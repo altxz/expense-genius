@@ -1,4 +1,4 @@
-import { LayoutDashboard, Tag, History, Settings, DollarSign, BarChart3, Repeat, CreditCard } from 'lucide-react';
+import { LayoutDashboard, Tag, History, Settings, DollarSign, BarChart3, Repeat, CreditCard, Landmark } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import {
   Sidebar,
