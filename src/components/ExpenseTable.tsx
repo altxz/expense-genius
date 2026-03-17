@@ -16,12 +16,13 @@ export interface Expense {
   category_ai: string | null;
   final_category: string;
   created_at: string;
-  type: 'income' | 'expense';
+  type: 'income' | 'expense' | 'transfer';
   is_recurring: boolean;
   frequency: string | null;
   credit_card_id: string | null;
   installments: number;
   wallet_id: string | null;
+  destination_wallet_id: string | null;
 }
 
 interface ExpenseTableProps {
