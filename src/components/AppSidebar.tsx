@@ -1,4 +1,4 @@
-import { LayoutDashboard, DollarSign } from 'lucide-react';
+import { LayoutDashboard, Tag, History, Settings, DollarSign } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import {
   Sidebar,
@@ -15,6 +15,8 @@ import {
 
 const items = [
   { title: 'Dashboard', url: '/', icon: LayoutDashboard },
+  { title: 'Categorias', url: '/categorias', icon: Tag },
+  { title: 'Histórico', url: '/historico', icon: History },
 ];
 
 export function AppSidebar() {
@@ -41,7 +43,7 @@ export function AppSidebar() {
               {items.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
-                    <NavLink to={item.url} end activeClassName="bg-sidebar-accent text-sidebar-accent-foreground">
+                    <NavLink to={item.url} end={item.url === '/'} activeClassName="bg-sidebar-accent text-sidebar-accent-foreground">
                       <item.icon className="h-4 w-4" />
                       {!collapsed && <span>{item.title}</span>}
                     </NavLink>
