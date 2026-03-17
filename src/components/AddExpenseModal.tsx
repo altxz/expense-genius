@@ -104,17 +104,30 @@ export function AddExpenseModal({ open, onOpenChange, onExpenseAdded }: AddExpen
           <DialogTitle className="text-xl font-bold">Nova Transação</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-2">
-          <div className="space-y-2">
-            <Label>Tipo</Label>
-            <Select value={type} onValueChange={(v: 'income' | 'expense') => setType(v)}>
-              <SelectTrigger className="rounded-xl h-11">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="expense">Despesa</SelectItem>
-                <SelectItem value="income">Receita</SelectItem>
-              </SelectContent>
-            </Select>
+          {/* Type toggle */}
+          <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-secondary">
+            <button
+              type="button"
+              onClick={() => setType('expense')}
+              className={`flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold transition-all ${
+                type === 'expense'
+                  ? 'bg-destructive text-destructive-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <span>↓</span> Despesa
+            </button>
+            <button
+              type="button"
+              onClick={() => setType('income')}
+              className={`flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold transition-all ${
+                type === 'income'
+                  ? 'bg-green-600 text-white shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <span>↑</span> Receita
+            </button>
           </div>
           <div className="space-y-2">
             <Label htmlFor="expense-date">Data</Label>
