@@ -16,6 +16,7 @@ import {
 const items = [
   { title: 'Dashboard', url: '/', icon: LayoutDashboard },
   { title: 'Analytics', url: '/analytics', icon: BarChart3 },
+  { title: 'Cartões', url: '/cartoes', icon: CreditCard },
   { title: 'Assinaturas', url: '/assinaturas', icon: Repeat },
   { title: 'Categorias', url: '/categorias', icon: Tag },
   { title: 'Histórico', url: '/historico', icon: History },
