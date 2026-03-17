@@ -31,8 +31,6 @@ interface WalletRow {
   crypto_price: number | null;
   created_at: string;
 }
-  created_at: string;
-}
 
 const ASSET_LABELS: Record<string, string> = {
   checking_account: 'Conta Corrente',
