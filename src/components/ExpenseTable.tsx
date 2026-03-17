@@ -102,10 +102,18 @@ export function ExpenseTable({ expenses, loading, onDeleted, filters, onFilterCh
               expenses.map(exp => {
                 const catInfo = getCategoryInfo(exp.final_category);
                 return (
-                  <TableRow key={exp.id}>
+                    <TableRow key={exp.id}>
                     <TableCell className="font-medium">{formatDate(exp.date)}</TableCell>
-                    <TableCell className="max-w-[200px] truncate">{exp.description}</TableCell>
-                    <TableCell className="text-right font-bold">{formatCurrency(exp.value)}</TableCell>
+                    <TableCell className="max-w-[200px] truncate">
+                      {exp.description}
+                      {exp.is_recurring && <Badge variant="outline" className="ml-2 text-[10px] px-1.5 py-0">{exp.frequency === 'annual' ? 'Anual' : 'Mensal'}</Badge>}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={exp.type === 'income' ? 'default' : 'secondary'} className="text-xs">
+                        {exp.type === 'income' ? 'Receita' : 'Despesa'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className={`text-right font-bold ${exp.type === 'income' ? 'text-green-600' : ''}`}>{exp.type === 'income' ? '+' : ''}{formatCurrency(exp.value)}</TableCell>
                     <TableCell>
                       <Badge variant={catInfo.variant}>{catInfo.label}</Badge>
                     </TableCell>
