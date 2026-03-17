@@ -188,6 +188,7 @@ export type Database = {
           credit_card_id: string | null
           date: string
           description: string
+          destination_wallet_id: string | null
           final_category: string
           frequency: string | null
           id: string
@@ -204,6 +205,7 @@ export type Database = {
           credit_card_id?: string | null
           date?: string
           description: string
+          destination_wallet_id?: string | null
           final_category: string
           frequency?: string | null
           id?: string
@@ -220,6 +222,7 @@ export type Database = {
           credit_card_id?: string | null
           date?: string
           description?: string
+          destination_wallet_id?: string | null
           final_category?: string
           frequency?: string | null
           id?: string
@@ -236,6 +239,13 @@ export type Database = {
             columns: ["credit_card_id"]
             isOneToOne: false
             referencedRelation: "credit_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_destination_wallet_id_fkey"
+            columns: ["destination_wallet_id"]
+            isOneToOne: false
+            referencedRelation: "wallets"
             referencedColumns: ["id"]
           },
           {
