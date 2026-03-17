@@ -11,6 +11,7 @@ import HistoryPage from "./pages/HistoryPage";
 import SettingsPage from "./pages/SettingsPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
 import SubscriptionsPage from "./pages/SubscriptionsPage";
+import CreditCardsPage from "./pages/CreditCardsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,6 +31,7 @@ const App = () => (
             <Route path="/configuracoes" element={<SettingsPage />} />
             <Route path="/analytics" element={<AnalyticsPage />} />
             <Route path="/assinaturas" element={<SubscriptionsPage />} />
+            <Route path="/cartoes" element={<CreditCardsPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

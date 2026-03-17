@@ -1,16 +1,20 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
 import { Sparkles, Loader2 } from 'lucide-react';
 import { CATEGORIES, getCategoryInfo } from '@/lib/constants';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+
+interface CreditCardOption {
+  id: string;
+  name: string;
+}
 
 interface AddExpenseModalProps {
   open: boolean;
@@ -25,12 +29,22 @@ export function AddExpenseModal({ open, onOpenChange, onExpenseAdded }: AddExpen
   const [type, setType] = useState<'income' | 'expense'>('expense');
   const [isRecurring, setIsRecurring] = useState(false);
   const [frequency, setFrequency] = useState<string>('monthly');
+  const [creditCardId, setCreditCardId] = useState<string>('');
+  const [installments, setInstallments] = useState('1');
+  const [creditCards, setCreditCards] = useState<CreditCardOption[]>([]);
   const [categoryAi, setCategoryAi] = useState('');
   const [finalCategory, setFinalCategory] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
+
+  useEffect(() => {
+    if (!user || !open) return;
+    supabase.from('credit_cards').select('id, name').eq('user_id', user.id).order('name').then(({ data }) => {
+      setCreditCards((data || []) as CreditCardOption[]);
+    });
+  }, [user, open]);
 
   const handleAiCategorize = async () => {
     if (!description.trim()) {
@@ -72,6 +86,8 @@ export function AddExpenseModal({ open, onOpenChange, onExpenseAdded }: AddExpen
       type,
       is_recurring: isRecurring,
       frequency: isRecurring ? frequency : null,
+      credit_card_id: creditCardId && creditCardId !== 'none' ? creditCardId : null,
+      installments: parseInt(installments) || 1,
     });
     if (error) {
       toast({ title: 'Erro ao salvar', description: error.message, variant: 'destructive' });
@@ -91,6 +107,8 @@ export function AddExpenseModal({ open, onOpenChange, onExpenseAdded }: AddExpen
     setType('expense');
     setIsRecurring(false);
     setFrequency('monthly');
+    setCreditCardId('');
+    setInstallments('1');
     setCategoryAi('');
     setFinalCategory('');
   };
@@ -99,7 +117,7 @@ export function AddExpenseModal({ open, onOpenChange, onExpenseAdded }: AddExpen
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md rounded-2xl">
+      <DialogContent className="sm:max-w-md rounded-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold">Nova Transação</DialogTitle>
         </DialogHeader>
@@ -156,6 +174,38 @@ export function AddExpenseModal({ open, onOpenChange, onExpenseAdded }: AddExpen
               className="rounded-xl h-11"
             />
           </div>
+
+          {/* Credit card + installments (only for expenses) */}
+          {type === 'expense' && creditCards.length > 0 && (
+            <div className="grid grid-cols-3 gap-3">
+              <div className="col-span-2 space-y-2">
+                <Label>Cartão de crédito</Label>
+                <Select value={creditCardId} onValueChange={setCreditCardId}>
+                  <SelectTrigger className="rounded-xl h-11">
+                    <SelectValue placeholder="Nenhum (opcional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhum</SelectItem>
+                    {creditCards.map(c => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Parcelas</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  max="48"
+                  value={installments}
+                  onChange={e => setInstallments(e.target.value)}
+                  className="rounded-xl h-11"
+                />
+              </div>
+            </div>
+          )}
+
           <label className="flex items-center gap-3 rounded-xl border p-3 cursor-pointer select-none">
             <input
               type="checkbox"
