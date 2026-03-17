@@ -64,16 +64,19 @@ export default function Dashboard() {
   };
 
   const summary = useMemo(() => {
-    const total = expenses.reduce((sum, e) => sum + e.value, 0);
+    const income = expenses.filter(e => e.type === 'income').reduce((s, e) => s + e.value, 0);
+    const expenseTotal = expenses.filter(e => e.type !== 'income').reduce((s, e) => s + e.value, 0);
+    const balance = income - expenseTotal;
     const byCategory: Record<string, number> = {};
-    expenses.forEach(e => {
+    expenses.filter(e => e.type !== 'income').forEach(e => {
       byCategory[e.final_category] = (byCategory[e.final_category] || 0) + e.value;
     });
     const largest = Object.entries(byCategory).sort((a, b) => b[1] - a[1])[0];
     return {
-      totalMonth: total,
+      balance,
+      totalIncome: income,
+      totalExpense: expenseTotal,
       largestCategory: largest ? { name: getCategoryInfo(largest[0]).label, total: largest[1] } : null,
-      projectedSavings: Math.max(0, 5000 - total),
     };
   }, [expenses]);
 
