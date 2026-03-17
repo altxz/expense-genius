@@ -16,6 +16,11 @@ interface CreditCardOption {
   name: string;
 }
 
+interface WalletOption {
+  id: string;
+  name: string;
+}
+
 interface AddExpenseModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
