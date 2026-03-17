@@ -15,6 +15,7 @@ import {
 
 const items = [
   { title: 'Dashboard', url: '/', icon: LayoutDashboard },
+  { title: 'Analytics', url: '/analytics', icon: BarChart3 },
   { title: 'Categorias', url: '/categorias', icon: Tag },
   { title: 'Histórico', url: '/historico', icon: History },
   { title: 'Configurações', url: '/configuracoes', icon: Settings },

@@ -27,6 +27,7 @@ const App = () => (
             <Route path="/categorias" element={<CategoriesPage />} />
             <Route path="/historico" element={<HistoryPage />} />
             <Route path="/configuracoes" element={<SettingsPage />} />
+            <Route path="/analytics" element={<AnalyticsPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
