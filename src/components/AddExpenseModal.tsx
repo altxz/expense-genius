@@ -126,6 +126,7 @@ export function AddExpenseModal({ open, onOpenChange, onExpenseAdded }: AddExpen
     setFrequency('monthly');
     setCreditCardId('');
     setInstallments('1');
+    setWalletId('');
     setCategoryAi('');
     setFinalCategory('');
   };
