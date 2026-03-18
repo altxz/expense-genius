@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, Upload } from 'lucide-react';
 import { SummaryCards } from '@/components/SummaryCards';
 import { ExpenseTable, Expense } from '@/components/ExpenseTable';
 import { AddExpenseModal } from '@/components/AddExpenseModal';
+import { ImportTransactionsModal } from '@/components/ImportTransactionsModal';
 import { DashboardHeader } from '@/components/DashboardHeader';
 import { AppSidebar } from '@/components/AppSidebar';
 import { SidebarProvider } from '@/components/ui/sidebar';
@@ -19,6 +20,7 @@ export default function Dashboard() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
+  const [importModalOpen, setImportModalOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [filters, setFilters] = useState({ period: '1', category: 'all' });
@@ -103,10 +105,16 @@ export default function Dashboard() {
                 <h1 className="text-3xl font-bold tracking-tight">Transações</h1>
                 <p className="text-sm text-muted-foreground mt-1">Gerencie receitas e despesas com inteligência artificial</p>
               </div>
-              <Button onClick={() => setModalOpen(true)} className="gap-2 rounded-xl h-11 px-6 bg-accent text-accent-foreground hover:bg-accent/90 font-semibold">
-                <PlusCircle className="h-5 w-5" />
-                Nova Transação
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setImportModalOpen(true)} className="gap-2 rounded-xl h-11 px-5 font-semibold">
+                  <Upload className="h-5 w-5" />
+                  Importar CSV
+                </Button>
+                <Button onClick={() => setModalOpen(true)} className="gap-2 rounded-xl h-11 px-6 bg-accent text-accent-foreground hover:bg-accent/90 font-semibold">
+                  <PlusCircle className="h-5 w-5" />
+                  Nova Transação
+                </Button>
+              </div>
             </div>
 
             <SummaryCards
@@ -130,6 +138,7 @@ export default function Dashboard() {
         </div>
       </div>
       <AddExpenseModal open={modalOpen} onOpenChange={setModalOpen} onExpenseAdded={fetchExpenses} />
+      <ImportTransactionsModal open={importModalOpen} onOpenChange={setImportModalOpen} onImported={fetchExpenses} />
     </SidebarProvider>
   );
 }
