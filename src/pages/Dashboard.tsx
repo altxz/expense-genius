@@ -138,6 +138,7 @@ export default function Dashboard() {
         </div>
       </div>
       <AddExpenseModal open={modalOpen} onOpenChange={setModalOpen} onExpenseAdded={fetchExpenses} />
+      <ImportTransactionsModal open={importModalOpen} onOpenChange={setImportModalOpen} onImported={fetchExpenses} />
     </SidebarProvider>
   );
 }
