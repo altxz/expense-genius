@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, Upload } from 'lucide-react';
 import { SummaryCards } from '@/components/SummaryCards';
 import { ExpenseTable, Expense } from '@/components/ExpenseTable';
 import { AddExpenseModal } from '@/components/AddExpenseModal';
+import { ImportTransactionsModal } from '@/components/ImportTransactionsModal';
 import { DashboardHeader } from '@/components/DashboardHeader';
 import { AppSidebar } from '@/components/AppSidebar';
 import { SidebarProvider } from '@/components/ui/sidebar';
