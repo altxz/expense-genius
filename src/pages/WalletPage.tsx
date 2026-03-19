@@ -548,16 +548,32 @@ export default function WalletPage() {
               <Label>Limite (R$)</Label>
               <Input type="number" step="0.01" min="0" placeholder="5000" value={cardForm.limit_amount} onChange={e => setCardForm(f => ({ ...f, limit_amount: e.target.value }))} className="rounded-xl h-11" />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label>Dia de vencimento</Label>
+              <Input type="number" min="1" max="31" value={cardForm.due_day} onChange={e => setCardForm(f => ({ ...f, due_day: e.target.value }))} className="rounded-xl h-11" />
+            </div>
+            <div className="space-y-2">
+              <Label>Estratégia de fecho da fatura</Label>
+              <Select value={cardForm.closing_strategy} onValueChange={v => setCardForm(f => ({ ...f, closing_strategy: v }))}>
+                <SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="fixed">Dia Fixo</SelectItem>
+                  <SelectItem value="relative">Dias antes do Vencimento</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {cardForm.closing_strategy === 'fixed' ? (
               <div className="space-y-2">
-                <Label>Dia de fecho</Label>
+                <Label>Dia de fecho (1-31)</Label>
                 <Input type="number" min="1" max="31" value={cardForm.closing_day} onChange={e => setCardForm(f => ({ ...f, closing_day: e.target.value }))} className="rounded-xl h-11" />
               </div>
+            ) : (
               <div className="space-y-2">
-                <Label>Dia de vencimento</Label>
-                <Input type="number" min="1" max="31" value={cardForm.due_day} onChange={e => setCardForm(f => ({ ...f, due_day: e.target.value }))} className="rounded-xl h-11" />
+                <Label>Dias antes do vencimento</Label>
+                <Input type="number" min="1" max="30" placeholder="7" value={cardForm.closing_days_before_due} onChange={e => setCardForm(f => ({ ...f, closing_days_before_due: e.target.value }))} className="rounded-xl h-11" />
+                <p className="text-xs text-muted-foreground">A fatura fechará {cardForm.closing_days_before_due || '7'} dias antes do dia {cardForm.due_day || '10'}</p>
               </div>
-            </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCardModalOpen(false)} className="rounded-xl">Cancelar</Button>
