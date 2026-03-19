@@ -68,6 +68,8 @@ interface CreditCardRow {
   limit_amount: number;
   closing_day: number;
   due_day: number;
+  closing_strategy: string;
+  closing_days_before_due: number;
   created_at: string;
 }
 
