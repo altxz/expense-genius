@@ -452,7 +452,9 @@ export default function WalletPage() {
                             <div className="flex gap-4 text-xs text-muted-foreground pt-1 border-t">
                               <div className="flex items-center gap-1">
                                 <Calendar className="h-3 w-3" />
-                                Fecha dia {card.closing_day}
+                                {card.closing_strategy === 'relative'
+                                  ? `Fecha ${card.closing_days_before_due}d antes`
+                                  : `Fecha dia ${card.closing_day}`}
                               </div>
                               <div className="flex items-center gap-1">
                                 <Calendar className="h-3 w-3" />
