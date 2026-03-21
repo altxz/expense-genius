@@ -139,7 +139,56 @@ export default function WalletPage() {
     setCardsLoading(false);
   }, [user]);
 
-  useEffect(() => { fetchWallets(); fetchCards(); }, [fetchWallets, fetchCards]);
+  // ─── Fetch invoice transactions ───
+  const fetchInvoiceTransactions = useCallback(async () => {
+    if (!user || !selectedCardId || !invoiceMonth) return;
+    setInvoiceLoading(true);
+    const { data } = await supabase
+      .from('expenses')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('credit_card_id', selectedCardId)
+      .eq('invoice_month', invoiceMonth)
+      .order('date', { ascending: false });
+    setInvoiceTransactions(data || []);
+    setInvoiceLoading(false);
+  }, [user, selectedCardId, invoiceMonth]);
+
+  useEffect(() => { fetchInvoiceTransactions(); }, [fetchInvoiceTransactions]);
+
+  const selectedCard = useMemo(() => cards.find(c => c.id === selectedCardId), [cards, selectedCardId]);
+
+  const invoiceTotal = useMemo(() => invoiceTransactions.reduce((s, t) => s + t.value, 0), [invoiceTransactions]);
+
+  const getInvoiceStatus = useCallback((card: CreditCardRow, month: string): { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' } => {
+    const now = new Date();
+    const [y, m] = month.split('-').map(Number);
+    const closingDay = card.closing_strategy === 'relative'
+      ? Math.max(card.due_day - card.closing_days_before_due, 1)
+      : card.closing_day;
+    const closingDate = new Date(y, m - 1, closingDay);
+    const dueDate = new Date(y, m - 1, card.due_day);
+    // If due date is before closing date, due is next month
+    const effectiveDue = dueDate <= closingDate ? new Date(y, m, card.due_day) : dueDate;
+
+    if (now < closingDate) return { label: 'Aberta', variant: 'default' };
+    if (now < effectiveDue) return { label: 'Fechada', variant: 'secondary' };
+    return { label: 'Vencida', variant: 'destructive' };
+  }, []);
+
+  const navigateInvoiceMonth = (direction: -1 | 1) => {
+    const [y, m] = invoiceMonth.split('-').map(Number);
+    const d = new Date(y, m - 1 + direction, 1);
+    setInvoiceMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+  };
+
+  const formatMonthLabel = (month: string) => {
+    const [y, m] = month.split('-').map(Number);
+    const d = new Date(y, m - 1, 1);
+    return format(d, 'MMMM yyyy', { locale: pt }).replace(/^\w/, c => c.toUpperCase());
+  };
+
+
 
   // ─── Wallet handlers ───
   const resetWalletForm = () => setWalletForm({ name: '', asset_type: 'checking_account', current_balance: '', crypto_symbol: '', crypto_amount: '', crypto_price: '' });
