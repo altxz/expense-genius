@@ -1,4 +1,4 @@
-import { LayoutDashboard, Settings, BarChart3, Wallet, PiggyBank, ArrowLeftRight } from 'lucide-react';
+import { LayoutDashboard, Settings, BarChart3, Wallet, PiggyBank, ArrowLeftRight, DollarSign } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import {
   Sidebar,
