@@ -15,10 +15,13 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { formatCurrency } from '@/lib/constants';
-import { PlusCircle, Wallet, Landmark, TrendingUp, Bitcoin, Trash2, CreditCard, Calendar } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { formatCurrency, getCategoryInfo } from '@/lib/constants';
+import { PlusCircle, Wallet, Landmark, TrendingUp, Bitcoin, Trash2, CreditCard, Calendar, ChevronLeft, ChevronRight, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { format } from 'date-fns';
+import { pt } from 'date-fns/locale';
 
 // ─── Wallet types ───
 interface WalletRow {
