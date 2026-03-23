@@ -2,8 +2,10 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Navigate } from 'react-router-dom';
 import { AppSidebar } from '@/components/AppSidebar';
 import { DashboardHeader } from '@/components/DashboardHeader';
+import { MonthSelector } from '@/components/MonthSelector';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSelectedDate } from '@/contexts/DateContext';
 import { supabase } from '@/lib/supabase';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -21,6 +23,7 @@ interface BudgetRow {
 
 export default function BudgetPage() {
   const { user, loading: authLoading } = useAuth();
+  const { startDate, endDate, monthKey, label: monthLabel } = useSelectedDate();
   const { toast } = useToast();
   const [budgets, setBudgets] = useState<Record<string, BudgetRow>>({});
   const [spentByCategory, setSpentByCategory] = useState<Record<string, number>>({});
@@ -28,28 +31,15 @@ export default function BudgetPage() {
   const [loading, setLoading] = useState(true);
   const [savingCat, setSavingCat] = useState<string | null>(null);
 
-  const monthYear = useMemo(() => {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
-  }, []);
-
-  const monthLabel = useMemo(() => {
-    const d = new Date(monthYear);
-    return d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
-  }, [monthYear]);
-
   const fetchData = useCallback(async () => {
     if (!user) return;
     setLoading(true);
 
-    const firstOfMonth = monthYear;
-    const nextMonth = new Date(monthYear);
-    nextMonth.setMonth(nextMonth.getMonth() + 1);
-    const endOfMonth = nextMonth.toISOString().split('T')[0];
+    const firstOfMonth = startDate;
 
     const [{ data: budgetData }, { data: expenseData }] = await Promise.all([
       supabase.from('budgets').select('*').eq('user_id', user.id).eq('month_year', firstOfMonth),
-      supabase.from('expenses').select('final_category, value, type').eq('user_id', user.id).gte('date', firstOfMonth).lt('date', endOfMonth),
+      supabase.from('expenses').select('final_category, value, type').eq('user_id', user.id).gte('date', firstOfMonth).lt('date', endDate),
     ]);
 
     // Budgets map
@@ -70,7 +60,7 @@ export default function BudgetPage() {
     setSpentByCategory(spent);
     setTotalIncome(income);
     setLoading(false);
-  }, [user, monthYear]);
+  }, [user, startDate, endDate]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -92,13 +82,13 @@ export default function BudgetPage() {
       else { setBudgets(prev => ({ ...prev, [category]: { ...existing, allocated_amount: amount } })); }
     } else {
       const { data, error } = await supabase.from('budgets').insert({
-        user_id: user.id, category, month_year: monthYear, allocated_amount: amount,
+        user_id: user.id, category, month_year: monthKey, allocated_amount: amount,
       }).select().single();
       if (error) { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); }
       else if (data) { setBudgets(prev => ({ ...prev, [category]: data as BudgetRow })); }
     }
     setSavingCat(null);
-  }, [user, budgets, monthYear, toast]);
+  }, [user, budgets, monthKey, toast]);
 
   if (authLoading) return <div className="min-h-screen flex items-center justify-center bg-background"><span className="text-muted-foreground">Carregando...</span></div>;
   if (!user) return <Navigate to="/auth" replace />;
@@ -110,9 +100,9 @@ export default function BudgetPage() {
         <div className="flex-1 flex flex-col min-w-0">
           <DashboardHeader />
           <main className="flex-1 p-3 sm:p-4 lg:p-8 space-y-4 sm:space-y-6 overflow-auto">
+            <MonthSelector />
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Orçamento Mensal</h1>
-              <p className="text-xs sm:text-sm text-muted-foreground mt-1 capitalize">{monthLabel}</p>
             </div>
 
             {/* Summary row */}

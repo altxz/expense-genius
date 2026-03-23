@@ -30,7 +30,7 @@ interface ExpenseTableProps {
   expenses: Expense[];
   loading: boolean;
   onDeleted: () => void;
-  filters: { period: string; category: string };
+  filters: { category: string };
   onFilterChange: (key: string, value: string) => void;
   page: number;
   totalPages: number;
@@ -53,17 +53,6 @@ export function ExpenseTable({ expenses, loading, onDeleted, filters, onFilterCh
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2 sm:gap-3">
-        <Select value={filters.period} onValueChange={v => onFilterChange('period', v)}>
-          <SelectTrigger className="w-[130px] sm:w-[160px] rounded-xl text-sm">
-            <SelectValue placeholder="Período" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="1">Último mês</SelectItem>
-            <SelectItem value="3">3 meses</SelectItem>
-            <SelectItem value="6">6 meses</SelectItem>
-            <SelectItem value="all">Todos</SelectItem>
-          </SelectContent>
-        </Select>
         <Select value={filters.category} onValueChange={v => onFilterChange('category', v)}>
           <SelectTrigger className="w-[130px] sm:w-[160px] rounded-xl text-sm">
             <SelectValue placeholder="Categoria" />
