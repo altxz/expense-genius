@@ -35,14 +35,11 @@ export default function BudgetPage() {
     if (!user) return;
     setLoading(true);
 
-    const firstOfMonth = monthYear;
-    const nextMonth = new Date(monthYear);
-    nextMonth.setMonth(nextMonth.getMonth() + 1);
-    const endOfMonth = nextMonth.toISOString().split('T')[0];
+    const firstOfMonth = startDate;
 
     const [{ data: budgetData }, { data: expenseData }] = await Promise.all([
       supabase.from('budgets').select('*').eq('user_id', user.id).eq('month_year', firstOfMonth),
-      supabase.from('expenses').select('final_category, value, type').eq('user_id', user.id).gte('date', firstOfMonth).lt('date', endOfMonth),
+      supabase.from('expenses').select('final_category, value, type').eq('user_id', user.id).gte('date', firstOfMonth).lt('date', endDate),
     ]);
 
     // Budgets map
@@ -63,7 +60,7 @@ export default function BudgetPage() {
     setSpentByCategory(spent);
     setTotalIncome(income);
     setLoading(false);
-  }, [user, monthYear]);
+  }, [user, startDate, endDate]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -85,13 +82,13 @@ export default function BudgetPage() {
       else { setBudgets(prev => ({ ...prev, [category]: { ...existing, allocated_amount: amount } })); }
     } else {
       const { data, error } = await supabase.from('budgets').insert({
-        user_id: user.id, category, month_year: monthYear, allocated_amount: amount,
+        user_id: user.id, category, month_year: monthKey, allocated_amount: amount,
       }).select().single();
       if (error) { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); }
       else if (data) { setBudgets(prev => ({ ...prev, [category]: data as BudgetRow })); }
     }
     setSavingCat(null);
-  }, [user, budgets, monthYear, toast]);
+  }, [user, budgets, monthKey, toast]);
 
   if (authLoading) return <div className="min-h-screen flex items-center justify-center bg-background"><span className="text-muted-foreground">Carregando...</span></div>;
   if (!user) return <Navigate to="/auth" replace />;
