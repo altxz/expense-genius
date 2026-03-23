@@ -2,8 +2,10 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Navigate } from 'react-router-dom';
 import { AppSidebar } from '@/components/AppSidebar';
 import { DashboardHeader } from '@/components/DashboardHeader';
+import { MonthSelector } from '@/components/MonthSelector';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSelectedDate } from '@/contexts/DateContext';
 import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -35,13 +37,14 @@ const PAGE_SIZE = 15;
 
 export default function HistoryPage() {
   const { user, loading: authLoading } = useAuth();
+  const { startDate, endDate } = useSelectedDate();
   const { toast } = useToast();
   const [expenses, setExpenses] = useState<ExpenseWithStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [search, setSearch] = useState('');
-  const [filters, setFilters] = useState({ period: '3', status: 'all', category: 'all' });
+  const [filters, setFilters] = useState({ status: 'all', category: 'all' });
   const [allExpenses, setAllExpenses] = useState<ExpenseWithStatus[]>([]);
 
   // Subscriptions state
@@ -56,13 +59,9 @@ export default function HistoryPage() {
   const fetchExpenses = useCallback(async () => {
     if (!user) return;
     setLoading(true);
-    let allQuery = supabase.from('expenses').select('*').eq('user_id', user.id).order('date', { ascending: false });
-    if (filters.period !== 'all') {
-      const months = parseInt(filters.period);
-      const from = new Date();
-      from.setMonth(from.getMonth() - months);
-      allQuery = allQuery.gte('date', from.toISOString().split('T')[0]);
-    }
+    let allQuery = supabase.from('expenses').select('*').eq('user_id', user.id)
+      .gte('date', startDate).lt('date', endDate)
+      .order('date', { ascending: false });
     const { data: allData } = await allQuery;
     const all = (allData || []).map(e => ({ ...e, status: classifyExpense(e) }));
     setAllExpenses(all);
@@ -76,7 +75,7 @@ export default function HistoryPage() {
     const start = (page - 1) * PAGE_SIZE;
     setExpenses(filtered.slice(start, start + PAGE_SIZE));
     setLoading(false);
-  }, [user, page, filters, search]);
+  }, [user, page, filters, search, startDate, endDate]);
 
   const fetchSubscriptions = useCallback(async () => {
     if (!user) return;
