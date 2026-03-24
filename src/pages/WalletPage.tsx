@@ -824,6 +824,43 @@ export default function WalletPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ═══ Pay Invoice Dialog ═══ */}
+      <Dialog open={payInvoiceOpen} onOpenChange={setPayInvoiceOpen}>
+        <DialogContent className="rounded-2xl max-w-md">
+          <DialogHeader>
+            <DialogTitle>Pagar Fatura</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="text-center p-4 rounded-xl bg-muted">
+              <p className="text-sm text-muted-foreground">Valor da fatura</p>
+              <p className="text-3xl font-bold mt-1">{formatCurrency(invoiceTotal)}</p>
+              <p className="text-xs text-muted-foreground mt-1">{selectedCard?.name} — {formatMonthLabel(invoiceMonth)}</p>
+            </div>
+            <div className="space-y-2">
+              <Label>Debitar de qual conta?</Label>
+              <Select value={payWalletId} onValueChange={setPayWalletId}>
+                <SelectTrigger className="rounded-xl h-11">
+                  <SelectValue placeholder="Selecione a conta" />
+                </SelectTrigger>
+                <SelectContent>
+                  {wallets.map(w => (
+                    <SelectItem key={w.id} value={w.id}>
+                      {w.name} — {formatCurrency(getWalletValue(w))}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPayInvoiceOpen(false)} className="rounded-xl">Cancelar</Button>
+            <Button onClick={handlePayInvoice} disabled={payingSaving || !payWalletId} className="rounded-xl bg-success text-success-foreground hover:bg-success/90 font-semibold">
+              {payingSaving ? 'Pagando...' : 'Confirmar Pagamento'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </SidebarProvider>
   );
 }
