@@ -136,6 +136,8 @@ export default function Dashboard() {
               largestCategory={summary.largestCategory}
             />
 
+            <CashFlowChart />
+
             <TransactionFeed
               expenses={expenses}
               loading={loading}
