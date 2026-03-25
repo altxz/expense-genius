@@ -217,34 +217,83 @@ export function AddExpenseModal({ open, onOpenChange, onExpenseAdded }: AddExpen
     }
 
     setSaving(true);
-    const { error } = await supabase.from('expenses').insert({
-      user_id: user?.id,
-      date,
-      description: isTransfer ? 'Transferência entre contas' : description.trim(),
-      value: parseFloat(value),
-      category_ai: isTransfer ? null : (categoryAi || null),
-      final_category: isTransfer ? 'transferencia' : finalCategory,
-      type,
-      payment_method: isTransfer ? null : (type === 'expense' ? paymentMethod : 'debit'),
-      is_recurring: isTransfer ? false : isRecurring,
-      frequency: isRecurring && !isTransfer ? frequency : null,
-      credit_card_id: isCredit ? creditCardId : null,
-      installments: isCredit ? (parseInt(installments) || 1) : 1,
-      wallet_id: (isTransfer || (type === 'expense' && paymentMethod === 'debit') || type === 'income') ? (walletId || null) : null,
-      destination_wallet_id: isTransfer ? destinationWalletId : null,
-      invoice_month: isCredit ? (invoiceMonth || null) : null,
-      is_paid: isTransfer ? true : isPaid,
-      notes: notes.trim() || null,
-      tags: tags.length > 0 ? tags : null,
-    });
-    if (error) {
-      toast({ title: 'Erro ao salvar', description: error.message, variant: 'destructive' });
+    const numInstallments = isCredit ? (parseInt(installments) || 1) : 1;
+
+    if (isCredit && numInstallments > 1 && invoiceMonth) {
+      // Generate one record per installment with shared group id
+      const groupId = crypto.randomUUID();
+      const totalValue = parseFloat(value);
+      const perInstallment = Math.round((totalValue / numInstallments) * 100) / 100;
+      const [baseY, baseM] = invoiceMonth.split('-').map(Number);
+
+      const rows = Array.from({ length: numInstallments }, (_, i) => {
+        const m = new Date(baseY, baseM - 1 + i, 1);
+        const im = `${m.getFullYear()}-${String(m.getMonth() + 1).padStart(2, '0')}`;
+        return {
+          user_id: user?.id,
+          date,
+          description: description.trim(),
+          value: perInstallment,
+          category_ai: categoryAi || null,
+          final_category: finalCategory,
+          type,
+          payment_method: 'credit',
+          is_recurring: false,
+          frequency: null,
+          credit_card_id: creditCardId,
+          installments: numInstallments,
+          wallet_id: null,
+          destination_wallet_id: null,
+          invoice_month: im,
+          is_paid: false,
+          notes: notes.trim() || null,
+          tags: tags.length > 0 ? tags : null,
+          installment_group_id: groupId,
+          installment_info: `${i + 1}/${numInstallments}`,
+        };
+      });
+
+      const { error } = await supabase.from('expenses').insert(rows);
+      if (error) {
+        toast({ title: 'Erro ao salvar', description: error.message, variant: 'destructive' });
+      } else {
+        toast({ title: 'Parcelas criadas!', description: `${numInstallments} parcelas salvas com sucesso.` });
+        resetForm();
+        onOpenChange(false);
+        onExpenseAdded();
+      }
     } else {
-      const msg = isTransfer ? 'Transferência salva!' : (type === 'income' ? 'Receita salva!' : 'Despesa salva!');
-      toast({ title: msg, description: 'Registro salvo com sucesso.' });
-      resetForm();
-      onOpenChange(false);
-      onExpenseAdded();
+      const { error } = await supabase.from('expenses').insert({
+        user_id: user?.id,
+        date,
+        description: isTransfer ? 'Transferência entre contas' : description.trim(),
+        value: parseFloat(value),
+        category_ai: isTransfer ? null : (categoryAi || null),
+        final_category: isTransfer ? 'transferencia' : finalCategory,
+        type,
+        payment_method: isTransfer ? null : (type === 'expense' ? paymentMethod : 'debit'),
+        is_recurring: isTransfer ? false : isRecurring,
+        frequency: isRecurring && !isTransfer ? frequency : null,
+        credit_card_id: isCredit ? creditCardId : null,
+        installments: 1,
+        wallet_id: (isTransfer || (type === 'expense' && paymentMethod === 'debit') || type === 'income') ? (walletId || null) : null,
+        destination_wallet_id: isTransfer ? destinationWalletId : null,
+        invoice_month: isCredit ? (invoiceMonth || null) : null,
+        is_paid: isTransfer ? true : isPaid,
+        notes: notes.trim() || null,
+        tags: tags.length > 0 ? tags : null,
+        installment_group_id: null,
+        installment_info: null,
+      });
+      if (error) {
+        toast({ title: 'Erro ao salvar', description: error.message, variant: 'destructive' });
+      } else {
+        const msg = isTransfer ? 'Transferência salva!' : (type === 'income' ? 'Receita salva!' : 'Despesa salva!');
+        toast({ title: msg, description: 'Registro salvo com sucesso.' });
+        resetForm();
+        onOpenChange(false);
+        onExpenseAdded();
+      }
     }
     setSaving(false);
   };
