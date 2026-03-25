@@ -27,6 +27,8 @@ export interface Expense {
   is_paid: boolean;
   notes: string | null;
   tags: string[] | null;
+  installment_group_id: string | null;
+  installment_info: string | null;
 }
 
 interface ExpenseTableProps {
