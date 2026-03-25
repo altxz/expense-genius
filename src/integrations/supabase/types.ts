@@ -198,6 +198,8 @@ export type Database = {
           final_category: string
           frequency: string | null
           id: string
+          installment_group_id: string | null
+          installment_info: string | null
           installments: number
           invoice_month: string | null
           is_paid: boolean
@@ -220,6 +222,8 @@ export type Database = {
           final_category: string
           frequency?: string | null
           id?: string
+          installment_group_id?: string | null
+          installment_info?: string | null
           installments?: number
           invoice_month?: string | null
           is_paid?: boolean
@@ -242,6 +246,8 @@ export type Database = {
           final_category?: string
           frequency?: string | null
           id?: string
+          installment_group_id?: string | null
+          installment_info?: string | null
           installments?: number
           invoice_month?: string | null
           is_paid?: boolean
