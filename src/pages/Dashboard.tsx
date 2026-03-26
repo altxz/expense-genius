@@ -15,6 +15,8 @@ import { supabase } from '@/lib/supabase';
 import { getCategoryInfo } from '@/lib/constants';
 import { Navigate } from 'react-router-dom';
 import { CashFlowChart } from '@/components/CashFlowChart';
+import { CalendarView } from '@/components/CalendarView';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { Expense } from '@/components/ExpenseTable';
 
 const PAGE_SIZE = 20;
