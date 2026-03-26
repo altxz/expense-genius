@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Upload } from 'lucide-react';
+import { PlusCircle, Upload, AlertTriangle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { SummaryCards } from '@/components/SummaryCards';
 import { TransactionFeed } from '@/components/TransactionFeed';
 import { AddExpenseModal } from '@/components/AddExpenseModal';
@@ -12,7 +13,7 @@ import { SidebarProvider } from '@/components/ui/sidebar';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSelectedDate } from '@/contexts/DateContext';
 import { supabase } from '@/lib/supabase';
-import { getCategoryInfo } from '@/lib/constants';
+import { getCategoryInfo, CATEGORIES } from '@/lib/constants';
 import { Navigate } from 'react-router-dom';
 import { CashFlowChart } from '@/components/CashFlowChart';
 import { CalendarView } from '@/components/CalendarView';
@@ -43,6 +44,7 @@ export default function Dashboard() {
   const prevEndDate = `${prevNextY}-${String(prevNextM + 1).padStart(2, '0')}-01`;
 
   const [prevExpenses, setPrevExpenses] = useState<Expense[]>([]);
+  const [budgetAlerts, setBudgetAlerts] = useState<string[]>([]);
 
   const fetchExpenses = useCallback(async () => {
     if (!user) return;
@@ -86,11 +88,34 @@ export default function Dashboard() {
   useEffect(() => { fetchExpenses(); }, [fetchExpenses]);
   useEffect(() => { fetchPrevExpenses(); }, [fetchPrevExpenses]);
 
+  // Fetch wallets
   useEffect(() => {
     if (!user) return;
     supabase.from('wallets').select('id, name').eq('user_id', user.id).order('name')
       .then(({ data }) => setWallets(data || []));
   }, [user]);
+
+  // Fetch budget alerts — check which categories are ≥80% spent
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      const [{ data: budgetData }, { data: expData }] = await Promise.all([
+        supabase.from('budgets').select('category, allocated_amount').eq('user_id', user.id).eq('month_year', startDate),
+        supabase.from('expenses').select('final_category, value, type').eq('user_id', user.id).gte('date', startDate).lt('date', endDate),
+      ]);
+      if (!budgetData || !expData) { setBudgetAlerts([]); return; }
+      const spent: Record<string, number> = {};
+      expData.forEach((e: any) => { if (e.type !== 'income') spent[e.final_category] = (spent[e.final_category] || 0) + e.value; });
+      const warnings: string[] = [];
+      budgetData.forEach((b: any) => {
+        if (b.allocated_amount > 0) {
+          const pct = (spent[b.category] || 0) / b.allocated_amount * 100;
+          if (pct >= 80) warnings.push(getCategoryInfo(b.category).label);
+        }
+      });
+      setBudgetAlerts(warnings);
+    })();
+  }, [user, startDate, endDate]);
 
   const handleFilterChange = (key: string, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value }));
@@ -142,6 +167,16 @@ export default function Dashboard() {
           <DashboardHeader />
           <main className="flex-1 p-4 lg:p-8 space-y-6 overflow-auto">
             <MonthSelector />
+
+            {budgetAlerts.length > 0 && (
+              <Alert variant="destructive" className="rounded-xl border-destructive/50 bg-destructive/10">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription className="font-medium text-sm">
+                  Atenção: Estás quase a ultrapassar o teu orçamento em{' '}
+                  <span className="font-bold">{budgetAlerts.join(' e ')}</span>!
+                </AlertDescription>
+              </Alert>
+            )}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Transações</h1>
