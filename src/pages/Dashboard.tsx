@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Upload } from 'lucide-react';
+import { PlusCircle, Upload, AlertTriangle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { SummaryCards } from '@/components/SummaryCards';
 import { TransactionFeed } from '@/components/TransactionFeed';
 import { AddExpenseModal } from '@/components/AddExpenseModal';
@@ -12,7 +13,7 @@ import { SidebarProvider } from '@/components/ui/sidebar';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSelectedDate } from '@/contexts/DateContext';
 import { supabase } from '@/lib/supabase';
-import { getCategoryInfo } from '@/lib/constants';
+import { getCategoryInfo, CATEGORIES } from '@/lib/constants';
 import { Navigate } from 'react-router-dom';
 import { CashFlowChart } from '@/components/CashFlowChart';
 import { CalendarView } from '@/components/CalendarView';
