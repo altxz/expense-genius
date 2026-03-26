@@ -44,6 +44,7 @@ export default function Dashboard() {
   const prevEndDate = `${prevNextY}-${String(prevNextM + 1).padStart(2, '0')}-01`;
 
   const [prevExpenses, setPrevExpenses] = useState<Expense[]>([]);
+  const [budgetAlerts, setBudgetAlerts] = useState<string[]>([]);
 
   const fetchExpenses = useCallback(async () => {
     if (!user) return;
