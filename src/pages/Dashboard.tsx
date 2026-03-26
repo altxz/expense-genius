@@ -88,11 +88,34 @@ export default function Dashboard() {
   useEffect(() => { fetchExpenses(); }, [fetchExpenses]);
   useEffect(() => { fetchPrevExpenses(); }, [fetchPrevExpenses]);
 
+  // Fetch wallets
   useEffect(() => {
     if (!user) return;
     supabase.from('wallets').select('id, name').eq('user_id', user.id).order('name')
       .then(({ data }) => setWallets(data || []));
   }, [user]);
+
+  // Fetch budget alerts — check which categories are ≥80% spent
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      const [{ data: budgetData }, { data: expData }] = await Promise.all([
+        supabase.from('budgets').select('category, allocated_amount').eq('user_id', user.id).eq('month_year', startDate),
+        supabase.from('expenses').select('final_category, value, type').eq('user_id', user.id).gte('date', startDate).lt('date', endDate),
+      ]);
+      if (!budgetData || !expData) { setBudgetAlerts([]); return; }
+      const spent: Record<string, number> = {};
+      expData.forEach((e: any) => { if (e.type !== 'income') spent[e.final_category] = (spent[e.final_category] || 0) + e.value; });
+      const warnings: string[] = [];
+      budgetData.forEach((b: any) => {
+        if (b.allocated_amount > 0) {
+          const pct = (spent[b.category] || 0) / b.allocated_amount * 100;
+          if (pct >= 80) warnings.push(getCategoryInfo(b.category).label);
+        }
+      });
+      setBudgetAlerts(warnings);
+    })();
+  }, [user, startDate, endDate]);
 
   const handleFilterChange = (key: string, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value }));
