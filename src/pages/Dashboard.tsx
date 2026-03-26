@@ -167,6 +167,16 @@ export default function Dashboard() {
           <DashboardHeader />
           <main className="flex-1 p-4 lg:p-8 space-y-6 overflow-auto">
             <MonthSelector />
+
+            {budgetAlerts.length > 0 && (
+              <Alert variant="destructive" className="rounded-xl border-destructive/50 bg-destructive/10">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription className="font-medium text-sm">
+                  Atenção: Estás quase a ultrapassar o teu orçamento em{' '}
+                  <span className="font-bold">{budgetAlerts.join(' e ')}</span>!
+                </AlertDescription>
+              </Alert>
+            )}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Transações</h1>
