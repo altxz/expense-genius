@@ -116,6 +116,14 @@ export default function Dashboard() {
     };
   }, [expenses]);
 
+  const prevSummary = useMemo(() => {
+    const nonTransfers = prevExpenses.filter(e => e.type !== 'transfer');
+    const income = nonTransfers.filter(e => e.type === 'income').reduce((s, e) => s + e.value, 0);
+    const cashExpenses = nonTransfers.filter(e => e.type !== 'income' && !e.credit_card_id);
+    const expenseTotal = cashExpenses.reduce((s, e) => s + e.value, 0);
+    return { totalIncome: income, totalExpense: expenseTotal, balance: income - expenseTotal };
+  }, [prevExpenses]);
+
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -158,6 +166,9 @@ export default function Dashboard() {
               totalIncome={summary.totalIncome}
               totalExpense={summary.totalExpense}
               largestCategory={summary.largestCategory}
+              prevBalance={prevSummary.balance}
+              prevIncome={prevSummary.totalIncome}
+              prevExpense={prevSummary.totalExpense}
             />
 
             <CashFlowChart />
