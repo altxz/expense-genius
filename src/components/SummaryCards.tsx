@@ -1,5 +1,5 @@
 import { Card, CardContent } from '@/components/ui/card';
-import { ArrowDownCircle, ArrowUpCircle, TrendingUp, Wallet } from 'lucide-react';
+import { ArrowDownCircle, ArrowUpCircle, TrendingUp, TrendingDown, Wallet } from 'lucide-react';
 import { formatCurrency } from '@/lib/constants';
 
 interface SummaryCardsProps {
@@ -7,9 +7,39 @@ interface SummaryCardsProps {
   totalIncome: number;
   totalExpense: number;
   largestCategory: { name: string; total: number } | null;
+  prevBalance?: number;
+  prevIncome?: number;
+  prevExpense?: number;
 }
 
-export function SummaryCards({ balance, totalIncome, totalExpense, largestCategory }: SummaryCardsProps) {
+function TrendBadge({ current, previous, invertColor }: { current: number; previous: number; invertColor?: boolean }) {
+  if (previous === 0 && current === 0) return null;
+
+  const pct = previous === 0
+    ? (current > 0 ? 100 : 0)
+    : Math.round(((current - previous) / previous) * 100);
+
+  if (pct === 0) return null;
+
+  const isUp = pct > 0;
+  // For expenses: up is bad (red), down is good (green). invertColor flips this.
+  const isPositive = invertColor ? !isUp : isUp;
+
+  return (
+    <span className={`inline-flex items-center gap-0.5 text-[9px] sm:text-[11px] font-semibold mt-0.5 ${
+      isPositive ? 'opacity-90' : 'opacity-90'
+    }`}>
+      {isUp ? (
+        <TrendingUp className="h-3 w-3" />
+      ) : (
+        <TrendingDown className="h-3 w-3" />
+      )}
+      {isUp ? '+' : ''}{pct}%
+    </span>
+  );
+}
+
+export function SummaryCards({ balance, totalIncome, totalExpense, largestCategory, prevBalance, prevIncome, prevExpense }: SummaryCardsProps) {
   return (
     <div className="grid gap-3 grid-cols-2 xl:grid-cols-4">
       <Card className="rounded-2xl border-0 shadow-md bg-primary text-primary-foreground">
@@ -23,6 +53,9 @@ export function SummaryCards({ balance, totalIncome, totalExpense, largestCatego
               <p className={`text-base sm:text-2xl font-bold tracking-tight ${balance < 0 ? 'text-red-300' : ''}`}>
                 {balance >= 0 ? '+' : ''}{formatCurrency(balance)}
               </p>
+              {prevBalance !== undefined && (
+                <TrendBadge current={balance} previous={prevBalance} />
+              )}
             </div>
           </div>
         </CardContent>
@@ -36,6 +69,9 @@ export function SummaryCards({ balance, totalIncome, totalExpense, largestCatego
             <div className="min-w-0">
               <p className="text-[10px] sm:text-sm font-medium opacity-80">Entradas</p>
               <p className="text-base sm:text-2xl font-bold tracking-tight">+{formatCurrency(totalIncome)}</p>
+              {prevIncome !== undefined && (
+                <TrendBadge current={totalIncome} previous={prevIncome} />
+              )}
             </div>
           </div>
         </CardContent>
@@ -49,6 +85,9 @@ export function SummaryCards({ balance, totalIncome, totalExpense, largestCatego
             <div className="min-w-0">
               <p className="text-[10px] sm:text-sm font-medium opacity-80">Saídas</p>
               <p className="text-base sm:text-2xl font-bold tracking-tight">-{formatCurrency(totalExpense)}</p>
+              {prevExpense !== undefined && (
+                <TrendBadge current={totalExpense} previous={prevExpense} invertColor />
+              )}
             </div>
           </div>
         </CardContent>
