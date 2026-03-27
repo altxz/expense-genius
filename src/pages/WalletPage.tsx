@@ -790,10 +790,23 @@ export default function WalletPage() {
                 )}
               </>
             ) : (
-              <div className="space-y-2">
-                <Label>Saldo atual (R$)</Label>
-                <Input type="number" step="0.01" min="0" placeholder="0,00" value={walletForm.current_balance} onChange={e => setWalletForm(f => ({ ...f, current_balance: e.target.value }))} className="rounded-xl h-11" />
-              </div>
+              <>
+                <div className="space-y-2">
+                  <Label>Moeda</Label>
+                  <Select value={walletForm.currency} onValueChange={v => setWalletForm(f => ({ ...f, currency: v }))}>
+                    <SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {CURRENCY_OPTIONS.filter(c => c.value !== 'BTC').map(c => (
+                        <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Saldo atual ({walletForm.currency})</Label>
+                  <Input type="number" step="0.01" min="0" placeholder="0,00" value={walletForm.current_balance} onChange={e => setWalletForm(f => ({ ...f, current_balance: e.target.value }))} className="rounded-xl h-11" />
+                </div>
+              </>
             )}
           </div>
           <DialogFooter>
