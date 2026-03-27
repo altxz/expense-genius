@@ -206,6 +206,7 @@ export type Database = {
           is_recurring: boolean
           notes: string | null
           payment_method: string | null
+          project_id: string | null
           tags: string[] | null
           type: string
           user_id: string
@@ -230,6 +231,7 @@ export type Database = {
           is_recurring?: boolean
           notes?: string | null
           payment_method?: string | null
+          project_id?: string | null
           tags?: string[] | null
           type?: string
           user_id: string
@@ -254,6 +256,7 @@ export type Database = {
           is_recurring?: boolean
           notes?: string | null
           payment_method?: string | null
+          project_id?: string | null
           tags?: string[] | null
           type?: string
           user_id?: string
@@ -276,6 +279,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "expenses_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "expenses_wallet_id_fkey"
             columns: ["wallet_id"]
             isOneToOne: false
@@ -283,6 +293,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      projects: {
+        Row: {
+          budget: number | null
+          color: string
+          created_at: string
+          id: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          budget?: number | null
+          color?: string
+          created_at?: string
+          id?: string
+          name: string
+          user_id: string
+        }
+        Update: {
+          budget?: number | null
+          color?: string
+          created_at?: string
+          id?: string
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       user_settings: {
         Row: {
