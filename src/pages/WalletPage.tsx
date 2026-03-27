@@ -432,7 +432,7 @@ export default function WalletPage() {
                 ) : (
                   Object.entries(grouped).map(([type, items]) => {
                     const Icon = ASSET_ICONS[type] || Wallet;
-                    const typeTotal = items.reduce((s, w) => s + getWalletValue(w), 0);
+                    const typeTotal = items.reduce((s, w) => s + getWalletValueBRL(w, rates), 0);
                     const pct = totalWealth > 0 ? (typeTotal / totalWealth) * 100 : 0;
                     return (
                       <div key={type} className="space-y-3">
@@ -447,6 +447,8 @@ export default function WalletPage() {
                         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                           {items.map(w => {
                             const val = getWalletValue(w);
+                            const valBRL = getWalletValueBRL(w, rates);
+                            const isForeign = w.currency !== 'BRL';
                             return (
                               <Card key={w.id} className="rounded-2xl hover:shadow-md transition-shadow">
                                 <CardContent className="p-5">
@@ -457,6 +459,9 @@ export default function WalletPage() {
                                         <p className="text-xs text-muted-foreground mt-0.5">
                                           {w.crypto_amount} {w.crypto_symbol} × {formatCurrency(w.crypto_price || 0)}
                                         </p>
+                                      )}
+                                      {isForeign && (
+                                        <Badge variant="outline" className="text-[10px] mt-1">{w.currency}</Badge>
                                       )}
                                     </div>
                                     <AlertDialog>
@@ -477,11 +482,18 @@ export default function WalletPage() {
                                       </AlertDialogContent>
                                     </AlertDialog>
                                   </div>
-                                  <p className="text-2xl font-bold mt-3">{formatCurrency(val)}</p>
+                                  {isForeign ? (
+                                    <div className="mt-3">
+                                      <p className="text-xl font-bold">{formatForeignCurrency(val, w.currency)}</p>
+                                      <p className="text-sm text-muted-foreground">≈ {formatCurrency(valBRL)}</p>
+                                    </div>
+                                  ) : (
+                                    <p className="text-2xl font-bold mt-3">{formatCurrency(val)}</p>
+                                  )}
                                   {totalWealth > 0 && (
                                     <div className="mt-2 space-y-1">
-                                      <Progress value={(val / totalWealth) * 100} className="h-1.5" />
-                                      <p className="text-[11px] text-muted-foreground">{((val / totalWealth) * 100).toFixed(1)}% do património</p>
+                                      <Progress value={(valBRL / totalWealth) * 100} className="h-1.5" />
+                                      <p className="text-[11px] text-muted-foreground">{((valBRL / totalWealth) * 100).toFixed(1)}% do património</p>
                                     </div>
                                   )}
                                 </CardContent>
