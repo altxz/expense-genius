@@ -610,6 +610,27 @@ export function AddExpenseModal({ open, onOpenChange, onExpenseAdded }: AddExpen
                           </div>
                         )}
                       </div>
+                      {projects.length > 0 && (
+                        <div className="space-y-1.5">
+                          <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Projeto</Label>
+                          <Select value={projectId} onValueChange={setProjectId}>
+                            <SelectTrigger className="rounded-xl h-9 text-sm">
+                              <SelectValue placeholder="Nenhum projeto" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">Nenhum</SelectItem>
+                              {projects.map(p => (
+                                <SelectItem key={p.id} value={p.id}>
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: p.color }} />
+                                    {p.name}
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
                     </div>
                   </AccordionContent>
                 </AccordionItem>
