@@ -219,6 +219,7 @@ export default function WalletPage() {
       user_id: user?.id,
       name: walletForm.name.trim(),
       asset_type: walletForm.asset_type,
+      currency: isCrypto ? 'BTC' : walletForm.currency,
       initial_balance: isCrypto ? 0 : parseFloat(walletForm.current_balance) || 0,
       current_balance: isCrypto ? 0 : parseFloat(walletForm.current_balance) || 0,
       crypto_symbol: isCrypto ? (walletForm.crypto_symbol.trim().toUpperCase() || 'BTC') : null,
