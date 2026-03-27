@@ -114,6 +114,8 @@ export function AddExpenseModal({ open, onOpenChange, onExpenseAdded }: AddExpen
   const [invoiceMonth, setInvoiceMonth] = useState<string>('');
   const [wallets, setWallets] = useState<WalletOption[]>([]);
   const [creditCards, setCreditCards] = useState<CreditCardOption[]>([]);
+  const [projects, setProjects] = useState<{ id: string; name: string; color: string }[]>([]);
+  const [projectId, setProjectId] = useState<string>('');
   const [categoryAi, setCategoryAi] = useState('');
   const [finalCategory, setFinalCategory] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
@@ -132,9 +134,11 @@ export function AddExpenseModal({ open, onOpenChange, onExpenseAdded }: AddExpen
     Promise.all([
       supabase.from('credit_cards').select('id, name, closing_day, due_day, closing_strategy, closing_days_before_due').eq('user_id', user.id).order('name'),
       supabase.from('wallets').select('id, name').eq('user_id', user.id).order('name'),
-    ]).then(([cards, walletsRes]) => {
+      supabase.from('projects').select('id, name, color').eq('user_id', user.id).order('name'),
+    ]).then(([cards, walletsRes, projectsRes]) => {
       setCreditCards((cards.data || []) as CreditCardOption[]);
       setWallets((walletsRes.data || []) as WalletOption[]);
+      setProjects((projectsRes.data || []) as { id: string; name: string; color: string }[]);
     });
   }, [user, open]);
 
