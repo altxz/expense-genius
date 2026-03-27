@@ -22,7 +22,7 @@ import { useToast } from '@/hooks/use-toast';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { format } from 'date-fns';
 import { pt } from 'date-fns/locale';
-import { useExchangeRates, convertToBRL, formatForeignCurrency } from '@/hooks/useExchangeRates';
+import { useExchangeRates, convertToBRL, formatForeignCurrency, type ExchangeRates } from '@/hooks/useExchangeRates';
 
 // ─── Wallet types ───
 interface WalletRow {
