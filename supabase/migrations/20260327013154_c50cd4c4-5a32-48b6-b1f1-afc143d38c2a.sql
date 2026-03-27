@@ -1,0 +1,1 @@
+ALTER TABLE public.wallets ADD COLUMN currency text NOT NULL DEFAULT 'BRL';
