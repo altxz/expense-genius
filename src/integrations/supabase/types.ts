@@ -363,6 +363,7 @@ export type Database = {
           crypto_amount: number | null
           crypto_price: number | null
           crypto_symbol: string | null
+          currency: string
           current_balance: number
           id: string
           initial_balance: number
@@ -376,6 +377,7 @@ export type Database = {
           crypto_amount?: number | null
           crypto_price?: number | null
           crypto_symbol?: string | null
+          currency?: string
           current_balance?: number
           id?: string
           initial_balance?: number
@@ -389,6 +391,7 @@ export type Database = {
           crypto_amount?: number | null
           crypto_price?: number | null
           crypto_symbol?: string | null
+          currency?: string
           current_balance?: number
           id?: string
           initial_balance?: number

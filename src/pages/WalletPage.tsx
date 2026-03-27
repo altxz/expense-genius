@@ -22,6 +22,7 @@ import { useToast } from '@/hooks/use-toast';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { format } from 'date-fns';
 import { pt } from 'date-fns/locale';
+import { useExchangeRates, convertToBRL, formatForeignCurrency, type ExchangeRates } from '@/hooks/useExchangeRates';
 
 // ─── Wallet types ───
 interface WalletRow {
@@ -29,6 +30,7 @@ interface WalletRow {
   user_id: string;
   name: string;
   asset_type: 'checking_account' | 'savings' | 'stocks' | 'crypto';
+  currency: string;
   current_balance: number;
   initial_balance: number;
   crypto_symbol: string | null;
@@ -53,6 +55,13 @@ const ASSET_ICONS: Record<string, typeof Wallet> = {
 
 const CHART_COLORS = ['hsl(var(--primary))', 'hsl(var(--accent))', 'hsl(var(--ai))', '#F59E0B'];
 
+const CURRENCY_OPTIONS = [
+  { value: 'BRL', label: 'Real (BRL)' },
+  { value: 'USD', label: 'Dólar (USD)' },
+  { value: 'EUR', label: 'Euro (EUR)' },
+  { value: 'BTC', label: 'Bitcoin (BTC)' },
+];
+
 const walletBalanceMap = new Map<string, number>();
 
 function getWalletValue(w: WalletRow): number {
@@ -61,6 +70,12 @@ function getWalletValue(w: WalletRow): number {
   }
   const txBalance = walletBalanceMap.get(w.id) || 0;
   return w.initial_balance + txBalance;
+}
+
+function getWalletValueBRL(w: WalletRow, rates: ExchangeRates | undefined): number {
+  const val = getWalletValue(w);
+  const converted = convertToBRL(val, w.currency, rates);
+  return converted ?? val;
 }
 
 // ─── Credit Card types ───
@@ -79,6 +94,7 @@ interface CreditCardRow {
 export default function WalletPage() {
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
+  const { data: rates } = useExchangeRates();
 
   // ─── Wallets state ───
   const [wallets, setWallets] = useState<WalletRow[]>([]);
@@ -86,7 +102,7 @@ export default function WalletPage() {
   const [walletModalOpen, setWalletModalOpen] = useState(false);
   const [walletSaving, setWalletSaving] = useState(false);
   const [walletForm, setWalletForm] = useState({
-    name: '', asset_type: 'checking_account' as string, current_balance: '',
+    name: '', asset_type: 'checking_account' as string, currency: 'BRL' as string, current_balance: '',
     crypto_symbol: '', crypto_amount: '', crypto_price: '',
   });
 
@@ -196,7 +212,7 @@ export default function WalletPage() {
 
 
   // ─── Wallet handlers ───
-  const resetWalletForm = () => setWalletForm({ name: '', asset_type: 'checking_account', current_balance: '', crypto_symbol: '', crypto_amount: '', crypto_price: '' });
+  const resetWalletForm = () => setWalletForm({ name: '', asset_type: 'checking_account', currency: 'BRL', current_balance: '', crypto_symbol: '', crypto_amount: '', crypto_price: '' });
 
   const handleAddWallet = async () => {
     if (!walletForm.name.trim()) {
@@ -209,6 +225,7 @@ export default function WalletPage() {
       user_id: user?.id,
       name: walletForm.name.trim(),
       asset_type: walletForm.asset_type,
+      currency: isCrypto ? 'BTC' : walletForm.currency,
       initial_balance: isCrypto ? 0 : parseFloat(walletForm.current_balance) || 0,
       current_balance: isCrypto ? 0 : parseFloat(walletForm.current_balance) || 0,
       crypto_symbol: isCrypto ? (walletForm.crypto_symbol.trim().toUpperCase() || 'BTC') : null,
@@ -298,13 +315,13 @@ export default function WalletPage() {
   };
 
   // ─── Computed data ───
-  const totalWealth = useMemo(() => wallets.reduce((s, w) => s + getWalletValue(w), 0), [wallets]);
+  const totalWealth = useMemo(() => wallets.reduce((s, w) => s + getWalletValueBRL(w, rates), 0), [wallets, rates]);
 
   const byType = useMemo(() => {
     const map: Record<string, number> = {};
-    wallets.forEach(w => { map[w.asset_type] = (map[w.asset_type] || 0) + getWalletValue(w); });
+    wallets.forEach(w => { map[w.asset_type] = (map[w.asset_type] || 0) + getWalletValueBRL(w, rates); });
     return Object.entries(map).map(([type, value]) => ({ name: ASSET_LABELS[type] || type, value }));
-  }, [wallets]);
+  }, [wallets, rates]);
 
   const grouped = useMemo(() => {
     const g: Record<string, WalletRow[]> = {};
@@ -415,7 +432,7 @@ export default function WalletPage() {
                 ) : (
                   Object.entries(grouped).map(([type, items]) => {
                     const Icon = ASSET_ICONS[type] || Wallet;
-                    const typeTotal = items.reduce((s, w) => s + getWalletValue(w), 0);
+                    const typeTotal = items.reduce((s, w) => s + getWalletValueBRL(w, rates), 0);
                     const pct = totalWealth > 0 ? (typeTotal / totalWealth) * 100 : 0;
                     return (
                       <div key={type} className="space-y-3">
@@ -430,6 +447,8 @@ export default function WalletPage() {
                         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                           {items.map(w => {
                             const val = getWalletValue(w);
+                            const valBRL = getWalletValueBRL(w, rates);
+                            const isForeign = w.currency !== 'BRL';
                             return (
                               <Card key={w.id} className="rounded-2xl hover:shadow-md transition-shadow">
                                 <CardContent className="p-5">
@@ -440,6 +459,9 @@ export default function WalletPage() {
                                         <p className="text-xs text-muted-foreground mt-0.5">
                                           {w.crypto_amount} {w.crypto_symbol} × {formatCurrency(w.crypto_price || 0)}
                                         </p>
+                                      )}
+                                      {isForeign && (
+                                        <Badge variant="outline" className="text-[10px] mt-1">{w.currency}</Badge>
                                       )}
                                     </div>
                                     <AlertDialog>
@@ -460,11 +482,18 @@ export default function WalletPage() {
                                       </AlertDialogContent>
                                     </AlertDialog>
                                   </div>
-                                  <p className="text-2xl font-bold mt-3">{formatCurrency(val)}</p>
+                                  {isForeign ? (
+                                    <div className="mt-3">
+                                      <p className="text-xl font-bold">{formatForeignCurrency(val, w.currency)}</p>
+                                      <p className="text-sm text-muted-foreground">≈ {formatCurrency(valBRL)}</p>
+                                    </div>
+                                  ) : (
+                                    <p className="text-2xl font-bold mt-3">{formatCurrency(val)}</p>
+                                  )}
                                   {totalWealth > 0 && (
                                     <div className="mt-2 space-y-1">
-                                      <Progress value={(val / totalWealth) * 100} className="h-1.5" />
-                                      <p className="text-[11px] text-muted-foreground">{((val / totalWealth) * 100).toFixed(1)}% do património</p>
+                                      <Progress value={(valBRL / totalWealth) * 100} className="h-1.5" />
+                                      <p className="text-[11px] text-muted-foreground">{((valBRL / totalWealth) * 100).toFixed(1)}% do património</p>
                                     </div>
                                   )}
                                 </CardContent>
@@ -761,10 +790,23 @@ export default function WalletPage() {
                 )}
               </>
             ) : (
-              <div className="space-y-2">
-                <Label>Saldo atual (R$)</Label>
-                <Input type="number" step="0.01" min="0" placeholder="0,00" value={walletForm.current_balance} onChange={e => setWalletForm(f => ({ ...f, current_balance: e.target.value }))} className="rounded-xl h-11" />
-              </div>
+              <>
+                <div className="space-y-2">
+                  <Label>Moeda</Label>
+                  <Select value={walletForm.currency} onValueChange={v => setWalletForm(f => ({ ...f, currency: v }))}>
+                    <SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {CURRENCY_OPTIONS.filter(c => c.value !== 'BTC').map(c => (
+                        <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Saldo atual ({walletForm.currency})</Label>
+                  <Input type="number" step="0.01" min="0" placeholder="0,00" value={walletForm.current_balance} onChange={e => setWalletForm(f => ({ ...f, current_balance: e.target.value }))} className="rounded-xl h-11" />
+                </div>
+              </>
             )}
           </div>
           <DialogFooter>
