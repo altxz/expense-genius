@@ -613,7 +613,7 @@ export function AddExpenseModal({ open, onOpenChange, onExpenseAdded }: AddExpen
                       {projects.length > 0 && (
                         <div className="space-y-1.5">
                           <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Projeto</Label>
-                          <Select value={projectId} onValueChange={setProjectId}>
+                          <Select value={projectId || 'none'} onValueChange={v => setProjectId(v === 'none' ? '' : v)}>
                             <SelectTrigger className="rounded-xl h-9 text-sm">
                               <SelectValue placeholder="Nenhum projeto" />
                             </SelectTrigger>
