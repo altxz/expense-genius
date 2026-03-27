@@ -30,6 +30,7 @@ interface WalletRow {
   user_id: string;
   name: string;
   asset_type: 'checking_account' | 'savings' | 'stocks' | 'crypto';
+  currency: string;
   current_balance: number;
   initial_balance: number;
   crypto_symbol: string | null;
@@ -53,6 +54,13 @@ const ASSET_ICONS: Record<string, typeof Wallet> = {
 };
 
 const CHART_COLORS = ['hsl(var(--primary))', 'hsl(var(--accent))', 'hsl(var(--ai))', '#F59E0B'];
+
+const CURRENCY_OPTIONS = [
+  { value: 'BRL', label: 'Real (BRL)' },
+  { value: 'USD', label: 'Dólar (USD)' },
+  { value: 'EUR', label: 'Euro (EUR)' },
+  { value: 'BTC', label: 'Bitcoin (BTC)' },
+];
 
 const walletBalanceMap = new Map<string, number>();
 
