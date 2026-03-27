@@ -1,4 +1,4 @@
-import { LayoutDashboard, Settings, BarChart3, Wallet, PiggyBank, ArrowLeftRight, DollarSign } from 'lucide-react';
+import { LayoutDashboard, Settings, BarChart3, Wallet, PiggyBank, ArrowLeftRight, DollarSign, FolderKanban } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import {
   Sidebar,
@@ -17,6 +17,7 @@ const items = [
   { title: 'Dashboard', url: '/', icon: LayoutDashboard },
   { title: 'Transações', url: '/historico', icon: ArrowLeftRight },
   { title: 'Orçamento', url: '/orcamento', icon: PiggyBank },
+  { title: 'Projetos', url: '/projetos', icon: FolderKanban },
   { title: 'Minha Carteira', url: '/wallet', icon: Wallet },
   { title: 'Configurações', url: '/configuracoes', icon: Settings },
 ];

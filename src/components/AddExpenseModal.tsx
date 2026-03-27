@@ -114,6 +114,8 @@ export function AddExpenseModal({ open, onOpenChange, onExpenseAdded }: AddExpen
   const [invoiceMonth, setInvoiceMonth] = useState<string>('');
   const [wallets, setWallets] = useState<WalletOption[]>([]);
   const [creditCards, setCreditCards] = useState<CreditCardOption[]>([]);
+  const [projects, setProjects] = useState<{ id: string; name: string; color: string }[]>([]);
+  const [projectId, setProjectId] = useState<string>('');
   const [categoryAi, setCategoryAi] = useState('');
   const [finalCategory, setFinalCategory] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
@@ -132,9 +134,11 @@ export function AddExpenseModal({ open, onOpenChange, onExpenseAdded }: AddExpen
     Promise.all([
       supabase.from('credit_cards').select('id, name, closing_day, due_day, closing_strategy, closing_days_before_due').eq('user_id', user.id).order('name'),
       supabase.from('wallets').select('id, name').eq('user_id', user.id).order('name'),
-    ]).then(([cards, walletsRes]) => {
+      supabase.from('projects').select('id, name, color').eq('user_id', user.id).order('name'),
+    ]).then(([cards, walletsRes, projectsRes]) => {
       setCreditCards((cards.data || []) as CreditCardOption[]);
       setWallets((walletsRes.data || []) as WalletOption[]);
+      setProjects((projectsRes.data || []) as { id: string; name: string; color: string }[]);
     });
   }, [user, open]);
 
@@ -250,6 +254,7 @@ export function AddExpenseModal({ open, onOpenChange, onExpenseAdded }: AddExpen
           tags: tags.length > 0 ? tags : null,
           installment_group_id: groupId,
           installment_info: `${i + 1}/${numInstallments}`,
+          project_id: projectId || null,
         };
       });
 
@@ -284,6 +289,7 @@ export function AddExpenseModal({ open, onOpenChange, onExpenseAdded }: AddExpen
         tags: tags.length > 0 ? tags : null,
         installment_group_id: null,
         installment_info: null,
+        project_id: projectId || null,
       });
       if (error) {
         toast({ title: 'Erro ao salvar', description: error.message, variant: 'destructive' });
@@ -317,6 +323,7 @@ export function AddExpenseModal({ open, onOpenChange, onExpenseAdded }: AddExpen
     setNotes('');
     setTags([]);
     setTagInput('');
+    setProjectId('');
   };
 
   const aiCategoryInfo = categoryAi ? getCategoryInfo(categoryAi) : null;
@@ -603,6 +610,27 @@ export function AddExpenseModal({ open, onOpenChange, onExpenseAdded }: AddExpen
                           </div>
                         )}
                       </div>
+                      {projects.length > 0 && (
+                        <div className="space-y-1.5">
+                          <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Projeto</Label>
+                          <Select value={projectId || 'none'} onValueChange={v => setProjectId(v === 'none' ? '' : v)}>
+                            <SelectTrigger className="rounded-xl h-9 text-sm">
+                              <SelectValue placeholder="Nenhum projeto" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">Nenhum</SelectItem>
+                              {projects.map(p => (
+                                <SelectItem key={p.id} value={p.id}>
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: p.color }} />
+                                    {p.name}
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
                     </div>
                   </AccordionContent>
                 </AccordionItem>
