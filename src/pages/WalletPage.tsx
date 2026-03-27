@@ -88,6 +88,7 @@ interface CreditCardRow {
 export default function WalletPage() {
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
+  const { data: rates } = useExchangeRates();
 
   // ─── Wallets state ───
   const [wallets, setWallets] = useState<WalletRow[]>([]);
@@ -95,7 +96,7 @@ export default function WalletPage() {
   const [walletModalOpen, setWalletModalOpen] = useState(false);
   const [walletSaving, setWalletSaving] = useState(false);
   const [walletForm, setWalletForm] = useState({
-    name: '', asset_type: 'checking_account' as string, current_balance: '',
+    name: '', asset_type: 'checking_account' as string, currency: 'BRL' as string, current_balance: '',
     crypto_symbol: '', crypto_amount: '', crypto_price: '',
   });
 
