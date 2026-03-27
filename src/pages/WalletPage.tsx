@@ -72,6 +72,12 @@ function getWalletValue(w: WalletRow): number {
   return w.initial_balance + txBalance;
 }
 
+function getWalletValueBRL(w: WalletRow, rates: ExchangeRates | undefined): number {
+  const val = getWalletValue(w);
+  const converted = convertToBRL(val, w.currency, rates);
+  return converted ?? val;
+}
+
 // ─── Credit Card types ───
 interface CreditCardRow {
   id: string;
@@ -309,13 +315,13 @@ export default function WalletPage() {
   };
 
   // ─── Computed data ───
-  const totalWealth = useMemo(() => wallets.reduce((s, w) => s + getWalletValue(w), 0), [wallets]);
+  const totalWealth = useMemo(() => wallets.reduce((s, w) => s + getWalletValueBRL(w, rates), 0), [wallets, rates]);
 
   const byType = useMemo(() => {
     const map: Record<string, number> = {};
-    wallets.forEach(w => { map[w.asset_type] = (map[w.asset_type] || 0) + getWalletValue(w); });
+    wallets.forEach(w => { map[w.asset_type] = (map[w.asset_type] || 0) + getWalletValueBRL(w, rates); });
     return Object.entries(map).map(([type, value]) => ({ name: ASSET_LABELS[type] || type, value }));
-  }, [wallets]);
+  }, [wallets, rates]);
 
   const grouped = useMemo(() => {
     const g: Record<string, WalletRow[]> = {};
