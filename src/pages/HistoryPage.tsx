@@ -36,13 +36,18 @@ const PAGE_SIZE = 15;
 export default function HistoryPage() {
   const { user, loading: authLoading } = useAuth();
   const { startDate, endDate } = useSelectedDate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const [expenses, setExpenses] = useState<ExpenseWithStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [search, setSearch] = useState('');
-  const [filters, setFilters] = useState({ status: 'all', category: 'all' });
+  const [filters, setFilters] = useState(() => ({
+    status: 'all',
+    category: searchParams.get('category') || 'all',
+    type: searchParams.get('type') || 'all',
+  }));
   const [allExpenses, setAllExpenses] = useState<ExpenseWithStatus[]>([]);
 
   // Subscriptions state
