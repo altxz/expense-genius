@@ -104,11 +104,16 @@ export function TransactionFeed({ expenses, loading, onDeleted, filters, onFilte
         <p className="text-center py-12 text-muted-foreground">Nenhuma transação encontrada.</p>
       ) : (
         <div className="space-y-6">
-          {grouped.map(([dateKey, items]) => (
+          {grouped.map(({ dateKey, items, endOfDayBalance }) => (
             <div key={dateKey}>
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2 px-1">
-                {formatGroupDate(dateKey)}
-              </h3>
+              <div className="flex items-center justify-between mb-2 px-1">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  {formatGroupDate(dateKey)}
+                </h3>
+                <span className={`text-xs font-semibold ${endOfDayBalance >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
+                  Saldo: {formatCurrency(Math.abs(endOfDayBalance))}
+                </span>
+              </div>
               <div className="rounded-2xl border bg-card overflow-hidden divide-y divide-border">
                 {items.map(exp => {
                   const catData = CATEGORY_ICONS[exp.final_category] || CATEGORY_ICONS.outros;
