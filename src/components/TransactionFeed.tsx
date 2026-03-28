@@ -191,7 +191,6 @@ export function TransactionFeed({ expenses, loading, onDeleted, page, totalPages
                       </div>
                     </div>
                   );
-                  );
                 })}
               </div>
             </div>
