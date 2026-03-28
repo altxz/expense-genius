@@ -312,6 +312,7 @@ export function ImportTransactionsModal({ open, onOpenChange, onImported }: Impo
                     <TableHead>Data</TableHead>
                     <TableHead>Descrição</TableHead>
                     <TableHead>Tipo</TableHead>
+                    <TableHead>Categoria</TableHead>
                     <TableHead className="text-right">Valor</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -331,6 +332,17 @@ export function ImportTransactionsModal({ open, onOpenChange, onImported }: Impo
                         }`}>
                           {t.type === 'income' ? 'Receita' : 'Despesa'}
                         </span>
+                      </TableCell>
+                      <TableCell>
+                        <Select value={t.category} onValueChange={(v) => updateCategory(i, v)}>
+                          <SelectTrigger className="h-8 w-[140px] text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {t.type === 'income' && <SelectItem value="salary">Salário</SelectItem>}
+                            {CATEGORIES.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
                       </TableCell>
                       <TableCell className={`text-right font-mono ${t.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
                         {t.type === 'income' ? '+' : '-'}{formatCurrency(t.value)}
