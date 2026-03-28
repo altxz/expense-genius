@@ -8,6 +8,7 @@ import { AddExpenseModal } from '@/components/AddExpenseModal';
 import { ImportTransactionsModal } from '@/components/ImportTransactionsModal';
 import { DashboardHeader } from '@/components/DashboardHeader';
 import { InstallPwaPrompt } from '@/components/InstallPwaPrompt';
+import { AnomalyInsights } from '@/components/analytics/AnomalyInsights';
 import { AppSidebar } from '@/components/AppSidebar';
 import { MonthSelector } from '@/components/MonthSelector';
 import { SidebarProvider } from '@/components/ui/sidebar';
@@ -210,6 +211,8 @@ export default function Dashboard() {
           <main className="flex-1 p-4 lg:p-8 space-y-6 overflow-auto">
             <InstallPwaPrompt />
             <MonthSelector />
+
+            <AnomalyInsights />
 
             {budgetAlerts.length > 0 && (
               <Alert variant="destructive" className="rounded-xl border-destructive/50 bg-destructive/10">
