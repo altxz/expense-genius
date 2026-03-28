@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { SummaryCards } from '@/components/SummaryCards';
@@ -9,6 +9,7 @@ import { AnomalyInsights } from '@/components/analytics/AnomalyInsights';
 import { AppSidebar } from '@/components/AppSidebar';
 import { MonthSelector } from '@/components/MonthSelector';
 import { SidebarProvider } from '@/components/ui/sidebar';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSelectedDate } from '@/contexts/DateContext';
 import { supabase } from '@/lib/supabase';
@@ -29,6 +30,29 @@ import { WeekComparisonChart } from '@/components/analytics/WeekComparisonChart'
 import { IncomeSourcesPie } from '@/components/analytics/IncomeSourcesPie';
 import type { Expense } from '@/components/ExpenseTable';
 
+function DashboardSkeleton() {
+  return (
+    <div className="space-y-6 animate-in fade-in duration-200">
+      {/* Summary Cards */}
+      <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+        {[1, 2, 3, 4].map(i => (
+          <Skeleton key={i} className="h-[88px] rounded-2xl" />
+        ))}
+      </div>
+      {/* CashFlow Chart */}
+      <Skeleton className="h-[340px] rounded-2xl" />
+      {/* Analytics Grid */}
+      <div className="grid gap-4 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
+        {[1, 2, 3, 4, 5, 6].map(i => (
+          <Skeleton key={i} className="h-[300px] rounded-2xl" />
+        ))}
+      </div>
+      {/* Calendar */}
+      <Skeleton className="h-[320px] rounded-2xl" />
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const { user, loading: authLoading } = useAuth();
   const { startDate, endDate, selectedMonth, selectedYear } = useSelectedDate();
@@ -38,6 +62,8 @@ export default function Dashboard() {
   const [hasOverdueCards, setHasOverdueCards] = useState(false);
   const [totalRealBalance, setTotalRealBalance] = useState(0);
   const [dbCategories, setDbCategories] = useState<any[]>([]);
+  const [dataLoading, setDataLoading] = useState(true);
+  const fetchCounterRef = useRef(0);
 
   // Previous month date range
   const prevMonth = selectedMonth === 0 ? 11 : selectedMonth - 1;
@@ -50,46 +76,47 @@ export default function Dashboard() {
   const [prevExpenses, setPrevExpenses] = useState<Expense[]>([]);
   const [budgetAlerts, setBudgetAlerts] = useState<string[]>([]);
 
-  const fetchExpenses = useCallback(async () => {
+  const fetchAllData = useCallback(async () => {
     if (!user) return;
-    const { data } = await supabase
-      .from('expenses')
-      .select('*')
-      .eq('user_id', user.id)
-      .gte('date', startDate)
-      .lt('date', endDate)
-      .order('date', { ascending: false });
-    setExpenses(data || []);
-  }, [user, startDate, endDate]);
+    const counter = ++fetchCounterRef.current;
+    setDataLoading(true);
 
-  const fetchPrevExpenses = useCallback(async () => {
-    if (!user) return;
-    const { data } = await supabase
-      .from('expenses').select('*').eq('user_id', user.id)
-      .gte('date', prevStartDate).lt('date', prevEndDate);
-    setPrevExpenses(data || []);
-  }, [user, prevStartDate, prevEndDate]);
+    try {
+      const [
+        { data: expData },
+        { data: prevExpData },
+        { data: catData },
+        { data: walletsData },
+        { data: allTxns },
+        { data: budgetData },
+        { data: budgetExpData },
+        { data: cards },
+      ] = await Promise.all([
+        supabase.from('expenses').select('*').eq('user_id', user.id)
+          .gte('date', startDate).lt('date', endDate).order('date', { ascending: false }),
+        supabase.from('expenses').select('*').eq('user_id', user.id)
+          .gte('date', prevStartDate).lt('date', prevEndDate),
+        supabase.from('categories').select('id, name, parent_id, icon, color')
+          .eq('user_id', user.id).order('sort_order'),
+        supabase.from('wallets').select('initial_balance').eq('user_id', user.id),
+        supabase.from('expenses').select('value, type, credit_card_id')
+          .eq('user_id', user.id).eq('is_paid', true),
+        supabase.from('budgets').select('category, allocated_amount')
+          .eq('user_id', user.id).eq('month_year', startDate),
+        supabase.from('expenses').select('final_category, value, type')
+          .eq('user_id', user.id).gte('date', startDate).lt('date', endDate),
+        supabase.from('credit_cards').select('due_day').eq('user_id', user.id),
+      ]);
 
-  useEffect(() => { fetchExpenses(); }, [fetchExpenses]);
-  useEffect(() => { fetchPrevExpenses(); }, [fetchPrevExpenses]);
+      // Stale check
+      if (counter !== fetchCounterRef.current) return;
 
-  useEffect(() => {
-    if (!user) return;
-    supabase.from('categories').select('id, name, parent_id, icon, color')
-      .eq('user_id', user.id).order('sort_order')
-      .then(({ data }) => setDbCategories(data || []));
-  }, [user]);
+      setExpenses(expData || []);
+      setPrevExpenses(prevExpData || []);
+      setDbCategories(catData || []);
 
-  // Total real balance
-  useEffect(() => {
-    if (!user) return;
-    (async () => {
-      const { data: walletsData } = await supabase
-        .from('wallets').select('initial_balance').eq('user_id', user.id);
-      const walletsTotal = (walletsData || []).reduce((s, w: any) => s + (w.initial_balance || 0), 0);
-      const { data: allTxns } = await supabase
-        .from('expenses').select('value, type, credit_card_id')
-        .eq('user_id', user.id).eq('is_paid', true);
+      // Real balance
+      const walletsTotal = (walletsData || []).reduce((s: number, w: any) => s + (w.initial_balance || 0), 0);
       let realBalance = walletsTotal;
       (allTxns || []).forEach((t: any) => {
         if (t.type === 'transfer') return;
@@ -97,22 +124,14 @@ export default function Dashboard() {
         else if (!t.credit_card_id) realBalance -= t.value;
       });
       setTotalRealBalance(realBalance);
-    })();
-  }, [user, startDate]);
 
-  // Budget alerts
-  useEffect(() => {
-    if (!user) return;
-    (async () => {
-      const [{ data: budgetData }, { data: expData }] = await Promise.all([
-        supabase.from('budgets').select('category, allocated_amount').eq('user_id', user.id).eq('month_year', startDate),
-        supabase.from('expenses').select('final_category, value, type').eq('user_id', user.id).gte('date', startDate).lt('date', endDate),
-      ]);
-      if (!budgetData || !expData) { setBudgetAlerts([]); return; }
+      // Budget alerts
       const spent: Record<string, number> = {};
-      expData.forEach((e: any) => { if (e.type !== 'income') spent[e.final_category] = (spent[e.final_category] || 0) + e.value; });
+      (budgetExpData || []).forEach((e: any) => {
+        if (e.type !== 'income') spent[e.final_category] = (spent[e.final_category] || 0) + e.value;
+      });
       const warnings: string[] = [];
-      budgetData.forEach((b: any) => {
+      (budgetData || []).forEach((b: any) => {
         if (b.allocated_amount > 0) {
           const pct = (spent[b.category] || 0) / b.allocated_amount * 100;
           if (pct >= 80) warnings.push(getCategoryInfo(b.category).label);
@@ -120,21 +139,21 @@ export default function Dashboard() {
       });
       setBudgetAlerts(warnings);
       setBudgetTotals({
-        totalBudget: budgetData.reduce((s: number, b: any) => s + (b.allocated_amount || 0), 0),
+        totalBudget: (budgetData || []).reduce((s: number, b: any) => s + (b.allocated_amount || 0), 0),
         totalSpent: Object.values(spent).reduce((s: number, v: number) => s + v, 0),
       });
-    })();
-  }, [user, startDate, endDate]);
 
-  // Overdue cards
-  useEffect(() => {
-    if (!user) return;
-    (async () => {
+      // Overdue cards
       const today = new Date();
-      const { data: cards } = await supabase.from('credit_cards').select('due_day').eq('user_id', user.id);
       setHasOverdueCards(cards ? cards.some((c: any) => c.due_day < today.getDate()) : false);
-    })();
-  }, [user]);
+    } finally {
+      if (counter === fetchCounterRef.current) {
+        setDataLoading(false);
+      }
+    }
+  }, [user, startDate, endDate, prevStartDate, prevEndDate]);
+
+  useEffect(() => { fetchAllData(); }, [fetchAllData]);
 
   const summary = useMemo(() => {
     const nonTransfers = expenses.filter(e => e.type !== 'transfer');
@@ -172,58 +191,65 @@ export default function Dashboard() {
           <main className="flex-1 p-4 lg:p-8 space-y-6 overflow-auto">
             <InstallPwaPrompt />
             <MonthSelector />
-            <AnomalyInsights />
 
-            {budgetAlerts.length > 0 && (
-              <Alert variant="destructive" className="rounded-xl border-destructive/50 bg-destructive/10">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertDescription className="font-medium text-sm">
-                  Atenção: Estás quase a ultrapassar o teu orçamento em{' '}
-                  <span className="font-bold">{budgetAlerts.join(' e ')}</span>!
-                </AlertDescription>
-              </Alert>
+            {dataLoading ? (
+              <DashboardSkeleton />
+            ) : (
+              <>
+                <AnomalyInsights />
+
+                {budgetAlerts.length > 0 && (
+                  <Alert variant="destructive" className="rounded-xl border-destructive/50 bg-destructive/10">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription className="font-medium text-sm">
+                      Atenção: Estás quase a ultrapassar o teu orçamento em{' '}
+                      <span className="font-bold">{budgetAlerts.join(' e ')}</span>!
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-4 items-start">
+                  <SummaryCards
+                    balance={totalRealBalance}
+                    totalIncome={summary.totalIncome}
+                    totalExpense={summary.totalExpense}
+                    largestCategory={summary.largestCategory}
+                    prevBalance={prevSummary.balance}
+                    prevIncome={prevSummary.totalIncome}
+                    prevExpense={prevSummary.totalExpense}
+                  />
+                  <HealthScore
+                    totalIncome={summary.totalIncome}
+                    totalExpense={summary.totalExpense}
+                    totalBudget={budgetTotals.totalBudget}
+                    totalSpentInBudget={budgetTotals.totalSpent}
+                    hasOverdueCards={hasOverdueCards}
+                  />
+                </div>
+
+                <CashFlowChart />
+
+                {/* Analytics Grid */}
+                <div className="grid gap-4 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
+                  <IncomeVsExpenseChart />
+                  <TopCategoriesPie expenses={expenses} categories={dbCategories} />
+                  <SavingsRateGauge totalIncome={summary.totalIncome} totalExpense={summary.totalExpense} />
+                  <EndOfMonthForecast />
+                  <DailySpendingChart expenses={expenses} />
+                  <CreditUsageChart />
+                  <FixedVsVariableChart expenses={expenses} />
+                  <SubcategoryTreemap expenses={expenses} categories={dbCategories} />
+                  <WeekComparisonChart expenses={expenses} />
+                  <IncomeSourcesPie expenses={expenses} categories={dbCategories} />
+                </div>
+
+                <CalendarView />
+              </>
             )}
-
-            <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-4 items-start">
-              <SummaryCards
-                balance={totalRealBalance}
-                totalIncome={summary.totalIncome}
-                totalExpense={summary.totalExpense}
-                largestCategory={summary.largestCategory}
-                prevBalance={prevSummary.balance}
-                prevIncome={prevSummary.totalIncome}
-                prevExpense={prevSummary.totalExpense}
-              />
-              <HealthScore
-                totalIncome={summary.totalIncome}
-                totalExpense={summary.totalExpense}
-                totalBudget={budgetTotals.totalBudget}
-                totalSpentInBudget={budgetTotals.totalSpent}
-                hasOverdueCards={hasOverdueCards}
-              />
-            </div>
-
-            <CashFlowChart />
-
-            {/* Analytics Grid */}
-            <div className="grid gap-4 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
-              <IncomeVsExpenseChart />
-              <TopCategoriesPie expenses={expenses} categories={dbCategories} />
-              <SavingsRateGauge totalIncome={summary.totalIncome} totalExpense={summary.totalExpense} />
-              <EndOfMonthForecast />
-              <DailySpendingChart expenses={expenses} />
-              <CreditUsageChart />
-              <FixedVsVariableChart expenses={expenses} />
-              <SubcategoryTreemap expenses={expenses} categories={dbCategories} />
-              <WeekComparisonChart expenses={expenses} />
-              <IncomeSourcesPie expenses={expenses} categories={dbCategories} />
-            </div>
-
-            <CalendarView />
           </main>
         </div>
       </div>
-      <AddExpenseModal open={modalOpen} onOpenChange={setModalOpen} onExpenseAdded={fetchExpenses} />
+      <AddExpenseModal open={modalOpen} onOpenChange={setModalOpen} onExpenseAdded={fetchAllData} />
     </SidebarProvider>
   );
 }
