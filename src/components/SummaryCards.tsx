@@ -44,7 +44,7 @@ export function SummaryCards({ balance, totalIncome, totalExpense, largestCatego
   const navigate = useNavigate();
 
   return (
-    <div className="grid gap-3 grid-cols-2 xl:grid-cols-4">
+    <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
       <Card className="rounded-2xl border-0 shadow-md bg-primary text-primary-foreground">
         <CardContent className="p-3 sm:p-6">
           <div className="flex items-center gap-2 sm:gap-4">
@@ -102,7 +102,7 @@ export function SummaryCards({ balance, totalIncome, totalExpense, largestCatego
         </CardContent>
       </Card>
       <Card
-        className={`rounded-2xl border-0 shadow-md bg-pink text-pink-foreground col-span-2 xl:col-span-1 ${largestCategory ? 'cursor-pointer hover:opacity-90 transition-opacity' : ''}`}
+        className={`rounded-2xl border-0 shadow-md bg-pink text-pink-foreground ${largestCategory ? 'cursor-pointer hover:opacity-90 transition-opacity' : ''}`}
         onClick={() => largestCategory && navigate(`/historico?category=${encodeURIComponent(largestCategory.categoryKey)}`)}
       >
         <CardContent className="p-3 sm:p-6">
