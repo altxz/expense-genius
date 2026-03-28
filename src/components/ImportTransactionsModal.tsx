@@ -193,7 +193,12 @@ export function ImportTransactionsModal({ open, onOpenChange, onImported }: Impo
     setTransactions(prev => prev.map((t, i) => i === index ? { ...t, selected: !t.selected } : t));
   };
 
+  const updateCategory = (index: number, category: string) => {
+    setTransactions(prev => prev.map((t, i) => i === index ? { ...t, category } : t));
+  };
+
   const selectedCount = transactions.filter(t => t.selected).length;
+  const rulesAppliedCount = transactions.filter(t => t.type === 'expense' && t.category !== 'outros').length;
 
   const handleImport = async () => {
     if (!user || !walletId) return;
@@ -207,7 +212,7 @@ export function ImportTransactionsModal({ open, onOpenChange, onImported }: Impo
       description: t.description,
       value: t.value,
       type: t.type,
-      final_category: t.type === 'income' ? 'salary' : 'other',
+      final_category: t.category,
       wallet_id: walletId,
     }));
 
