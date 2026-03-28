@@ -5,10 +5,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Upload, FileSpreadsheet, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Upload, FileSpreadsheet, Loader2, AlertCircle, CheckCircle2, Zap } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { CATEGORIES } from '@/lib/constants';
 
 interface ParsedTransaction {
   date: string;
@@ -16,6 +17,13 @@ interface ParsedTransaction {
   value: number;
   type: 'income' | 'expense';
   selected: boolean;
+  category: string;
+}
+
+interface AutomationRule {
+  condition_operator: string;
+  condition_value: string;
+  target_category: string;
 }
 
 interface WalletOption {
@@ -85,6 +93,7 @@ function parseCSV(text: string): ParsedTransaction[] {
       value: Math.abs(numericValue),
       type: isIncome ? 'income' : 'expense',
       selected: true,
+      category: isIncome ? 'salary' : 'outros',
     });
   }
 
@@ -103,13 +112,35 @@ export function ImportTransactionsModal({ open, onOpenChange, onImported }: Impo
   const [fileName, setFileName] = useState('');
   const [importing, setImporting] = useState(false);
   const [step, setStep] = useState<'upload' | 'preview'>('upload');
+  const [rules, setRules] = useState<AutomationRule[]>([]);
 
   useEffect(() => {
     if (!open || !user) return;
-    supabase.from('wallets').select('id, name').eq('user_id', user.id).then(({ data }) => {
-      setWallets(data || []);
+    Promise.all([
+      supabase.from('wallets').select('id, name').eq('user_id', user.id),
+      supabase.from('automation_rules').select('condition_operator, condition_value, target_category').eq('user_id', user.id).eq('active', true),
+    ]).then(([walletsRes, rulesRes]) => {
+      setWallets(walletsRes.data || []);
+      setRules(rulesRes.data || []);
     });
   }, [open, user]);
+
+  const applyRules = (txns: ParsedTransaction[], activeRules: AutomationRule[]): ParsedTransaction[] => {
+    if (activeRules.length === 0) return txns;
+    return txns.map(t => {
+      if (t.type === 'income') return t;
+      const descLower = t.description.toLowerCase();
+      for (const rule of activeRules) {
+        const val = rule.condition_value.toLowerCase();
+        const match =
+          rule.condition_operator === 'contains' ? descLower.includes(val) :
+          rule.condition_operator === 'starts_with' ? descLower.startsWith(val) :
+          rule.condition_operator === 'equals' ? descLower === val : false;
+        if (match) return { ...t, category: rule.target_category };
+      }
+      return t;
+    });
+  };
 
   const reset = () => {
     setTransactions([]);
@@ -136,7 +167,7 @@ export function ImportTransactionsModal({ open, onOpenChange, onImported }: Impo
         toast({ title: 'CSV inválido', description: 'Não foi possível encontrar colunas de Data, Descrição e Valor.', variant: 'destructive' });
         return;
       }
-      setTransactions(parsed);
+      setTransactions(applyRules(parsed, rules));
       setStep('preview');
     };
     reader.readAsText(file);
@@ -162,7 +193,12 @@ export function ImportTransactionsModal({ open, onOpenChange, onImported }: Impo
     setTransactions(prev => prev.map((t, i) => i === index ? { ...t, selected: !t.selected } : t));
   };
 
+  const updateCategory = (index: number, category: string) => {
+    setTransactions(prev => prev.map((t, i) => i === index ? { ...t, category } : t));
+  };
+
   const selectedCount = transactions.filter(t => t.selected).length;
+  const rulesAppliedCount = transactions.filter(t => t.type === 'expense' && t.category !== 'outros').length;
 
   const handleImport = async () => {
     if (!user || !walletId) return;
@@ -176,7 +212,7 @@ export function ImportTransactionsModal({ open, onOpenChange, onImported }: Impo
       description: t.description,
       value: t.value,
       type: t.type,
-      final_category: t.type === 'income' ? 'salary' : 'other',
+      final_category: t.category,
       wallet_id: walletId,
     }));
 
@@ -235,6 +271,11 @@ export function ImportTransactionsModal({ open, onOpenChange, onImported }: Impo
                 <CheckCircle2 className="h-4 w-4 text-green-500" />
                 <span className="font-medium text-foreground">{fileName}</span>
                 <span>— {transactions.length} transações encontradas</span>
+                {rulesAppliedCount > 0 && (
+                  <span className="flex items-center gap-1 text-xs text-accent-foreground bg-accent/20 px-2 py-0.5 rounded-full">
+                    <Zap className="h-3 w-3" />{rulesAppliedCount} categorizadas por regras
+                  </span>
+                )}
               </div>
               <div className="flex items-center gap-3">
                 <Label className="text-sm whitespace-nowrap">Conta de destino:</Label>
@@ -271,6 +312,7 @@ export function ImportTransactionsModal({ open, onOpenChange, onImported }: Impo
                     <TableHead>Data</TableHead>
                     <TableHead>Descrição</TableHead>
                     <TableHead>Tipo</TableHead>
+                    <TableHead>Categoria</TableHead>
                     <TableHead className="text-right">Valor</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -290,6 +332,17 @@ export function ImportTransactionsModal({ open, onOpenChange, onImported }: Impo
                         }`}>
                           {t.type === 'income' ? 'Receita' : 'Despesa'}
                         </span>
+                      </TableCell>
+                      <TableCell>
+                        <Select value={t.category} onValueChange={(v) => updateCategory(i, v)}>
+                          <SelectTrigger className="h-8 w-[140px] text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {t.type === 'income' && <SelectItem value="salary">Salário</SelectItem>}
+                            {CATEGORIES.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
                       </TableCell>
                       <TableCell className={`text-right font-mono ${t.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
                         {t.type === 'income' ? '+' : '-'}{formatCurrency(t.value)}
