@@ -29,6 +29,7 @@ import { SavingsRateGauge } from '@/components/analytics/SavingsRateGauge';
 import { WeekComparisonChart } from '@/components/analytics/WeekComparisonChart';
 import { IncomeSourcesPie } from '@/components/analytics/IncomeSourcesPie';
 import { WaterfallChart } from '@/components/analytics/WaterfallChart';
+import { SpendingHeatmap } from '@/components/analytics/SpendingHeatmap';
 import type { Expense } from '@/components/ExpenseTable';
 
 function DashboardSkeleton() {
@@ -243,6 +244,7 @@ export default function Dashboard() {
                   <SubcategoryTreemap expenses={expenses} categories={dbCategories} />
                   <WeekComparisonChart expenses={expenses} />
                   <IncomeSourcesPie expenses={expenses} categories={dbCategories} />
+                  <SpendingHeatmap expenses={expenses} />
                 </div>
 
                 <CalendarView />
