@@ -70,6 +70,7 @@ export default function HistoryPage() {
     setAllExpenses(all);
 
     let filtered = all;
+    if (filters.type !== 'all') filtered = filtered.filter((e: any) => e.type === filters.type);
     if (filters.status !== 'all') filtered = filtered.filter(e => e.status === filters.status);
     if (filters.category !== 'all') filtered = filtered.filter(e => e.final_category === filters.category);
     if (search.trim()) filtered = filtered.filter(e => e.description.toLowerCase().includes(search.toLowerCase()));
@@ -216,6 +217,15 @@ export default function HistoryPage() {
                       <SelectContent>
                         <SelectItem value="all">Todas categorias</SelectItem>
                         {CATEGORIES.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <Select value={filters.type} onValueChange={v => handleFilterChange('type', v)}>
+                      <SelectTrigger className="w-[120px] sm:w-[160px] rounded-xl text-sm"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos tipos</SelectItem>
+                        <SelectItem value="income">📈 Receitas</SelectItem>
+                        <SelectItem value="expense">📉 Despesas</SelectItem>
+                        <SelectItem value="transfer">🔄 Transferências</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
