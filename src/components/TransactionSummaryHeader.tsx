@@ -1,0 +1,98 @@
+import { useState, useMemo } from 'react';
+import { Eye, EyeOff, ArrowUpCircle, ArrowDownCircle, Scale } from 'lucide-react';
+import { useSelectedDate } from '@/contexts/DateContext';
+import { formatCurrency } from '@/lib/constants';
+import type { Expense } from '@/components/ExpenseTable';
+
+interface TransactionSummaryHeaderProps {
+  expenses: Expense[];
+  startingMonthBalance: number;
+}
+
+export function TransactionSummaryHeader({ expenses, startingMonthBalance }: TransactionSummaryHeaderProps) {
+  const [visible, setVisible] = useState(true);
+  const { selectedMonth, selectedYear } = useSelectedDate();
+
+  const now = new Date();
+  const isCurrentMonth = now.getMonth() === selectedMonth && now.getFullYear() === selectedYear;
+  const isFutureMonth = selectedYear > now.getFullYear() || (selectedYear === now.getFullYear() && selectedMonth > now.getMonth());
+
+  const label = isFutureMonth ? 'Saldo previsto' : isCurrentMonth ? 'Saldo atual' : 'Saldo final';
+
+  const { totalIncome, totalExpense } = useMemo(() => {
+    let income = 0;
+    let expense = 0;
+    expenses.forEach(e => {
+      if (e.type === 'transfer') return;
+      if (e.type === 'income') income += e.value;
+      else if (!e.credit_card_id) expense += e.value;
+    });
+    return { totalIncome: income, totalExpense: expense };
+  }, [expenses]);
+
+  const balance = totalIncome - totalExpense;
+  const currentBalance = startingMonthBalance + totalIncome - totalExpense;
+
+  const mask = '••••••';
+
+  return (
+    <div className="rounded-2xl bg-primary text-primary-foreground p-4 sm:p-6 shadow-lg">
+      {/* Top: label + eye toggle */}
+      <div className="flex items-center justify-center gap-2 mb-1">
+        <span className="text-xs sm:text-sm font-medium opacity-80">{label}</span>
+        <button
+          onClick={() => setVisible(v => !v)}
+          className="opacity-70 hover:opacity-100 transition-opacity"
+          aria-label={visible ? 'Ocultar valores' : 'Mostrar valores'}
+        >
+          {visible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+        </button>
+      </div>
+
+      {/* Main balance */}
+      <p className="text-center text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight">
+        {visible ? formatCurrency(currentBalance) : mask}
+      </p>
+
+      {/* Three columns */}
+      <div className="grid grid-cols-3 gap-2 mt-4 sm:mt-6 pt-4 border-t border-primary-foreground/20">
+        {/* Receitas */}
+        <div className="flex flex-col items-center gap-1">
+          <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center">
+            <ArrowUpCircle className="h-4 w-4 text-emerald-300" />
+          </div>
+          <span className="text-[10px] sm:text-xs opacity-70">Receitas</span>
+          <span className="text-xs sm:text-sm font-bold">
+            {visible ? formatCurrency(totalIncome) : mask}
+          </span>
+        </div>
+
+        {/* Despesas */}
+        <div className="flex flex-col items-center gap-1">
+          <div className="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center">
+            <ArrowDownCircle className="h-4 w-4 text-red-300" />
+          </div>
+          <span className="text-[10px] sm:text-xs opacity-70">Despesas</span>
+          <span className="text-xs sm:text-sm font-bold">
+            {visible ? formatCurrency(totalExpense) : mask}
+          </span>
+        </div>
+
+        {/* Balanço */}
+        <div className="flex flex-col items-center gap-1">
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+            balance >= 0 ? 'bg-emerald-500/20' : 'bg-red-500/20'
+          }`}>
+            <Scale className={`h-4 w-4 ${balance >= 0 ? 'text-emerald-300' : 'text-red-300'}`} />
+          </div>
+          <span className="text-[10px] sm:text-xs opacity-70">Balanço</span>
+          <span className={`text-xs sm:text-sm font-bold ${
+            balance >= 0 ? 'text-emerald-300' : 'text-red-300'
+          }`}>
+            {visible ? (balance >= 0 ? '+' : '') + formatCurrency(balance) : mask}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
