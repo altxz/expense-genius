@@ -112,19 +112,34 @@ export function ImportTransactionsModal({ open, onOpenChange, onImported }: Impo
   const [fileName, setFileName] = useState('');
   const [importing, setImporting] = useState(false);
   const [step, setStep] = useState<'upload' | 'preview'>('upload');
+  const [rules, setRules] = useState<AutomationRule[]>([]);
 
   useEffect(() => {
     if (!open || !user) return;
-    supabase.from('wallets').select('id, name').eq('user_id', user.id).then(({ data }) => {
-      setWallets(data || []);
+    Promise.all([
+      supabase.from('wallets').select('id, name').eq('user_id', user.id),
+      supabase.from('automation_rules').select('condition_operator, condition_value, target_category').eq('user_id', user.id).eq('active', true),
+    ]).then(([walletsRes, rulesRes]) => {
+      setWallets(walletsRes.data || []);
+      setRules(rulesRes.data || []);
     });
   }, [open, user]);
 
-  const reset = () => {
-    setTransactions([]);
-    setFileName('');
-    setWalletId('');
-    setStep('upload');
+  const applyRules = (txns: ParsedTransaction[], activeRules: AutomationRule[]): ParsedTransaction[] => {
+    if (activeRules.length === 0) return txns;
+    return txns.map(t => {
+      if (t.type === 'income') return t;
+      const descLower = t.description.toLowerCase();
+      for (const rule of activeRules) {
+        const val = rule.condition_value.toLowerCase();
+        const match =
+          rule.condition_operator === 'contains' ? descLower.includes(val) :
+          rule.condition_operator === 'starts_with' ? descLower.startsWith(val) :
+          rule.condition_operator === 'equals' ? descLower === val : false;
+        if (match) return { ...t, category: rule.target_category };
+      }
+      return t;
+    });
   };
 
   useEffect(() => {
