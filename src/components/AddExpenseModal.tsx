@@ -544,8 +544,29 @@ export function AddExpenseModal({ open, onOpenChange, onExpenseAdded }: AddExpen
                 )}
                 <Select value={finalCategory} onValueChange={setFinalCategory}>
                   <SelectTrigger className="rounded-xl h-11"><SelectValue placeholder="Selecione a categoria" /></SelectTrigger>
-                  <SelectContent>
-                    {CATEGORIES.map(cat => <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>)}
+                  <SelectContent className="max-h-64">
+                    {groupedCategories.length > 0 ? (
+                      groupedCategories.map(group => (
+                        <SelectGroup key={group.id}>
+                          <SelectLabel className="font-bold text-xs text-muted-foreground uppercase tracking-wider px-2 pt-2">
+                            {group.name}
+                          </SelectLabel>
+                          {group.subs.length > 0 ? (
+                            group.subs.map(sub => (
+                              <SelectItem key={sub.id} value={sub.name.toLowerCase()}>
+                                <span className="pl-2">{sub.name}</span>
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <SelectItem value={group.name.toLowerCase()}>
+                              {group.name}
+                            </SelectItem>
+                          )}
+                        </SelectGroup>
+                      ))
+                    ) : (
+                      CATEGORIES.map(cat => <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>)
+                    )}
                   </SelectContent>
                 </Select>
               </div>
