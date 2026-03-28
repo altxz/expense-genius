@@ -17,6 +17,7 @@ import { supabase } from '@/lib/supabase';
 import { getCategoryInfo, CATEGORIES } from '@/lib/constants';
 import { Navigate } from 'react-router-dom';
 import { CashFlowChart } from '@/components/CashFlowChart';
+import { HealthScore } from '@/components/HealthScore';
 import { CalendarView } from '@/components/CalendarView';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { Expense } from '@/components/ExpenseTable';
@@ -34,6 +35,8 @@ export default function Dashboard() {
   const [totalCount, setTotalCount] = useState(0);
   const [filters, setFilters] = useState({ category: 'all' });
   const [wallets, setWallets] = useState<{ id: string; name: string }[]>([]);
+  const [budgetTotals, setBudgetTotals] = useState({ totalBudget: 0, totalSpent: 0 });
+  const [hasOverdueCards, setHasOverdueCards] = useState(false);
 
   // Compute previous month date range
   const { selectedMonth, selectedYear } = useSelectedDate();
@@ -115,8 +118,23 @@ export default function Dashboard() {
         }
       });
       setBudgetAlerts(warnings);
+      const tBudget = budgetData.reduce((s: number, b: any) => s + (b.allocated_amount || 0), 0);
+      const tSpent = Object.values(spent).reduce((s: number, v: number) => s + v, 0);
+      setBudgetTotals({ totalBudget: tBudget, totalSpent: tSpent });
     })();
   }, [user, startDate, endDate]);
+
+  // Check overdue credit card bills
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      const today = new Date();
+      const { data: cards } = await supabase.from('credit_cards').select('due_day').eq('user_id', user.id);
+      if (!cards) { setHasOverdueCards(false); return; }
+      const overdue = cards.some((c: any) => c.due_day < today.getDate());
+      setHasOverdueCards(overdue);
+    })();
+  }, [user]);
 
   const handleFilterChange = (key: string, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value }));
@@ -197,7 +215,8 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <SummaryCards
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-4 items-start">
+              <SummaryCards
               balance={summary.balance}
               totalIncome={summary.totalIncome}
               totalExpense={summary.totalExpense}
@@ -206,6 +225,14 @@ export default function Dashboard() {
               prevIncome={prevSummary.totalIncome}
               prevExpense={prevSummary.totalExpense}
             />
+              <HealthScore
+                totalIncome={summary.totalIncome}
+                totalExpense={summary.totalExpense}
+                totalBudget={budgetTotals.totalBudget}
+                totalSpentInBudget={budgetTotals.totalSpent}
+                hasOverdueCards={hasOverdueCards}
+              />
+            </div>
 
             <CashFlowChart />
 
