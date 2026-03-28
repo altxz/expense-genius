@@ -17,6 +17,7 @@ import { Search, Download, ArrowUpCircle, ArrowDownCircle, CalendarClock, Wallet
 import { CATEGORIES, formatCurrency } from '@/lib/constants';
 import { useToast } from '@/hooks/use-toast';
 import { TransactionFeed } from '@/components/TransactionFeed';
+import { TransactionSummaryHeader } from '@/components/TransactionSummaryHeader';
 import type { Expense } from '@/components/ExpenseTable';
 
 const PAGE_SIZE = 30;
@@ -143,6 +144,7 @@ export default function HistoryPage() {
           <DashboardHeader />
           <main className="flex-1 p-3 sm:p-4 lg:p-8 space-y-4 sm:space-y-6 overflow-auto">
             <MonthSelector />
+            <TransactionSummaryHeader expenses={allExpenses} startingMonthBalance={startingMonthBalance} />
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Transações</h1>
