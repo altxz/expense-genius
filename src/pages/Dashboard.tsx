@@ -212,6 +212,8 @@ export default function Dashboard() {
             <InstallPwaPrompt />
             <MonthSelector />
 
+            <AnomalyInsights />
+
             {budgetAlerts.length > 0 && (
               <Alert variant="destructive" className="rounded-xl border-destructive/50 bg-destructive/10">
                 <AlertTriangle className="h-4 w-4" />
