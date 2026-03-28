@@ -127,6 +127,7 @@ export default function CategoriesPage() {
         icon: form.icon,
         color: form.color,
         keywords,
+        parent_id: form.parent_id || null,
       }).eq('id', editingCategory.id);
       if (error) toast({ title: 'Erro', description: error.message, variant: 'destructive' });
       else toast({ title: 'Categoria atualizada!' });
@@ -138,6 +139,7 @@ export default function CategoriesPage() {
         color: form.color,
         keywords,
         sort_order: categories.length,
+        parent_id: form.parent_id || null,
       });
       if (error) toast({ title: 'Erro', description: error.message, variant: 'destructive' });
       else toast({ title: 'Categoria criada!' });
