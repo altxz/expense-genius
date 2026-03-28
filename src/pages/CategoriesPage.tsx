@@ -103,13 +103,13 @@ export default function CategoriesPage() {
 
   const openCreateModal = () => {
     setEditingCategory(null);
-    setForm({ name: '', icon: 'tag', color: '#5447BC', keywords: '' });
+    setForm({ name: '', icon: 'tag', color: '#5447BC', keywords: '', parent_id: '' });
     setModalOpen(true);
   };
 
   const openEditModal = (cat: Category) => {
     setEditingCategory(cat);
-    setForm({ name: cat.name, icon: cat.icon, color: cat.color, keywords: (cat.keywords || []).join(', ') });
+    setForm({ name: cat.name, icon: cat.icon, color: cat.color, keywords: (cat.keywords || []).join(', '), parent_id: cat.parent_id || '' });
     setModalOpen(true);
   };
 
