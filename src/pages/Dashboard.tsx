@@ -106,6 +106,14 @@ export default function Dashboard() {
   useEffect(() => { fetchExpenses(); }, [fetchExpenses]);
   useEffect(() => { fetchPrevExpenses(); }, [fetchPrevExpenses]);
 
+  // Fetch categories for chart components
+  useEffect(() => {
+    if (!user) return;
+    supabase.from('categories').select('id, name, parent_id, icon, color')
+      .eq('user_id', user.id).order('sort_order')
+      .then(({ data }) => setDbCategories(data || []));
+  }, [user]);
+
   // Fetch wallets + starting month balance
   useEffect(() => {
     if (!user) return;
