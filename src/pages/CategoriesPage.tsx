@@ -14,9 +14,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { PlusCircle, Pencil, Eye, BarChart3, Trash2, Tag, Loader2 } from 'lucide-react';
+import { PlusCircle, Pencil, BarChart3, Trash2, Tag, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { CATEGORIES } from '@/lib/constants';
 import { icons } from 'lucide-react';
 
 interface Category {
@@ -27,6 +26,7 @@ interface Category {
   keywords: string[];
   active: boolean;
   sort_order: number;
+  parent_id?: string | null;
   expense_count?: number;
   ai_accuracy?: number;
 }
@@ -57,21 +57,19 @@ export default function CategoriesPage() {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
-  const [form, setForm] = useState({ name: '', icon: 'tag', color: '#5447BC', keywords: '' });
+  const [form, setForm] = useState({ name: '', icon: 'tag', color: '#5447BC', keywords: '', parent_id: '' });
   const [saving, setSaving] = useState(false);
 
   const fetchCategories = useCallback(async () => {
     if (!user) return;
     setLoading(true);
 
-    // Fetch user custom categories
-    const { data: customCats } = await supabase
+    const { data: allCats } = await supabase
       .from('categories')
       .select('*')
       .eq('user_id', user.id)
       .order('sort_order');
 
-    // Fetch expense counts per category
     const { data: expenses } = await supabase
       .from('expenses')
       .select('final_category, category_ai')
@@ -91,26 +89,13 @@ export default function CategoriesPage() {
       }
     });
 
-    // Merge default + custom categories
-    const defaults: Category[] = CATEGORIES.map((c, i) => ({
-      id: `default-${c.value}`,
-      name: c.label,
-      icon: c.value === 'alimentacao' ? 'utensils' : c.value === 'transporte' ? 'car' : c.value === 'lazer' ? 'gamepad-2' : c.value === 'saude' ? 'heart-pulse' : c.value === 'moradia' ? 'house' : c.value === 'educacao' ? 'graduation-cap' : 'tag',
-      color: c.value === 'alimentacao' ? '#F97316' : c.value === 'transporte' ? '#4B6DFB' : c.value === 'lazer' ? '#DA90FC' : c.value === 'saude' ? '#EF4444' : c.value === 'moradia' ? '#14B8A6' : c.value === 'educacao' ? '#F59E0B' : '#8B5CF6',
-      keywords: [],
-      active: true,
-      sort_order: i,
-      expense_count: countMap[c.value] || 0,
-      ai_accuracy: totalMap[c.value] ? Math.round((correctMap[c.value] || 0) / totalMap[c.value] * 100) : undefined,
-    }));
-
-    const custom = (customCats || []).map(c => ({
+    const mapped: Category[] = (allCats || []).map(c => ({
       ...c,
-      expense_count: countMap[c.name.toLowerCase()] || 0,
-      ai_accuracy: undefined,
+      expense_count: countMap[c.name.toLowerCase()] || countMap[c.name] || 0,
+      ai_accuracy: totalMap[c.name] ? Math.round((correctMap[c.name] || 0) / totalMap[c.name] * 100) : undefined,
     }));
 
-    setCategories([...defaults, ...custom]);
+    setCategories(mapped);
     setLoading(false);
   }, [user]);
 
@@ -118,14 +103,13 @@ export default function CategoriesPage() {
 
   const openCreateModal = () => {
     setEditingCategory(null);
-    setForm({ name: '', icon: 'tag', color: '#5447BC', keywords: '' });
+    setForm({ name: '', icon: 'tag', color: '#5447BC', keywords: '', parent_id: '' });
     setModalOpen(true);
   };
 
   const openEditModal = (cat: Category) => {
-    if (cat.id.startsWith('default-')) return;
     setEditingCategory(cat);
-    setForm({ name: cat.name, icon: cat.icon, color: cat.color, keywords: (cat.keywords || []).join(', ') });
+    setForm({ name: cat.name, icon: cat.icon, color: cat.color, keywords: (cat.keywords || []).join(', '), parent_id: cat.parent_id || '' });
     setModalOpen(true);
   };
 
@@ -143,6 +127,7 @@ export default function CategoriesPage() {
         icon: form.icon,
         color: form.color,
         keywords,
+        parent_id: form.parent_id || null,
       }).eq('id', editingCategory.id);
       if (error) toast({ title: 'Erro', description: error.message, variant: 'destructive' });
       else toast({ title: 'Categoria atualizada!' });
@@ -154,6 +139,7 @@ export default function CategoriesPage() {
         color: form.color,
         keywords,
         sort_order: categories.length,
+        parent_id: form.parent_id || null,
       });
       if (error) toast({ title: 'Erro', description: error.message, variant: 'destructive' });
       else toast({ title: 'Categoria criada!' });
@@ -226,45 +212,34 @@ export default function CategoriesPage() {
             {loading ? (
               <div className="flex items-center justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
             ) : (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {categories.map(cat => (
-                  <Card key={cat.id} className="rounded-2xl border shadow-sm hover:shadow-md transition-shadow">
-                    <CardContent className="p-5 space-y-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: cat.color + '20' }}>
-                          <LucideIcon name={cat.icon} className="h-5 w-5" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <h3 className="font-semibold truncate">{cat.name}</h3>
-                          <p className="text-xs text-muted-foreground">{cat.expense_count || 0} despesas</p>
-                        </div>
-                        <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />
-                      </div>
+              <div className="space-y-6">
+                {/* Parent categories */}
+                {categories.filter(c => !c.sort_order || !categories.some(p => p.id !== c.id && categories.some(ch => ch.id === c.id))).length === 0 && (
+                  <p className="text-muted-foreground text-center py-8">Nenhuma categoria encontrada.</p>
+                )}
+                {(() => {
+                  const parents = categories.filter(c => {
+                    // Find items where no other category has this as child (parent_id match)
+                    // Since we don't have parent_id in our Category interface yet, use the DB data directly
+                    return !(c as any).parent_id;
+                  });
+                  const children = categories.filter(c => !!(c as any).parent_id);
 
-                      {cat.ai_accuracy !== undefined && (
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1 h-2 rounded-full bg-secondary overflow-hidden">
-                            <div className="h-full rounded-full bg-ai transition-all" style={{ width: `${cat.ai_accuracy}%` }} />
+                  return parents.map(parent => {
+                    const subs = children.filter(c => (c as any).parent_id === parent.id);
+                    return (
+                      <div key={parent.id} className="space-y-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: parent.color + '20' }}>
+                            <LucideIcon name={parent.icon} className="h-4 w-4" />
                           </div>
-                          <span className="text-xs font-medium text-muted-foreground">{cat.ai_accuracy}%</span>
-                        </div>
-                      )}
-
-                      {cat.keywords && cat.keywords.length > 0 && (
-                        <div className="flex flex-wrap gap-1">
-                          {cat.keywords.slice(0, 3).map(k => (
-                            <Badge key={k} variant="secondary" className="text-[10px] px-1.5 py-0">{k}</Badge>
-                          ))}
-                          {cat.keywords.length > 3 && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">+{cat.keywords.length - 3}</Badge>}
-                        </div>
-                      )}
-
-                      <div className="flex gap-1 pt-1">
-                        {!cat.id.startsWith('default-') && (
-                          <>
+                          <h2 className="text-lg font-bold">{parent.name}</h2>
+                          <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: parent.color }} />
+                          <span className="text-xs text-muted-foreground">{parent.expense_count || 0} despesas</span>
+                          <div className="flex gap-1 ml-auto">
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl" onClick={() => openEditModal(cat)}><Pencil className="h-3.5 w-3.5" /></Button>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl" onClick={() => openEditModal(parent)}><Pencil className="h-3.5 w-3.5" /></Button>
                               </TooltipTrigger>
                               <TooltipContent>Editar</TooltipContent>
                             </Tooltip>
@@ -275,26 +250,71 @@ export default function CategoriesPage() {
                               <AlertDialogContent className="rounded-2xl">
                                 <AlertDialogHeader>
                                   <AlertDialogTitle>Excluir categoria?</AlertDialogTitle>
-                                  <AlertDialogDescription>Esta ação não pode ser desfeita.</AlertDialogDescription>
+                                  <AlertDialogDescription>Todas as subcategorias também serão removidas.</AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
                                   <AlertDialogCancel className="rounded-xl">Cancelar</AlertDialogCancel>
-                                  <AlertDialogAction onClick={() => handleDelete(cat.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl">Excluir</AlertDialogAction>
+                                  <AlertDialogAction onClick={() => handleDelete(parent.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl">Excluir</AlertDialogAction>
                                 </AlertDialogFooter>
                               </AlertDialogContent>
                             </AlertDialog>
-                          </>
+                          </div>
+                        </div>
+                        {subs.length > 0 && (
+                          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 pl-4 border-l-2" style={{ borderColor: parent.color + '40' }}>
+                            {subs.map(cat => (
+                              <Card key={cat.id} className="rounded-2xl border shadow-sm hover:shadow-md transition-shadow">
+                                <CardContent className="p-4 space-y-2">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: cat.color + '20' }}>
+                                      <LucideIcon name={cat.icon} className="h-4 w-4" />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                      <h3 className="font-semibold text-sm truncate">{cat.name}</h3>
+                                      <p className="text-xs text-muted-foreground">{cat.expense_count || 0} despesas</p>
+                                    </div>
+                                    <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />
+                                  </div>
+                                  {cat.keywords && cat.keywords.length > 0 && (
+                                    <div className="flex flex-wrap gap-1">
+                                      {cat.keywords.slice(0, 3).map(k => (
+                                        <Badge key={k} variant="secondary" className="text-[10px] px-1.5 py-0">{k}</Badge>
+                                      ))}
+                                      {cat.keywords.length > 3 && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">+{cat.keywords.length - 3}</Badge>}
+                                    </div>
+                                  )}
+                                  <div className="flex gap-1 pt-1">
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-7 w-7 rounded-xl" onClick={() => openEditModal(cat)}><Pencil className="h-3 w-3" /></Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>Editar</TooltipContent>
+                                    </Tooltip>
+                                    <AlertDialog>
+                                      <AlertDialogTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-7 w-7 rounded-xl text-muted-foreground hover:text-destructive"><Trash2 className="h-3 w-3" /></Button>
+                                      </AlertDialogTrigger>
+                                      <AlertDialogContent className="rounded-2xl">
+                                        <AlertDialogHeader>
+                                          <AlertDialogTitle>Excluir subcategoria?</AlertDialogTitle>
+                                          <AlertDialogDescription>Esta ação não pode ser desfeita.</AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                          <AlertDialogCancel className="rounded-xl">Cancelar</AlertDialogCancel>
+                                          <AlertDialogAction onClick={() => handleDelete(cat.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl">Excluir</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                      </AlertDialogContent>
+                                    </AlertDialog>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            ))}
+                          </div>
                         )}
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl"><Eye className="h-3.5 w-3.5" /></Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Ver despesas</TooltipContent>
-                        </Tooltip>
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                    );
+                  });
+                })()}
               </div>
             )}
           </main>
@@ -308,6 +328,19 @@ export default function CategoriesPage() {
             <DialogTitle className="text-xl font-bold">{editingCategory ? 'Editar Categoria' : 'Nova Categoria'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Categoria Pai (opcional)</Label>
+              <select
+                value={form.parent_id}
+                onChange={e => setForm(f => ({ ...f, parent_id: e.target.value }))}
+                className="flex h-10 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm"
+              >
+                <option value="">Nenhuma (Categoria Principal)</option>
+                {categories.filter(c => !c.parent_id && c.id !== editingCategory?.id).map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
             <div className="space-y-2">
               <Label>Nome da categoria</Label>
               <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Ex: Alimentação" className="rounded-xl h-11" />
