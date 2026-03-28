@@ -92,6 +92,7 @@ export default function AnalyticsPage() {
                 <TrendsCharts monthlyData={data.monthlyData} predictedNextMonth={data.predictedNextMonth} />
                 <GoalsSection avgMonthly={data.avgMonthly} totalCurrentPeriod={data.totalCurrentPeriod} />
                 <EmergencyFundCard />
+                <NetWorthChart />
               </>
             )}
           </main>
