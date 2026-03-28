@@ -16,6 +16,13 @@ interface ParsedTransaction {
   value: number;
   type: 'income' | 'expense';
   selected: boolean;
+  category: string;
+}
+
+interface AutomationRule {
+  condition_operator: string;
+  condition_value: string;
+  target_category: string;
 }
 
 interface WalletOption {
