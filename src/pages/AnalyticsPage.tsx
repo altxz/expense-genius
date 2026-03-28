@@ -11,6 +11,7 @@ import { OverviewCards } from '@/components/analytics/OverviewCards';
 import { CategoryCharts } from '@/components/analytics/CategoryCharts';
 import { InsightsSection } from '@/components/analytics/InsightsSection';
 import { TrendsCharts } from '@/components/analytics/TrendsCharts';
+import { ExpenseTreemap } from '@/components/analytics/ExpenseTreemap';
 import { GoalsSection } from '@/components/analytics/GoalsSection';
 import { useAnalyticsData, AnalyticsFilters } from '@/hooks/useAnalyticsData';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -79,6 +80,7 @@ export default function AnalyticsPage() {
                   biggestSaving={data.biggestSavingOpportunity}
                 />
                 <CategoryCharts categoryStats={data.categoryStats} compare={filters.compare} />
+                <ExpenseTreemap categoryStats={data.categoryStats} />
                 <InsightsSection
                   avgMonthly={data.avgMonthly}
                   categoryStats={data.categoryStats}
