@@ -63,14 +63,12 @@ export default function CategoriesPage() {
     if (!user) return;
     setLoading(true);
 
-    // Fetch user custom categories
-    const { data: customCats } = await supabase
+    const { data: allCats } = await supabase
       .from('categories')
       .select('*')
       .eq('user_id', user.id)
       .order('sort_order');
 
-    // Fetch expense counts per category
     const { data: expenses } = await supabase
       .from('expenses')
       .select('final_category, category_ai')
@@ -90,26 +88,13 @@ export default function CategoriesPage() {
       }
     });
 
-    // Merge default + custom categories
-    const defaults: Category[] = CATEGORIES.map((c, i) => ({
-      id: `default-${c.value}`,
-      name: c.label,
-      icon: c.value === 'alimentacao' ? 'utensils' : c.value === 'transporte' ? 'car' : c.value === 'lazer' ? 'gamepad-2' : c.value === 'saude' ? 'heart-pulse' : c.value === 'moradia' ? 'house' : c.value === 'educacao' ? 'graduation-cap' : 'tag',
-      color: c.value === 'alimentacao' ? '#F97316' : c.value === 'transporte' ? '#4B6DFB' : c.value === 'lazer' ? '#DA90FC' : c.value === 'saude' ? '#EF4444' : c.value === 'moradia' ? '#14B8A6' : c.value === 'educacao' ? '#F59E0B' : '#8B5CF6',
-      keywords: [],
-      active: true,
-      sort_order: i,
-      expense_count: countMap[c.value] || 0,
-      ai_accuracy: totalMap[c.value] ? Math.round((correctMap[c.value] || 0) / totalMap[c.value] * 100) : undefined,
-    }));
-
-    const custom = (customCats || []).map(c => ({
+    const mapped: Category[] = (allCats || []).map(c => ({
       ...c,
-      expense_count: countMap[c.name.toLowerCase()] || 0,
-      ai_accuracy: undefined,
+      expense_count: countMap[c.name.toLowerCase()] || countMap[c.name] || 0,
+      ai_accuracy: totalMap[c.name] ? Math.round((correctMap[c.name] || 0) / totalMap[c.name] * 100) : undefined,
     }));
 
-    setCategories([...defaults, ...custom]);
+    setCategories(mapped);
     setLoading(false);
   }, [user]);
 
