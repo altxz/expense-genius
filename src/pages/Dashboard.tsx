@@ -211,24 +211,24 @@ export default function Dashboard() {
                   </Alert>
                 )}
 
-                <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-4 items-start">
-                  <SummaryCards
-                    balance={totalRealBalance}
-                    totalIncome={summary.totalIncome}
-                    totalExpense={summary.totalExpense}
-                    largestCategory={summary.largestCategory}
-                    prevBalance={prevSummary.balance}
-                    prevIncome={prevSummary.totalIncome}
-                    prevExpense={prevSummary.totalExpense}
-                  />
-                  <HealthScore
-                    totalIncome={summary.totalIncome}
-                    totalExpense={summary.totalExpense}
-                    totalBudget={budgetTotals.totalBudget}
-                    totalSpentInBudget={budgetTotals.totalSpent}
-                    hasOverdueCards={hasOverdueCards}
-                  />
-                </div>
+                <SummaryCards
+                  balance={totalRealBalance}
+                  totalIncome={summary.totalIncome}
+                  totalExpense={summary.totalExpense}
+                  largestCategory={summary.largestCategory}
+                  prevBalance={prevSummary.balance}
+                  prevIncome={prevSummary.totalIncome}
+                  prevExpense={prevSummary.totalExpense}
+                  healthScore={
+                    <HealthScore
+                      totalIncome={summary.totalIncome}
+                      totalExpense={summary.totalExpense}
+                      totalBudget={budgetTotals.totalBudget}
+                      totalSpentInBudget={budgetTotals.totalSpent}
+                      hasOverdueCards={hasOverdueCards}
+                    />
+                  }
+                />
 
                 <CashFlowChart />
 
