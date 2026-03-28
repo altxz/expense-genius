@@ -110,9 +110,10 @@ export function TransactionFeed({ expenses, loading, onDeleted, filters, onFilte
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   {formatGroupDate(dateKey)}
                 </h3>
-                <span className={`text-xs font-semibold ${endOfDayBalance >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
-                  Saldo: {formatCurrency(Math.abs(endOfDayBalance))}
-                </span>
+                <div className={`flex items-center gap-1 text-xs font-semibold ${endOfDayBalance >= 0 ? 'text-muted-foreground' : 'text-destructive'}`}>
+                  <Wallet className="h-3 w-3" />
+                  <span>{endOfDayBalance < 0 ? '-' : ''}{formatCurrency(Math.abs(endOfDayBalance))}</span>
+                </div>
               </div>
               <div className="rounded-2xl border bg-card overflow-hidden divide-y divide-border">
                 {items.map(exp => {
