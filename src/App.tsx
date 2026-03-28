@@ -41,8 +41,7 @@ const App = () => (
                 <Route path="/projetos" element={<ProjectsPage />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
-              <FloatingActionButton />
-              <GeniusChatbot />
+              <AuthenticatedExtras />
             </BrowserRouter>
           </UserSettingsProvider>
         </DateProvider>
