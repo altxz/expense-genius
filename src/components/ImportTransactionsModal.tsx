@@ -142,6 +142,13 @@ export function ImportTransactionsModal({ open, onOpenChange, onImported }: Impo
     });
   };
 
+  const reset = () => {
+    setTransactions([]);
+    setFileName('');
+    setWalletId('');
+    setStep('upload');
+  };
+
   useEffect(() => {
     if (!open) reset();
   }, [open]);
@@ -160,7 +167,7 @@ export function ImportTransactionsModal({ open, onOpenChange, onImported }: Impo
         toast({ title: 'CSV inválido', description: 'Não foi possível encontrar colunas de Data, Descrição e Valor.', variant: 'destructive' });
         return;
       }
-      setTransactions(parsed);
+      setTransactions(applyRules(parsed, rules));
       setStep('preview');
     };
     reader.readAsText(file);
