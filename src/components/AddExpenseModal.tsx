@@ -13,6 +13,7 @@ import { CATEGORIES, getCategoryInfo } from '@/lib/constants';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUserSettings } from '@/contexts/UserSettingsContext';
 
 interface CreditCardOption {
   id: string;
@@ -127,6 +128,7 @@ export function AddExpenseModal({ open, onOpenChange, onExpenseAdded }: AddExpen
   const [tagInput, setTagInput] = useState('');
   const { toast } = useToast();
   const { user } = useAuth();
+  const { settings: moduleSettings } = useUserSettings();
 
   const style = TYPE_STYLES[type];
 
@@ -643,7 +645,7 @@ export function AddExpenseModal({ open, onOpenChange, onExpenseAdded }: AddExpen
                           </div>
                         )}
                       </div>
-                      {projects.length > 0 && (
+                      {moduleSettings.enable_projects_module && projects.length > 0 && (
                         <div className="space-y-1.5">
                           <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Projeto</Label>
                           <Select value={projectId || 'none'} onValueChange={v => setProjectId(v === 'none' ? '' : v)}>
