@@ -100,13 +100,13 @@ export function AnomalyInsights() {
                 {i.type === 'alert' ? (
                   <>
                     <span className="font-bold text-destructive">Aumento atípico:</span>{' '}
-                    Já gastaste <span className="font-bold">{i.pctChange}%</span> a mais em{' '}
+                    Você gastou <span className="font-bold">{i.pctChange}%</span> a mais em{' '}
                     <span className="font-semibold">{i.label}</span> comparado ao mês passado.
                   </>
                 ) : (
                   <>
-                    <span className="font-bold text-emerald-600">Estás a poupar!</span>{' '}
-                    Gastaste <span className="font-bold">{Math.abs(i.pctChange)}%</span> a menos em{' '}
+                    <span className="font-bold text-emerald-600">Você está economizando!</span>{' '}
+                    Gastou <span className="font-bold">{Math.abs(i.pctChange)}%</span> a menos em{' '}
                     <span className="font-semibold">{i.label}</span> este mês.
                   </>
                 )}

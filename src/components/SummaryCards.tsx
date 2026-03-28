@@ -44,7 +44,7 @@ export function SummaryCards({ balance, totalIncome, totalExpense, largestCatego
   const navigate = useNavigate();
 
   return (
-    <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
       <Card className="rounded-2xl border-0 shadow-md bg-primary text-primary-foreground">
         <CardContent className="p-3 sm:p-6">
           <div className="flex items-center gap-2 sm:gap-4">
@@ -53,7 +53,7 @@ export function SummaryCards({ balance, totalIncome, totalExpense, largestCatego
             </div>
             <div className="min-w-0">
               <p className="text-[10px] sm:text-sm font-medium opacity-80">Saldo Total</p>
-              <p className={`text-base sm:text-2xl font-bold tracking-tight ${balance < 0 ? 'text-red-300' : ''}`}>
+              <p className={`text-sm sm:text-2xl font-bold tracking-tight truncate ${balance < 0 ? 'text-red-300' : ''}`}>
                 {balance >= 0 ? '+' : ''}{formatCurrency(balance)}
               </p>
               {prevBalance !== undefined && (
@@ -74,7 +74,7 @@ export function SummaryCards({ balance, totalIncome, totalExpense, largestCatego
             </div>
             <div className="min-w-0">
               <p className="text-[10px] sm:text-sm font-medium opacity-80">Entradas</p>
-              <p className="text-base sm:text-2xl font-bold tracking-tight">+{formatCurrency(totalIncome)}</p>
+              <p className="text-sm sm:text-2xl font-bold tracking-tight truncate">+{formatCurrency(totalIncome)}</p>
               {prevIncome !== undefined && (
                 <TrendBadge current={totalIncome} previous={prevIncome} />
               )}
@@ -93,7 +93,7 @@ export function SummaryCards({ balance, totalIncome, totalExpense, largestCatego
             </div>
             <div className="min-w-0">
               <p className="text-[10px] sm:text-sm font-medium opacity-80">Saídas</p>
-              <p className="text-base sm:text-2xl font-bold tracking-tight">-{formatCurrency(totalExpense)}</p>
+              <p className="text-sm sm:text-2xl font-bold tracking-tight truncate">-{formatCurrency(totalExpense)}</p>
               {prevExpense !== undefined && (
                 <TrendBadge current={totalExpense} previous={prevExpense} invertColor />
               )}
@@ -112,7 +112,7 @@ export function SummaryCards({ balance, totalIncome, totalExpense, largestCatego
             </div>
             <div className="min-w-0">
               <p className="text-[10px] sm:text-sm font-medium opacity-80">Maior Categoria</p>
-              <p className="text-base sm:text-2xl font-bold tracking-tight truncate">
+              <p className="text-sm sm:text-2xl font-bold tracking-tight truncate">
                 {largestCategory ? largestCategory.name : '—'}
               </p>
               {largestCategory && (

@@ -82,7 +82,7 @@ export function EmergencyFundCard() {
         </div>
 
         <p className="text-xs text-muted-foreground">
-          {months < 1 && 'Atenção! Reserva muito baixa. Tente poupar mais.'}
+          {months < 1 && 'Atenção! Reserva muito baixa. Tente economizar mais.'}
           {months >= 1 && months < 6 && `Meta: 6 meses. Faltam ${(6 - months).toFixed(1)} meses.`}
           {months >= 6 && 'Parabéns! Reserva de emergência saudável.'}
         </p>
