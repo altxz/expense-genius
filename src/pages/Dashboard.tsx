@@ -21,6 +21,16 @@ import { CashFlowChart } from '@/components/CashFlowChart';
 import { HealthScore } from '@/components/HealthScore';
 import { CalendarView } from '@/components/CalendarView';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { IncomeVsExpenseChart } from '@/components/analytics/IncomeVsExpenseChart';
+import { TopCategoriesPie } from '@/components/analytics/TopCategoriesPie';
+import { CreditUsageChart } from '@/components/analytics/CreditUsageChart';
+import { EndOfMonthForecast } from '@/components/analytics/EndOfMonthForecast';
+import { DailySpendingChart } from '@/components/analytics/DailySpendingChart';
+import { FixedVsVariableChart } from '@/components/analytics/FixedVsVariableChart';
+import { SubcategoryTreemap } from '@/components/analytics/SubcategoryTreemap';
+import { SavingsRateGauge } from '@/components/analytics/SavingsRateGauge';
+import { WeekComparisonChart } from '@/components/analytics/WeekComparisonChart';
+import { IncomeSourcesPie } from '@/components/analytics/IncomeSourcesPie';
 import type { Expense } from '@/components/ExpenseTable';
 
 const PAGE_SIZE = 20;
@@ -40,6 +50,7 @@ export default function Dashboard() {
   const [hasOverdueCards, setHasOverdueCards] = useState(false);
   const [startingMonthBalance, setStartingMonthBalance] = useState(0);
   const [totalRealBalance, setTotalRealBalance] = useState(0);
+  const [dbCategories, setDbCategories] = useState<any[]>([]);
 
   // Compute previous month date range
   const { selectedMonth, selectedYear } = useSelectedDate();
