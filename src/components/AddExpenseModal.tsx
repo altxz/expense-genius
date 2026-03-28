@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
@@ -116,6 +116,7 @@ export function AddExpenseModal({ open, onOpenChange, onExpenseAdded }: AddExpen
   const [creditCards, setCreditCards] = useState<CreditCardOption[]>([]);
   const [projects, setProjects] = useState<{ id: string; name: string; color: string }[]>([]);
   const [projectId, setProjectId] = useState<string>('');
+  const [dbCategories, setDbCategories] = useState<{ id: string; name: string; parent_id: string | null; icon: string; color: string }[]>([]);
   const [categoryAi, setCategoryAi] = useState('');
   const [finalCategory, setFinalCategory] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
@@ -135,10 +136,12 @@ export function AddExpenseModal({ open, onOpenChange, onExpenseAdded }: AddExpen
       supabase.from('credit_cards').select('id, name, closing_day, due_day, closing_strategy, closing_days_before_due').eq('user_id', user.id).order('name'),
       supabase.from('wallets').select('id, name').eq('user_id', user.id).order('name'),
       supabase.from('projects').select('id, name, color').eq('user_id', user.id).order('name'),
-    ]).then(([cards, walletsRes, projectsRes]) => {
+      supabase.from('categories').select('id, name, parent_id, icon, color').eq('user_id', user.id).order('sort_order'),
+    ]).then(([cards, walletsRes, projectsRes, catsRes]) => {
       setCreditCards((cards.data || []) as CreditCardOption[]);
       setWallets((walletsRes.data || []) as WalletOption[]);
       setProjects((projectsRes.data || []) as { id: string; name: string; color: string }[]);
+      setDbCategories((catsRes.data || []) as any[]);
     });
   }, [user, open]);
 
