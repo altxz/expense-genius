@@ -13,6 +13,7 @@ import { InsightsSection } from '@/components/analytics/InsightsSection';
 import { TrendsCharts } from '@/components/analytics/TrendsCharts';
 import { ExpenseTreemap } from '@/components/analytics/ExpenseTreemap';
 import { EmergencyFundCard } from '@/components/analytics/EmergencyFundCard';
+import { NetWorthChart } from '@/components/analytics/NetWorthChart';
 import { GoalsSection } from '@/components/analytics/GoalsSection';
 import { useAnalyticsData, AnalyticsFilters } from '@/hooks/useAnalyticsData';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -91,6 +92,7 @@ export default function AnalyticsPage() {
                 <TrendsCharts monthlyData={data.monthlyData} predictedNextMonth={data.predictedNextMonth} />
                 <GoalsSection avgMonthly={data.avgMonthly} totalCurrentPeriod={data.totalCurrentPeriod} />
                 <EmergencyFundCard />
+                <NetWorthChart />
               </>
             )}
           </main>
