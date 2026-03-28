@@ -8,6 +8,7 @@ import { AddExpenseModal } from '@/components/AddExpenseModal';
 import { ImportTransactionsModal } from '@/components/ImportTransactionsModal';
 import { DashboardHeader } from '@/components/DashboardHeader';
 import { InstallPwaPrompt } from '@/components/InstallPwaPrompt';
+import { AnomalyInsights } from '@/components/analytics/AnomalyInsights';
 import { AppSidebar } from '@/components/AppSidebar';
 import { MonthSelector } from '@/components/MonthSelector';
 import { SidebarProvider } from '@/components/ui/sidebar';
