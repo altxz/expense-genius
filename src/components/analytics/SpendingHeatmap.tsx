@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { formatCurrency } from '@/lib/constants';
+import { useSelectedDate } from '@/contexts/DateContext';
 import type { Expense } from '@/components/ExpenseTable';
 
 interface SpendingHeatmapProps {
@@ -9,10 +10,11 @@ interface SpendingHeatmapProps {
 }
 
 export function SpendingHeatmap({ expenses }: SpendingHeatmapProps) {
-  const { days, maxSpend, month, year } = useMemo(() => {
-    const now = new Date();
-    const m = now.getMonth();
-    const y = now.getFullYear();
+  const { selectedMonth, selectedYear } = useSelectedDate();
+
+  const { days, maxSpend } = useMemo(() => {
+    const m = selectedMonth;
+    const y = selectedYear;
     const daysInMonth = new Date(y, m + 1, 0).getDate();
 
     const byDay: Record<number, number> = {};
@@ -32,8 +34,8 @@ export function SpendingHeatmap({ expenses }: SpendingHeatmapProps) {
       spend: byDay[i + 1] || 0,
     }));
 
-    return { days: result, maxSpend: max, month: m, year: y };
-  }, [expenses]);
+    return { days: result, maxSpend: max };
+  }, [expenses, selectedMonth, selectedYear]);
 
   const getIntensity = (spend: number): string => {
     if (spend === 0) return 'bg-muted/40';
@@ -45,17 +47,18 @@ export function SpendingHeatmap({ expenses }: SpendingHeatmapProps) {
     return 'bg-destructive/90';
   };
 
-  const today = new Date().getDate();
-  const monthLabel = new Date(year, month).toLocaleDateString('pt-BR', { month: 'long' });
+  const today = new Date();
+  const isCurrentMonth = today.getMonth() === selectedMonth && today.getFullYear() === selectedYear;
+  const todayDay = isCurrentMonth ? today.getDate() : -1;
 
   // Pad start to align with weekday (0=Sun)
-  const firstDayWeekday = new Date(year, month, 1).getDay();
+  const firstDayWeekday = new Date(selectedYear, selectedMonth, 1).getDay();
 
   return (
     <Card className="rounded-2xl border-0 shadow-md">
       <CardHeader className="pb-2">
         <CardTitle className="text-base font-semibold">Mapa de Gastos</CardTitle>
-        <p className="text-xs text-muted-foreground capitalize">{monthLabel} — intensidade por dia</p>
+        <p className="text-xs text-muted-foreground">Intensidade por dia</p>
       </CardHeader>
       <CardContent>
         {/* Weekday labels */}
@@ -77,7 +80,7 @@ export function SpendingHeatmap({ expenses }: SpendingHeatmapProps) {
               <TooltipTrigger asChild>
                 <div
                   className={`aspect-square rounded-sm cursor-default transition-colors ${getIntensity(spend)} ${
-                    day === today ? 'ring-2 ring-primary ring-offset-1 ring-offset-background' : ''
+                    day === todayDay ? 'ring-2 ring-primary ring-offset-1 ring-offset-background' : ''
                   }`}
                 />
               </TooltipTrigger>

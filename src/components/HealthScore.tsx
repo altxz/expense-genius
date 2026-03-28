@@ -17,8 +17,8 @@ function getScoreColor(score: number) {
 }
 
 function getMessage(score: number) {
-  if (score < 40) return 'Cuidado! Revê os teus gastos.';
-  if (score < 70) return 'Estás no caminho certo!';
+  if (score < 40) return 'Cuidado! Reveja seus gastos.';
+  if (score < 70) return 'Você está no caminho certo!';
   return 'Excelente! Finanças saudáveis!';
 }
 

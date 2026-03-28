@@ -205,7 +205,7 @@ export default function Dashboard() {
                   <Alert variant="destructive" className="rounded-xl border-destructive/50 bg-destructive/10">
                     <AlertTriangle className="h-4 w-4" />
                     <AlertDescription className="font-medium text-sm">
-                      Atenção: Estás quase a ultrapassar o teu orçamento em{' '}
+                      Atenção: Você está quase ultrapassando seu orçamento em{' '}
                       <span className="font-bold">{budgetAlerts.join(' e ')}</span>!
                     </AlertDescription>
                   </Alert>
