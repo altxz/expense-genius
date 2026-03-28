@@ -1,6 +1,7 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { ArrowDownCircle, ArrowUpCircle, TrendingUp, TrendingDown, Wallet } from 'lucide-react';
 import { formatCurrency } from '@/lib/constants';
+import { useNavigate } from 'react-router-dom';
 
 interface SummaryCardsProps {
   balance: number;
@@ -40,6 +41,8 @@ function TrendBadge({ current, previous, invertColor }: { current: number; previ
 }
 
 export function SummaryCards({ balance, totalIncome, totalExpense, largestCategory, prevBalance, prevIncome, prevExpense }: SummaryCardsProps) {
+  const navigate = useNavigate();
+
   return (
     <div className="grid gap-3 grid-cols-2 xl:grid-cols-4">
       <Card className="rounded-2xl border-0 shadow-md bg-primary text-primary-foreground">
@@ -60,7 +63,10 @@ export function SummaryCards({ balance, totalIncome, totalExpense, largestCatego
           </div>
         </CardContent>
       </Card>
-      <Card className="rounded-2xl border-0 shadow-md bg-green-600 text-white">
+      <Card
+        className="rounded-2xl border-0 shadow-md bg-green-600 text-white cursor-pointer hover:opacity-90 transition-opacity"
+        onClick={() => navigate('/historico?type=income')}
+      >
         <CardContent className="p-3 sm:p-6">
           <div className="flex items-center gap-2 sm:gap-4">
             <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-white/20 flex items-center justify-center shrink-0">
@@ -76,7 +82,10 @@ export function SummaryCards({ balance, totalIncome, totalExpense, largestCatego
           </div>
         </CardContent>
       </Card>
-      <Card className="rounded-2xl border-0 shadow-md bg-destructive text-destructive-foreground">
+      <Card
+        className="rounded-2xl border-0 shadow-md bg-destructive text-destructive-foreground cursor-pointer hover:opacity-90 transition-opacity"
+        onClick={() => navigate('/historico?type=expense')}
+      >
         <CardContent className="p-3 sm:p-6">
           <div className="flex items-center gap-2 sm:gap-4">
             <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-destructive-foreground/20 flex items-center justify-center shrink-0">
@@ -92,7 +101,10 @@ export function SummaryCards({ balance, totalIncome, totalExpense, largestCatego
           </div>
         </CardContent>
       </Card>
-      <Card className="rounded-2xl border-0 shadow-md bg-pink text-pink-foreground col-span-2 xl:col-span-1">
+      <Card
+        className={`rounded-2xl border-0 shadow-md bg-pink text-pink-foreground col-span-2 xl:col-span-1 ${largestCategory ? 'cursor-pointer hover:opacity-90 transition-opacity' : ''}`}
+        onClick={() => largestCategory && navigate(`/historico?category=${encodeURIComponent(largestCategory.categoryKey)}`)}
+      >
         <CardContent className="p-3 sm:p-6">
           <div className="flex items-center gap-2 sm:gap-4">
             <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-pink-foreground/10 flex items-center justify-center shrink-0">
