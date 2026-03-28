@@ -27,6 +27,7 @@ interface TransactionFeedProps {
   totalPages: number;
   onPageChange: (page: number) => void;
   wallets?: { id: string; name: string }[];
+  startingMonthBalance?: number;
 }
 
 function formatGroupDate(dateStr: string): string {
@@ -45,7 +46,7 @@ function formatGroupDate(dateStr: string): string {
   return date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', weekday: 'long' });
 }
 
-export function TransactionFeed({ expenses, loading, onDeleted, filters, onFilterChange, page, totalPages, onPageChange, wallets = [] }: TransactionFeedProps) {
+export function TransactionFeed({ expenses, loading, onDeleted, filters, onFilterChange, page, totalPages, onPageChange, wallets = [], startingMonthBalance = 0 }: TransactionFeedProps) {
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
 
   const grouped = useMemo(() => {
@@ -55,8 +56,25 @@ export function TransactionFeed({ expenses, loading, onDeleted, filters, onFilte
       if (!groups[key]) groups[key] = [];
       groups[key].push(exp);
     });
-    return Object.entries(groups).sort(([a], [b]) => b.localeCompare(a));
-  }, [expenses]);
+    // Sort ascending by date to compute running balance correctly
+    const sorted = Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
+
+    let runningBalance = startingMonthBalance;
+    const result: { dateKey: string; items: Expense[]; endOfDayBalance: number }[] = [];
+
+    for (const [dateKey, items] of sorted) {
+      for (const exp of items) {
+        if (exp.type === 'transfer') continue;
+        if (!exp.is_paid) continue;
+        if (exp.type === 'income') runningBalance += exp.value;
+        else if (!exp.credit_card_id) runningBalance -= exp.value;
+      }
+      result.push({ dateKey, items, endOfDayBalance: runningBalance });
+    }
+
+    // Reverse so newest day is on top
+    return result.reverse();
+  }, [expenses, startingMonthBalance]);
 
   const walletMap = useMemo(() => {
     const m: Record<string, string> = {};

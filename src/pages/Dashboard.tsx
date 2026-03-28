@@ -276,6 +276,7 @@ export default function Dashboard() {
                   totalPages={Math.ceil(totalCount / PAGE_SIZE)}
                   onPageChange={setPage}
                   wallets={wallets}
+                  startingMonthBalance={startingMonthBalance}
                 />
               </TabsContent>
               <TabsContent value="recorrentes">
