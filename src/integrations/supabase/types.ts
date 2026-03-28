@@ -124,6 +124,7 @@ export type Database = {
           id: string
           keywords: string[] | null
           name: string
+          parent_id: string | null
           sort_order: number
           user_id: string
         }
@@ -135,6 +136,7 @@ export type Database = {
           id?: string
           keywords?: string[] | null
           name: string
+          parent_id?: string | null
           sort_order?: number
           user_id: string
         }
@@ -146,10 +148,19 @@ export type Database = {
           id?: string
           keywords?: string[] | null
           name?: string
+          parent_id?: string | null
           sort_order?: number
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       credit_cards: {
         Row: {
