@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useSearchParams } from 'react-router-dom';
 import { AppSidebar } from '@/components/AppSidebar';
 import { DashboardHeader } from '@/components/DashboardHeader';
 import { MonthSelector } from '@/components/MonthSelector';
@@ -36,13 +36,18 @@ const PAGE_SIZE = 15;
 export default function HistoryPage() {
   const { user, loading: authLoading } = useAuth();
   const { startDate, endDate } = useSelectedDate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const [expenses, setExpenses] = useState<ExpenseWithStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [search, setSearch] = useState('');
-  const [filters, setFilters] = useState({ status: 'all', category: 'all' });
+  const [filters, setFilters] = useState(() => ({
+    status: 'all',
+    category: searchParams.get('category') || 'all',
+    type: searchParams.get('type') || 'all',
+  }));
   const [allExpenses, setAllExpenses] = useState<ExpenseWithStatus[]>([]);
 
   // Subscriptions state
@@ -65,6 +70,7 @@ export default function HistoryPage() {
     setAllExpenses(all);
 
     let filtered = all;
+    if (filters.type !== 'all') filtered = filtered.filter((e: any) => e.type === filters.type);
     if (filters.status !== 'all') filtered = filtered.filter(e => e.status === filters.status);
     if (filters.category !== 'all') filtered = filtered.filter(e => e.final_category === filters.category);
     if (search.trim()) filtered = filtered.filter(e => e.description.toLowerCase().includes(search.toLowerCase()));
@@ -211,6 +217,15 @@ export default function HistoryPage() {
                       <SelectContent>
                         <SelectItem value="all">Todas categorias</SelectItem>
                         {CATEGORIES.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <Select value={filters.type} onValueChange={v => handleFilterChange('type', v)}>
+                      <SelectTrigger className="w-[120px] sm:w-[160px] rounded-xl text-sm"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos tipos</SelectItem>
+                        <SelectItem value="income">📈 Receitas</SelectItem>
+                        <SelectItem value="expense">📉 Despesas</SelectItem>
+                        <SelectItem value="transfer">🔄 Transferências</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
