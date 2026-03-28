@@ -13,6 +13,7 @@ import { CATEGORIES, getCategoryInfo } from '@/lib/constants';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUserSettings } from '@/contexts/UserSettingsContext';
 
 interface CreditCardOption {
   id: string;
