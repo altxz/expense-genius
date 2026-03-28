@@ -69,25 +69,25 @@ export function CalendarView() {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-2xl border bg-card p-4 flex justify-center">
+      <div className="rounded-2xl border bg-card p-4 w-full overflow-hidden">
         <Calendar
           mode="single"
           selected={selectedDay}
           onSelect={handleDayClick}
           month={calendarMonth}
-          className="p-3 pointer-events-auto"
+          className="p-0 pointer-events-auto w-full"
           classNames={{
-            months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
-            month: "space-y-4 w-full",
+            months: "flex flex-col w-full",
+            month: "space-y-2 w-full",
             caption: "flex justify-center pt-1 relative items-center",
             caption_label: "text-sm font-medium",
             nav: "hidden",
-            table: "w-full border-collapse",
+            table: "w-full border-collapse table-fixed",
             head_row: "flex",
-            head_cell: "text-muted-foreground rounded-md flex-1 font-normal text-[0.8rem] text-center",
-            row: "flex w-full mt-1",
-            cell: "flex-1 text-center text-sm p-0 relative focus-within:relative focus-within:z-20",
-            day: "mx-auto h-14 w-full p-0 font-normal aria-selected:opacity-100 hover:bg-muted rounded-lg transition-colors flex flex-col items-center justify-start pt-1.5 gap-0.5",
+            head_cell: "text-muted-foreground flex-1 font-normal text-[0.8rem] text-center",
+            row: "flex w-full mt-0.5",
+            cell: "flex-1 text-center text-sm p-0 relative overflow-hidden focus-within:relative focus-within:z-20",
+            day: "mx-auto h-10 w-full p-0 font-normal aria-selected:opacity-100 hover:bg-muted rounded-lg transition-colors flex flex-col items-center justify-center gap-0.5",
             day_selected: "bg-primary/10 text-primary font-semibold",
             day_today: "bg-accent text-accent-foreground font-bold",
             day_outside: "text-muted-foreground opacity-40",
