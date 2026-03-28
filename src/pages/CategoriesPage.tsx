@@ -107,7 +107,6 @@ export default function CategoriesPage() {
   };
 
   const openEditModal = (cat: Category) => {
-    if (cat.id.startsWith('default-')) return;
     setEditingCategory(cat);
     setForm({ name: cat.name, icon: cat.icon, color: cat.color, keywords: (cat.keywords || []).join(', ') });
     setModalOpen(true);
@@ -210,45 +209,34 @@ export default function CategoriesPage() {
             {loading ? (
               <div className="flex items-center justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
             ) : (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {categories.map(cat => (
-                  <Card key={cat.id} className="rounded-2xl border shadow-sm hover:shadow-md transition-shadow">
-                    <CardContent className="p-5 space-y-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: cat.color + '20' }}>
-                          <LucideIcon name={cat.icon} className="h-5 w-5" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <h3 className="font-semibold truncate">{cat.name}</h3>
-                          <p className="text-xs text-muted-foreground">{cat.expense_count || 0} despesas</p>
-                        </div>
-                        <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />
-                      </div>
+              <div className="space-y-6">
+                {/* Parent categories */}
+                {categories.filter(c => !c.sort_order || !categories.some(p => p.id !== c.id && categories.some(ch => ch.id === c.id))).length === 0 && (
+                  <p className="text-muted-foreground text-center py-8">Nenhuma categoria encontrada.</p>
+                )}
+                {(() => {
+                  const parents = categories.filter(c => {
+                    // Find items where no other category has this as child (parent_id match)
+                    // Since we don't have parent_id in our Category interface yet, use the DB data directly
+                    return !(c as any).parent_id;
+                  });
+                  const children = categories.filter(c => !!(c as any).parent_id);
 
-                      {cat.ai_accuracy !== undefined && (
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1 h-2 rounded-full bg-secondary overflow-hidden">
-                            <div className="h-full rounded-full bg-ai transition-all" style={{ width: `${cat.ai_accuracy}%` }} />
+                  return parents.map(parent => {
+                    const subs = children.filter(c => (c as any).parent_id === parent.id);
+                    return (
+                      <div key={parent.id} className="space-y-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: parent.color + '20' }}>
+                            <LucideIcon name={parent.icon} className="h-4 w-4" />
                           </div>
-                          <span className="text-xs font-medium text-muted-foreground">{cat.ai_accuracy}%</span>
-                        </div>
-                      )}
-
-                      {cat.keywords && cat.keywords.length > 0 && (
-                        <div className="flex flex-wrap gap-1">
-                          {cat.keywords.slice(0, 3).map(k => (
-                            <Badge key={k} variant="secondary" className="text-[10px] px-1.5 py-0">{k}</Badge>
-                          ))}
-                          {cat.keywords.length > 3 && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">+{cat.keywords.length - 3}</Badge>}
-                        </div>
-                      )}
-
-                      <div className="flex gap-1 pt-1">
-                        {!cat.id.startsWith('default-') && (
-                          <>
+                          <h2 className="text-lg font-bold">{parent.name}</h2>
+                          <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: parent.color }} />
+                          <span className="text-xs text-muted-foreground">{parent.expense_count || 0} despesas</span>
+                          <div className="flex gap-1 ml-auto">
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl" onClick={() => openEditModal(cat)}><Pencil className="h-3.5 w-3.5" /></Button>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl" onClick={() => openEditModal(parent)}><Pencil className="h-3.5 w-3.5" /></Button>
                               </TooltipTrigger>
                               <TooltipContent>Editar</TooltipContent>
                             </Tooltip>
@@ -259,26 +247,71 @@ export default function CategoriesPage() {
                               <AlertDialogContent className="rounded-2xl">
                                 <AlertDialogHeader>
                                   <AlertDialogTitle>Excluir categoria?</AlertDialogTitle>
-                                  <AlertDialogDescription>Esta ação não pode ser desfeita.</AlertDialogDescription>
+                                  <AlertDialogDescription>Todas as subcategorias também serão removidas.</AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
                                   <AlertDialogCancel className="rounded-xl">Cancelar</AlertDialogCancel>
-                                  <AlertDialogAction onClick={() => handleDelete(cat.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl">Excluir</AlertDialogAction>
+                                  <AlertDialogAction onClick={() => handleDelete(parent.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl">Excluir</AlertDialogAction>
                                 </AlertDialogFooter>
                               </AlertDialogContent>
                             </AlertDialog>
-                          </>
+                          </div>
+                        </div>
+                        {subs.length > 0 && (
+                          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 pl-4 border-l-2" style={{ borderColor: parent.color + '40' }}>
+                            {subs.map(cat => (
+                              <Card key={cat.id} className="rounded-2xl border shadow-sm hover:shadow-md transition-shadow">
+                                <CardContent className="p-4 space-y-2">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: cat.color + '20' }}>
+                                      <LucideIcon name={cat.icon} className="h-4 w-4" />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                      <h3 className="font-semibold text-sm truncate">{cat.name}</h3>
+                                      <p className="text-xs text-muted-foreground">{cat.expense_count || 0} despesas</p>
+                                    </div>
+                                    <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />
+                                  </div>
+                                  {cat.keywords && cat.keywords.length > 0 && (
+                                    <div className="flex flex-wrap gap-1">
+                                      {cat.keywords.slice(0, 3).map(k => (
+                                        <Badge key={k} variant="secondary" className="text-[10px] px-1.5 py-0">{k}</Badge>
+                                      ))}
+                                      {cat.keywords.length > 3 && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">+{cat.keywords.length - 3}</Badge>}
+                                    </div>
+                                  )}
+                                  <div className="flex gap-1 pt-1">
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-7 w-7 rounded-xl" onClick={() => openEditModal(cat)}><Pencil className="h-3 w-3" /></Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>Editar</TooltipContent>
+                                    </Tooltip>
+                                    <AlertDialog>
+                                      <AlertDialogTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-7 w-7 rounded-xl text-muted-foreground hover:text-destructive"><Trash2 className="h-3 w-3" /></Button>
+                                      </AlertDialogTrigger>
+                                      <AlertDialogContent className="rounded-2xl">
+                                        <AlertDialogHeader>
+                                          <AlertDialogTitle>Excluir subcategoria?</AlertDialogTitle>
+                                          <AlertDialogDescription>Esta ação não pode ser desfeita.</AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                          <AlertDialogCancel className="rounded-xl">Cancelar</AlertDialogCancel>
+                                          <AlertDialogAction onClick={() => handleDelete(cat.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl">Excluir</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                      </AlertDialogContent>
+                                    </AlertDialog>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            ))}
+                          </div>
                         )}
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl"><Eye className="h-3.5 w-3.5" /></Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Ver despesas</TooltipContent>
-                        </Tooltip>
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                    );
+                  });
+                })()}
               </div>
             )}
           </main>
