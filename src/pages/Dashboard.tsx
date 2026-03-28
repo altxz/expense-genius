@@ -300,33 +300,7 @@ export default function Dashboard() {
               <IncomeSourcesPie expenses={expenses} categories={dbCategories} />
             </div>
 
-            <Tabs defaultValue="lancamentos" className="space-y-4">
-              <TabsList className="rounded-xl">
-                <TabsTrigger value="lancamentos" className="rounded-lg text-sm">Lançamentos</TabsTrigger>
-                <TabsTrigger value="recorrentes" className="rounded-lg text-sm">Assinaturas Fixas</TabsTrigger>
-                <TabsTrigger value="calendario" className="rounded-lg text-sm">Calendário</TabsTrigger>
-              </TabsList>
-              <TabsContent value="lancamentos">
-                <TransactionFeed
-                  expenses={expenses}
-                  loading={loading}
-                  onDeleted={fetchExpenses}
-                  filters={filters}
-                  onFilterChange={handleFilterChange}
-                  page={page}
-                  totalPages={Math.ceil(totalCount / PAGE_SIZE)}
-                  onPageChange={setPage}
-                  wallets={wallets}
-                  startingMonthBalance={startingMonthBalance}
-                />
-              </TabsContent>
-              <TabsContent value="recorrentes">
-                <p className="text-center py-12 text-muted-foreground">Em breve: gestão de assinaturas fixas.</p>
-              </TabsContent>
-              <TabsContent value="calendario">
-                <CalendarView />
-              </TabsContent>
-            </Tabs>
+            <CalendarView />
           </main>
         </div>
       </div>
