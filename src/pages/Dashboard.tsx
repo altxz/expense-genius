@@ -183,6 +183,7 @@ export default function Dashboard() {
     return { totalIncome: income, totalExpense: expenseTotal, balance: income - expenseTotal };
   }, [prevExpenses]);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const dashboardWidgets: GridWidget[] = useMemo(() => [
     { id: 'income-vs-expense', title: 'Receitas vs Despesas', component: <IncomeVsExpenseChart />, defaultLayout: { lg: { x: 0, y: 0, w: 4, h: 4 }, md: { x: 0, y: 0, w: 4, h: 4 }, sm: { x: 0, y: 0, w: 4, h: 4 } } },
     { id: 'top-categories', title: 'Top Categorias', component: <TopCategoriesPie expenses={expenses} categories={dbCategories} />, defaultLayout: { lg: { x: 4, y: 0, w: 4, h: 4 }, md: { x: 4, y: 0, w: 4, h: 4 }, sm: { x: 0, y: 4, w: 4, h: 4 } } },
