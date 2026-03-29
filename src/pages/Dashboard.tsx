@@ -120,6 +120,13 @@ export default function Dashboard() {
 
   useEffect(() => { fetchExtraData(); }, [fetchExtraData]);
 
+  // Show onboarding for new users
+  useEffect(() => {
+    if (user && !userSettings.onboarding_completed) {
+      setShowOnboarding(true);
+    }
+  }, [user, userSettings.onboarding_completed]);
+
   const [budgetDataRaw, setBudgetDataRaw] = useState<any[]>([]);
 
   // Compute budget alerts and spending from projected.monthExpenses (avoid duplicate query)
