@@ -75,12 +75,24 @@ export function DashboardHeader() {
           </DropdownMenuContent>
         </DropdownMenu>
 
+        {/* Desktop add button */}
+        <Button
+          onClick={() => setAddModalOpen(true)}
+          size="sm"
+          className="hidden md:inline-flex gap-2 rounded-xl bg-accent text-accent-foreground hover:bg-accent/90"
+        >
+          <Plus className="h-4 w-4" />
+          Nova Transação
+        </Button>
+
         <NotificationBell />
         <Button variant="ghost" size="sm" onClick={signOut} className="gap-2 rounded-xl">
           <LogOut className="h-4 w-4" />
           <span className="hidden sm:inline">Sair</span>
         </Button>
       </div>
+
+      <AddExpenseModal open={addModalOpen} onOpenChange={setAddModalOpen} onExpenseAdded={() => {}} />
     </header>
   );
 }
