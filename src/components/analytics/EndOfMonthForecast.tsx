@@ -7,14 +7,17 @@ import { useSelectedDate } from '@/contexts/DateContext';
 import { supabase } from '@/lib/supabase';
 import { InfoPopover } from '@/components/ui/info-popover';
 
-export function EndOfMonthForecast() {
+interface EndOfMonthForecastProps {
+  creditCards: any[];
+  wallets: { initial_balance: number }[];
+}
+
+export function EndOfMonthForecast({ creditCards: propCards, wallets: propWallets }: EndOfMonthForecastProps) {
   const { user } = useAuth();
   const { selectedMonth, selectedYear, startDate, endDate } = useSelectedDate();
-  const [wallets, setWallets] = useState<any[]>([]);
   const [allTxns, setAllTxns] = useState<any[]>([]);
   const [monthTxns, setMonthTxns] = useState<any[]>([]);
   const [recurring, setRecurring] = useState<any[]>([]);
-  const [creditCards, setCreditCards] = useState<any[]>([]);
   const [unpaidCredit, setUnpaidCredit] = useState<any[]>([]);
 
   const monthKey = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}`;
@@ -22,19 +25,15 @@ export function EndOfMonthForecast() {
   useEffect(() => {
     if (!user) return;
     (async () => {
-      const [w, all, month, rec, cc, uc] = await Promise.all([
-        supabase.from('wallets').select('initial_balance').eq('user_id', user.id),
+      const [all, month, rec, uc] = await Promise.all([
         supabase.from('expenses').select('value, type, credit_card_id, date').eq('user_id', user.id).eq('is_paid', true),
         supabase.from('expenses').select('value, type, credit_card_id, date').eq('user_id', user.id).gte('date', startDate).lt('date', endDate).neq('type', 'transfer'),
         supabase.from('expenses').select('value, type, date, credit_card_id').eq('user_id', user.id).eq('is_recurring', true),
-        supabase.from('credit_cards').select('id, due_day').eq('user_id', user.id),
         supabase.from('expenses').select('value, credit_card_id').eq('user_id', user.id).eq('is_paid', false).not('credit_card_id', 'is', null).eq('invoice_month', monthKey),
       ]);
-      setWallets(w.data || []);
       setAllTxns(all.data || []);
       setMonthTxns(month.data || []);
       setRecurring(rec.data || []);
-      setCreditCards(cc.data || []);
       setUnpaidCredit(uc.data || []);
     })();
   }, [user, startDate, endDate, monthKey]);
@@ -44,8 +43,7 @@ export function EndOfMonthForecast() {
   const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
 
   const chartData = useMemo(() => {
-    // Current real balance
-    const walletsTotal = wallets.reduce((s, w: any) => s + (w.initial_balance || 0), 0);
+    const walletsTotal = propWallets.reduce((s, w: any) => s + (w.initial_balance || 0), 0);
     let realBalance = walletsTotal;
     allTxns.forEach((t: any) => {
       if (t.type === 'transfer') return;
@@ -71,7 +69,7 @@ export function EndOfMonthForecast() {
     // Credit card bills
     const billByCard: Record<string, number> = {};
     unpaidCredit.forEach((e: any) => { billByCard[e.credit_card_id] = (billByCard[e.credit_card_id] || 0) + e.value; });
-    creditCards.forEach((c: any) => {
+    propCards.forEach((c: any) => {
       const due = Math.min(c.due_day || 10, daysInMonth);
       if (due > todayDay && billByCard[c.id]) {
         futureByDay[due] = (futureByDay[due] || 0) - billByCard[c.id];
@@ -84,7 +82,7 @@ export function EndOfMonthForecast() {
     }
 
     return points;
-  }, [wallets, allTxns, recurring, creditCards, unpaidCredit, todayDay, daysInMonth]);
+  }, [propWallets, allTxns, recurring, propCards, unpaidCredit, todayDay, daysInMonth]);
 
   const endBalance = chartData[chartData.length - 1]?.saldo || 0;
 

@@ -61,7 +61,7 @@ export default function Dashboard() {
   const projected = useProjectedTotals();
   const [modalOpen, setModalOpen] = useState(false);
   const [budgetTotals, setBudgetTotals] = useState({ totalBudget: 0, totalSpent: 0 });
-  const [hasOverdueCards, setHasOverdueCards] = useState(false);
+  
   const [dbCategories, setDbCategories] = useState<any[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
   const fetchCounterRef = useRef(0);
@@ -87,8 +87,6 @@ export default function Dashboard() {
         { data: prevExpData },
         { data: catData },
         { data: budgetData },
-        { data: budgetExpData },
-        { data: cards },
       ] = await Promise.all([
         supabase.from('expenses').select('id, value, type, credit_card_id, final_category').eq('user_id', user.id)
           .gte('date', prevStartDate).lt('date', prevEndDate),
@@ -96,9 +94,6 @@ export default function Dashboard() {
           .eq('user_id', user.id).order('sort_order'),
         supabase.from('budgets').select('category, allocated_amount')
           .eq('user_id', user.id).eq('month_year', startDate),
-        supabase.from('expenses').select('final_category, value, type')
-          .eq('user_id', user.id).gte('date', startDate).lt('date', endDate),
-        supabase.from('credit_cards').select('due_day').eq('user_id', user.id),
       ]);
 
       if (counter !== fetchCounterRef.current) return;
@@ -106,31 +101,63 @@ export default function Dashboard() {
       setPrevExpenses(prevExpData || []);
       setDbCategories(catData || []);
 
-      const spent: Record<string, number> = {};
-      (budgetExpData || []).forEach((e: any) => {
-        if (e.type !== 'income') spent[e.final_category] = (spent[e.final_category] || 0) + e.value;
-      });
-      const warnings: string[] = [];
-      (budgetData || []).forEach((b: any) => {
-        if (b.allocated_amount > 0) {
-          const pct = (spent[b.category] || 0) / b.allocated_amount * 100;
-          if (pct >= 80) warnings.push(getCategoryInfo(b.category).label);
-        }
-      });
-      setBudgetAlerts(warnings);
-      setBudgetTotals({
+      // Budget spending computed from projected.monthExpenses in a useMemo below
+      setBudgetTotals(prev => ({
+        ...prev,
         totalBudget: (budgetData || []).reduce((s: number, b: any) => s + (b.allocated_amount || 0), 0),
-        totalSpent: Object.values(spent).reduce((s: number, v: number) => s + v, 0),
-      });
+      }));
 
-      const today = new Date();
-      setHasOverdueCards(cards ? cards.some((c: any) => c.due_day < today.getDate()) : false);
+      // Store budget data for useMemo computation
+      setBudgetDataRaw(budgetData || []);
     } finally {
       if (counter === fetchCounterRef.current) setDataLoading(false);
     }
   }, [user, startDate, endDate, prevStartDate, prevEndDate]);
 
   useEffect(() => { fetchExtraData(); }, [fetchExtraData]);
+
+  const [budgetDataRaw, setBudgetDataRaw] = useState<any[]>([]);
+
+  // Compute budget alerts and spending from projected.monthExpenses (avoid duplicate query)
+  useEffect(() => {
+    if (projected.loading || budgetDataRaw.length === 0) return;
+    const spent: Record<string, number> = {};
+    projected.monthExpenses.forEach((e: any) => {
+      if (e.type !== 'income') spent[e.final_category] = (spent[e.final_category] || 0) + e.value;
+    });
+    const warnings: string[] = [];
+    budgetDataRaw.forEach((b: any) => {
+      if (b.allocated_amount > 0) {
+        const pct = (spent[b.category] || 0) / b.allocated_amount * 100;
+        if (pct >= 80) warnings.push(getCategoryInfo(b.category).label);
+      }
+    });
+    setBudgetAlerts(warnings);
+    setBudgetTotals({
+      totalBudget: budgetDataRaw.reduce((s: number, b: any) => s + (b.allocated_amount || 0), 0),
+      totalSpent: Object.values(spent).reduce((s: number, v: number) => s + v, 0),
+    });
+  }, [projected.monthExpenses, projected.loading, budgetDataRaw]);
+
+  // Compute hasOverdueCards from projected.creditCards (avoid duplicate query)
+  const hasOverdueCardsComputed = useMemo(() => {
+    const today = new Date();
+    return projected.creditCards.some((c: any) => c.due_day < today.getDate());
+  }, [projected.creditCards]);
+
+  // Derive unpaid CC expenses for CreditUsageChart
+  const unpaidCCExpenses = useMemo(() =>
+    projected.invoiceExpenses
+      .filter(e => !e.is_paid)
+      .map(e => ({ value: e.value, credit_card_id: e.credit_card_id! })),
+    [projected.invoiceExpenses]
+  );
+
+  // Cards with limit info for CreditUsageChart
+  const cardsForUsage = useMemo(() =>
+    projected.creditCards.map(c => ({ id: c.id, name: c.name, limit_amount: c.limit_amount })),
+    [projected.creditCards]
+  );
 
   const prevSummary = useMemo(() => {
     const nonTransfers = prevExpenses.filter((e: any) => e.type !== 'transfer');
@@ -195,7 +222,7 @@ export default function Dashboard() {
                       totalExpense={projected.totalExpense}
                       totalBudget={budgetTotals.totalBudget}
                       totalSpentInBudget={budgetTotals.totalSpent}
-                      hasOverdueCards={hasOverdueCards}
+                      hasOverdueCards={hasOverdueCardsComputed}
                     />
                   }
                 />
@@ -204,13 +231,13 @@ export default function Dashboard() {
                 <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Painel de Análises</h2>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 lg:gap-6">
-                  <div className="lg:col-span-2 flex flex-col min-h-[280px] sm:min-h-[350px]"><CreditCardSummary /></div>
-                  <div className="lg:col-span-2 flex flex-col min-h-[280px] sm:min-h-[350px]"><CashFlowChart /></div>
+                  <div className="lg:col-span-2 flex flex-col min-h-[280px] sm:min-h-[350px]"><CreditCardSummary cards={projected.creditCards} allExpenses={projected.invoiceExpenses} wallets={projected.wallets} refetch={projected.refetch} /></div>
+                  <div className="lg:col-span-2 flex flex-col min-h-[280px] sm:min-h-[350px]"><CashFlowChart creditCards={projected.creditCards} wallets={projected.wallets} /></div>
 
                   <div className="flex flex-col min-h-[280px] sm:min-h-[350px]"><TopExpensesList expenses={projected.monthExpenses} /></div>
                   <div className="flex flex-col min-h-[280px] sm:min-h-[350px]"><SubcategoryTreemap expenses={projected.monthExpenses} categories={dbCategories} /></div>
 
-                  <div className="flex flex-col min-h-[280px] sm:min-h-[350px]"><IncomeVsExpenseChart /></div>
+                  <div className="flex flex-col min-h-[280px] sm:min-h-[350px]"><IncomeVsExpenseChart totalIncome={projected.totalIncome} totalExpense={projected.totalExpense} /></div>
                   <div className="flex flex-col min-h-[280px] sm:min-h-[350px]"><WaterfallChart expenses={projected.monthExpenses} startingBalance={projected.startingBalance} /></div>
 
                   <div className="flex flex-col min-h-[280px] sm:min-h-[350px]"><IncomeSourcesPie expenses={projected.monthExpenses} categories={dbCategories} /></div>
@@ -219,13 +246,13 @@ export default function Dashboard() {
                   <div className="flex flex-col min-h-[280px] sm:min-h-[350px]"><WeekComparisonChart expenses={projected.monthExpenses} /></div>
                   <div className="flex flex-col min-h-[280px] sm:min-h-[350px]"><BurndownChart expenses={projected.monthExpenses} totalBudget={budgetTotals.totalBudget} /></div>
 
-                  <div className="flex flex-col min-h-[280px] sm:min-h-[350px]"><EndOfMonthForecast /></div>
-                  <div className="flex flex-col min-h-[280px] sm:min-h-[350px]"><CalendarView /></div>
+                  <div className="flex flex-col min-h-[280px] sm:min-h-[350px]"><EndOfMonthForecast creditCards={projected.creditCards} wallets={projected.wallets} /></div>
+                  <div className="flex flex-col min-h-[280px] sm:min-h-[350px]"><CalendarView expenses={projected.monthExpenses} wallets={projected.wallets} /></div>
 
                   <div className="flex flex-col min-h-[280px] sm:min-h-[350px]"><FixedVsVariableChart expenses={projected.monthExpenses} /></div>
                   <div className="flex flex-col min-h-[280px] sm:min-h-[350px]"><SpendingHeatmap expenses={projected.monthExpenses} /></div>
 
-                  <div className="flex flex-col min-h-[280px] sm:min-h-[350px]"><CreditUsageChart /></div>
+                  <div className="flex flex-col min-h-[280px] sm:min-h-[350px]"><CreditUsageChart cards={cardsForUsage} unpaidExpenses={unpaidCCExpenses} /></div>
                   <div className="flex flex-col min-h-[280px] sm:min-h-[350px]"><SavingsRateGauge totalIncome={projected.totalIncome} totalExpense={projected.totalExpense} /></div>
 
                   <div className="lg:col-span-2 flex flex-col min-h-[280px] sm:min-h-[350px]"><NetWorthChart /></div>

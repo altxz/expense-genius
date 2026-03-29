@@ -28,7 +28,7 @@ export interface ProjectedTotals {
   /** All CC expenses for invoice matching */
   invoiceExpenses: Expense[];
   creditCards: CreditCardType[];
-  wallets: { id: string; name: string }[];
+  wallets: { id: string; name: string; initial_balance: number }[];
 }
 
 export function useProjectedTotals(): ProjectedTotals {
@@ -37,7 +37,7 @@ export function useProjectedTotals(): ProjectedTotals {
   const [monthExpenses, setMonthExpenses] = useState<Expense[]>([]);
   const [invoiceExpenses, setInvoiceExpenses] = useState<Expense[]>([]);
   const [creditCards, setCreditCards] = useState<CreditCardType[]>([]);
-  const [wallets, setWallets] = useState<{ id: string; name: string }[]>([]);
+  const [wallets, setWallets] = useState<{ id: string; name: string; initial_balance: number }[]>([]);
   const [startingBalance, setStartingBalance] = useState(0);
   const [loading, setLoading] = useState(true);
 
@@ -70,7 +70,7 @@ export function useProjectedTotals(): ProjectedTotals {
     setMonthExpenses((expData || []) as Expense[]);
     setInvoiceExpenses((ccExpData || []) as Expense[]);
     setCreditCards((cardsData || []) as CreditCardType[]);
-    setWallets((walletsData || []).map((w: any) => ({ id: w.id, name: w.name })));
+    setWallets((walletsData || []).map((w: any) => ({ id: w.id, name: w.name, initial_balance: w.initial_balance ?? 0 })));
 
     // Starting balance comes from the RPC now (server-side calculation)
     setStartingBalance(balanceResult ?? 0);
