@@ -40,6 +40,7 @@ export default function HistoryPage() {
 
   const [wallets, setWallets] = useState<{ id: string; name: string }[]>([]);
   const [startingMonthBalance, setStartingMonthBalance] = useState(0);
+  const [creditCards, setCreditCards] = useState<CreditCardType[]>([]);
 
   // Subscriptions state
   const [subItems, setSubItems] = useState<Expense[]>([]);
