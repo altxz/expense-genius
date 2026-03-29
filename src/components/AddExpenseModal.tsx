@@ -38,27 +38,13 @@ interface AddExpenseModalProps {
 }
 
 function calcInvoiceMonth(card: CreditCardOption, expenseDate: string): string {
-  const d = new Date(expenseDate + 'T12:00:00');
-  const year = d.getFullYear();
-  const month = d.getMonth();
-  const day = d.getDate();
-
-  let closingDay: number;
-  if (card.closing_strategy === 'relative') {
-    closingDay = card.due_day - card.closing_days_before_due;
-    if (closingDay <= 0) closingDay += 30;
-  } else {
-    closingDay = card.closing_day;
-  }
-
-  if (day < closingDay) {
-    const m = month + 1;
-    return `${year}-${String(m).padStart(2, '0')}`;
-  } else {
-    const next = new Date(year, month + 1, 1);
-    const m = next.getMonth() + 1;
-    return `${next.getFullYear()}-${String(m).padStart(2, '0')}`;
-  }
+  const payDate = getPaymentDate(expenseDate, {
+    due_day: card.due_day,
+    closing_day: card.closing_day,
+    closing_strategy: card.closing_strategy,
+    closing_days_before_due: card.closing_days_before_due,
+  });
+  return `${payDate.getFullYear()}-${String(payDate.getMonth() + 1).padStart(2, '0')}`;
 }
 
 function formatInvoiceLabel(ym: string): string {
