@@ -1,16 +1,15 @@
-import { useState, useCallback, ReactNode, useMemo } from 'react';
-import { ResponsiveGridLayout as ResponsiveBase, Layout } from 'react-grid-layout';
+import { useState, useCallback, ReactNode, useMemo, useRef, useEffect } from 'react';
+import { Responsive, Layout } from 'react-grid-layout';
 import { GripVertical, Lock, Unlock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 
-const ResponsiveGridLayout = WidthProvider(Responsive);
+type LayoutMap = Record<string, Layout[]>;
 
 export interface GridWidget {
   id: string;
   title: string;
   component: ReactNode;
-  /** Default layout per breakpoint: { lg: {x,y,w,h}, md: …, sm: … } */
   defaultLayout: {
     lg: { x: number; y: number; w: number; h: number; minW?: number; minH?: number };
     md: { x: number; y: number; w: number; h: number; minW?: number; minH?: number };
@@ -27,12 +26,12 @@ const COLS = { lg: 12, md: 8, sm: 4 };
 const BREAKPOINTS = { lg: 1024, md: 768, sm: 0 };
 const ROW_HEIGHT = 80;
 
-function buildLayouts(widgets: GridWidget[]): Layouts {
-  const layouts: Layouts = { lg: [], md: [], sm: [] };
+function buildLayouts(widgets: GridWidget[]): LayoutMap {
+  const layouts: LayoutMap = { lg: [], md: [], sm: [] };
   for (const w of widgets) {
     for (const bp of ['lg', 'md', 'sm'] as const) {
       const def = w.defaultLayout[bp];
-      layouts[bp]!.push({
+      layouts[bp].push({
         i: w.id,
         x: def.x,
         y: def.y,
@@ -46,7 +45,7 @@ function buildLayouts(widgets: GridWidget[]): Layouts {
   return layouts;
 }
 
-function loadLayouts(key: string, widgets: GridWidget[]): Layouts {
+function loadLayouts(key: string, widgets: GridWidget[]): LayoutMap {
   try {
     const saved = localStorage.getItem(key);
     if (saved) return JSON.parse(saved);
@@ -56,10 +55,23 @@ function loadLayouts(key: string, widgets: GridWidget[]): Layouts {
 
 export function DashboardGrid({ widgets, storageKey = 'dashboard-grid-layouts' }: DashboardGridProps) {
   const defaultLayouts = useMemo(() => buildLayouts(widgets), [widgets]);
-  const [layouts, setLayouts] = useState<Layouts>(() => loadLayouts(storageKey, widgets));
+  const [layouts, setLayouts] = useState<LayoutMap>(() => loadLayouts(storageKey, widgets));
   const [locked, setLocked] = useState(true);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(1200);
 
-  const handleLayoutChange = useCallback((_: Layout[], allLayouts: Layouts) => {
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const obs = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setWidth(entry.contentRect.width);
+      }
+    });
+    obs.observe(containerRef.current);
+    return () => obs.disconnect();
+  }, []);
+
+  const handleLayoutChange = useCallback((_: Layout[], allLayouts: LayoutMap) => {
     setLayouts(allLayouts);
     try {
       localStorage.setItem(storageKey, JSON.stringify(allLayouts));
@@ -72,7 +84,7 @@ export function DashboardGrid({ widgets, storageKey = 'dashboard-grid-layouts' }
   }, [defaultLayouts, storageKey]);
 
   return (
-    <div className="relative">
+    <div className="relative" ref={containerRef}>
       {/* Toolbar */}
       <div className="flex items-center justify-end gap-2 mb-3">
         <Button
@@ -91,25 +103,25 @@ export function DashboardGrid({ widgets, storageKey = 'dashboard-grid-layouts' }
         )}
       </div>
 
-      <ResponsiveGridLayout
+      <Responsive
         className="layout"
         layouts={layouts}
         breakpoints={BREAKPOINTS}
         cols={COLS}
         rowHeight={ROW_HEIGHT}
+        width={width}
         isDraggable={!locked}
         isResizable={!locked}
         draggableHandle=".drag-handle"
         onLayoutChange={handleLayoutChange}
         compactType="vertical"
-        margin={[12, 12]}
-        containerPadding={[0, 0]}
+        margin={[12, 12] as [number, number]}
+        containerPadding={[0, 0] as [number, number]}
         useCSSTransforms
       >
         {widgets.map((widget) => (
           <div key={widget.id} className="overflow-hidden">
             <Card className="h-full w-full rounded-2xl border-border/50 shadow-sm overflow-hidden flex flex-col">
-              {/* Drag Handle — only visible when unlocked */}
               {!locked && (
                 <div className="drag-handle flex items-center justify-center gap-1 py-1 bg-muted/50 border-b border-border/50 text-muted-foreground hover:bg-muted transition-colors">
                   <GripVertical className="h-3.5 w-3.5" />
@@ -122,7 +134,7 @@ export function DashboardGrid({ widgets, storageKey = 'dashboard-grid-layouts' }
             </Card>
           </div>
         ))}
-      </ResponsiveGridLayout>
+      </Responsive>
     </div>
   );
 }
