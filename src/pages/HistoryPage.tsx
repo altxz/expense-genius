@@ -212,6 +212,8 @@ export default function HistoryPage() {
                   onPageChange={setPage}
                   wallets={wallets}
                   startingMonthBalance={startingMonthBalance}
+                  creditCards={creditCards}
+                  currentMonth={startDate}
                 />
               </TabsContent>
 
