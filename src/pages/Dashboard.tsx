@@ -331,7 +331,7 @@ export default function Dashboard() {
                   }
                 />
 
-                <CashFlowChart />
+
 
                 {/* Layout Controls */}
                 <div className="flex items-center justify-between">
