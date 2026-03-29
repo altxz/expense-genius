@@ -160,34 +160,34 @@ export function InvoiceDetailsModal({ open, onOpenChange, invoice, allExpenses, 
   const content = (
     <div className="flex flex-col h-full">
       {/* Header card */}
-      <div className="bg-primary rounded-2xl p-5 mx-4 mt-2 mb-4 text-primary-foreground">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <CreditCard className="h-5 w-5" />
-            <span className="font-bold text-base">{activeInvoice.cardName}</span>
+      <div className="bg-primary rounded-2xl p-4 sm:p-5 mx-3 sm:mx-4 mt-2 mb-4 text-primary-foreground overflow-hidden">
+        <div className="flex items-center justify-between mb-3 gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <CreditCard className="h-5 w-5 shrink-0" />
+            <span className="font-bold text-sm sm:text-base truncate">{activeInvoice.cardName}</span>
           </div>
-          <div className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full ${statusInfo.bg} ${statusInfo.text}`}>
+          <div className={`flex items-center gap-1 text-[10px] sm:text-xs font-semibold px-2 py-1 rounded-full shrink-0 ${statusInfo.bg} ${statusInfo.text}`}>
             <StatusIcon className="h-3 w-3" />
-            {statusInfo.label}
+            <span className="whitespace-nowrap">{statusInfo.label}</span>
           </div>
         </div>
 
-        <div className="text-3xl font-extrabold mb-1">{formatCurrency(activeInvoice.total)}</div>
+        <div className="text-2xl sm:text-3xl font-extrabold mb-1">{formatCurrency(activeInvoice.total)}</div>
 
-        <div className="flex items-center gap-4 text-xs opacity-80">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs opacity-80">
           <div className="flex items-center gap-1">
-            <Calendar className="h-3 w-3" />
+            <Calendar className="h-3 w-3 shrink-0" />
             Fecha em {formatInvoiceDate(activeInvoice.periodEnd)}
           </div>
           <div className="flex items-center gap-1">
-            <Receipt className="h-3 w-3" />
+            <Receipt className="h-3 w-3 shrink-0" />
             Vence em {formatInvoiceDate(activeInvoice.dueDate)}
           </div>
         </div>
       </div>
 
       {/* Month selector */}
-      <div className="px-4 mb-4">
+      <div className="px-3 sm:px-4 mb-4">
         <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
           <SelectTrigger className="rounded-xl">
             <SelectValue placeholder="Selecione o mês" />
@@ -201,7 +201,7 @@ export function InvoiceDetailsModal({ open, onOpenChange, invoice, allExpenses, 
       </div>
 
       {/* Transactions */}
-      <ScrollArea className="flex-1 px-4 pb-4">
+      <ScrollArea className="flex-1 px-3 sm:px-4 pb-4">
         {chronological.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground text-sm">
             Nenhuma transação nesta fatura
@@ -212,12 +212,12 @@ export function InvoiceDetailsModal({ open, onOpenChange, invoice, allExpenses, 
             <div className="space-y-2">
               <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Por categoria</h4>
               {byCategory.map(([cat, data]) => (
-                <div key={cat} className="flex items-center justify-between py-1.5">
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary" className="text-xs">{data.label}</Badge>
-                    <span className="text-xs text-muted-foreground">{data.items.length} transações</span>
+                <div key={cat} className="flex items-center justify-between py-1.5 gap-2">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <Badge variant="secondary" className="text-xs shrink-0">{data.label}</Badge>
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">{data.items.length} transações</span>
                   </div>
-                  <span className="text-sm font-bold">{formatCurrency(data.total)}</span>
+                  <span className="text-sm font-bold shrink-0">{formatCurrency(data.total)}</span>
                 </div>
               ))}
             </div>
@@ -226,7 +226,7 @@ export function InvoiceDetailsModal({ open, onOpenChange, invoice, allExpenses, 
             <div className="space-y-1">
               <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Todas as transações</h4>
               {chronological.map(tx => (
-                <div key={tx.id} className="flex items-center justify-between py-2 border-b border-border last:border-0 group">
+                <div key={tx.id} className="flex items-center justify-between py-2 border-b border-border last:border-0 group gap-2">
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium truncate">{tx.description}</p>
                     <p className="text-xs text-muted-foreground">
@@ -234,20 +234,20 @@ export function InvoiceDetailsModal({ open, onOpenChange, invoice, allExpenses, 
                       {tx.installment_info && ` • ${tx.installment_info}`}
                     </p>
                   </div>
-                  <div className="flex items-center gap-1 shrink-0 ml-2">
-                    <span className="text-sm font-bold text-destructive">
+                  <div className="flex items-center gap-0.5 shrink-0">
+                    <span className="text-sm font-bold text-destructive whitespace-nowrap">
                       -{formatCurrency(tx.value)}
                     </span>
                     <button
                       onClick={() => setEditingExpense(tx)}
-                      className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                      className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100"
                       title="Editar"
                     >
                       <Pencil className="h-3.5 w-3.5" />
                     </button>
                     <button
                       onClick={() => onDeleteClick(tx)}
-                      className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                      className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100"
                       title="Excluir"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
