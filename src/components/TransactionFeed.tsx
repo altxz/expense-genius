@@ -109,24 +109,15 @@ export function TransactionFeed({ expenses, loading, onDeleted, page, totalPages
           {grouped.map(({ dateKey, items, endOfDayBalance }) => (
             <div key={dateKey}>
               {/* Day header */}
-              {(() => {
-                const dayNet = items.reduce((acc, exp) => {
-                  if (exp.type === 'transfer') return acc;
-                  if (exp.type === 'income') return acc + exp.value;
-                  return acc - exp.value;
-                }, 0);
-                return (
-                  <div className="flex items-center justify-between px-3 py-2.5 bg-muted/60 rounded-t-xl border border-b-0 border-border">
-                    <h3 className="text-sm font-bold text-foreground capitalize">
-                      {formatGroupDate(dateKey)}
-                    </h3>
-                    <div className={`flex items-center gap-1.5 text-sm font-bold ${dayNet >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
-                      <Wallet className="h-3.5 w-3.5" />
-                      <span>{dayNet < 0 ? '-' : '+'}{formatCurrency(Math.abs(dayNet))}</span>
-                    </div>
-                  </div>
-                );
-              })()}
+              <div className="flex items-center justify-between px-3 py-2.5 bg-muted/60 rounded-t-xl border border-b-0 border-border">
+                <h3 className="text-sm font-bold text-foreground capitalize">
+                  {formatGroupDate(dateKey)}
+                </h3>
+                <div className={`flex items-center gap-1.5 text-xs font-bold ${endOfDayBalance >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
+                  <Wallet className="h-3.5 w-3.5" />
+                  <span>Saldo em conta: {endOfDayBalance < 0 ? '-' : ''}{formatCurrency(Math.abs(endOfDayBalance))}</span>
+                </div>
+              </div>
 
               {/* Transactions list */}
               <div className="rounded-b-xl border border-t-0 bg-card overflow-hidden divide-y divide-border">
