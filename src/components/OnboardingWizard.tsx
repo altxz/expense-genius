@@ -257,15 +257,16 @@ export function OnboardingWizard({ open, onComplete }: OnboardingWizardProps) {
 
           {/* Actions */}
           <div className="flex items-center justify-between gap-3 pt-2">
-            {step > 0 ? (
-              <Button variant="ghost" onClick={() => setStep(s => s - 1)} className="rounded-xl gap-1">
-                <ChevronLeft className="h-4 w-4" /> Voltar
+            <div className="flex items-center gap-1">
+              {step > 0 && (
+                <Button variant="ghost" onClick={() => setStep(s => s - 1)} className="rounded-xl gap-1">
+                  <ChevronLeft className="h-4 w-4" /> Voltar
+                </Button>
+              )}
+              <Button variant="ghost" onClick={handleSkip} className="rounded-xl text-muted-foreground text-xs">
+                Pular
               </Button>
-            ) : (
-              <Button variant="ghost" onClick={handleSkip} className="rounded-xl text-muted-foreground">
-                Pular setup
-              </Button>
-            )}
+            </div>
             <Button
               onClick={handleNext}
               disabled={!canProceed || loading}
