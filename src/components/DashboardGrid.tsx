@@ -1,10 +1,12 @@
 import { useState, useCallback, ReactNode, useMemo, useRef, useEffect } from 'react';
-import { Responsive, Layout } from 'react-grid-layout';
+import ReactGridLayout from 'react-grid-layout';
 import { GripVertical, Lock, Unlock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 
-type LayoutMap = Record<string, Layout[]>;
+type RGLLayout = ReactGridLayout.Layout;
+type RGLLayouts = ReactGridLayout.Layouts;
+const Responsive = ReactGridLayout.Responsive;
 
 export interface GridWidget {
   id: string;
@@ -26,8 +28,8 @@ const COLS = { lg: 12, md: 8, sm: 4 };
 const BREAKPOINTS = { lg: 1024, md: 768, sm: 0 };
 const ROW_HEIGHT = 80;
 
-function buildLayouts(widgets: GridWidget[]): LayoutMap {
-  const layouts: LayoutMap = { lg: [], md: [], sm: [] };
+function buildLayouts(widgets: GridWidget[]): RGLLayouts {
+  const layouts: RGLLayouts = { lg: [], md: [], sm: [] };
   for (const w of widgets) {
     for (const bp of ['lg', 'md', 'sm'] as const) {
       const def = w.defaultLayout[bp];
@@ -45,7 +47,7 @@ function buildLayouts(widgets: GridWidget[]): LayoutMap {
   return layouts;
 }
 
-function loadLayouts(key: string, widgets: GridWidget[]): LayoutMap {
+function loadLayouts(key: string, widgets: GridWidget[]): RGLLayouts {
   try {
     const saved = localStorage.getItem(key);
     if (saved) return JSON.parse(saved);
@@ -55,7 +57,7 @@ function loadLayouts(key: string, widgets: GridWidget[]): LayoutMap {
 
 export function DashboardGrid({ widgets, storageKey = 'dashboard-grid-layouts' }: DashboardGridProps) {
   const defaultLayouts = useMemo(() => buildLayouts(widgets), [widgets]);
-  const [layouts, setLayouts] = useState<LayoutMap>(() => loadLayouts(storageKey, widgets));
+  const [layouts, setLayouts] = useState<RGLLayouts>(() => loadLayouts(storageKey, widgets));
   const [locked, setLocked] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(1200);
@@ -71,7 +73,7 @@ export function DashboardGrid({ widgets, storageKey = 'dashboard-grid-layouts' }
     return () => obs.disconnect();
   }, []);
 
-  const handleLayoutChange = useCallback((_: Layout[], allLayouts: LayoutMap) => {
+  const handleLayoutChange = useCallback((_: RGLLayout[], allLayouts: RGLLayouts) => {
     setLayouts(allLayouts);
     try {
       localStorage.setItem(storageKey, JSON.stringify(allLayouts));
@@ -85,7 +87,6 @@ export function DashboardGrid({ widgets, storageKey = 'dashboard-grid-layouts' }
 
   return (
     <div className="relative" ref={containerRef}>
-      {/* Toolbar */}
       <div className="flex items-center justify-end gap-2 mb-3">
         <Button
           variant="outline"
