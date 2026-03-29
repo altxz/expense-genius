@@ -46,6 +46,34 @@ interface ImportTransactionsModalProps {
   onImported: () => void;
 }
 
+function parseOFX(text: string): Omit<ParsedTransaction, 'originType' | 'destId'>[] {
+  const transactions: Omit<ParsedTransaction, 'originType' | 'destId'>[] = [];
+  const txnBlocks = text.split(/<STMTTRN>/i).slice(1);
+
+  for (const block of txnBlocks) {
+    const amountMatch = block.match(/<TRNAMT>\s*([^\s<]+)/i);
+    const dateMatch = block.match(/<DTPOSTED>\s*(\d{8})/i);
+    const memoMatch = block.match(/<MEMO>\s*([^\r\n<]+)/i) || block.match(/<NAME>\s*([^\r\n<]+)/i);
+
+    if (!amountMatch || !dateMatch) continue;
+
+    const rawAmount = parseFloat(amountMatch[1].replace(',', '.'));
+    if (isNaN(rawAmount)) continue;
+
+    const rawDate = dateMatch[1];
+    const isoDate = `${rawDate.slice(0, 4)}-${rawDate.slice(4, 6)}-${rawDate.slice(6, 8)}`;
+    const description = memoMatch ? memoMatch[1].trim() : 'Sem descrição';
+
+    const type: 'income' | 'expense' = rawAmount < 0 ? 'expense' : 'income';
+    const finalValue = Math.abs(rawAmount);
+    const defaultCategory = type === 'income' ? 'salary' : 'outros';
+
+    transactions.push({ date: isoDate, description, value: finalValue, type, selected: true, category: defaultCategory });
+  }
+
+  return transactions;
+}
+
 function parseCSV(text: string): Omit<ParsedTransaction, 'originType' | 'destId'>[] {
   const lines = text.split('\n').filter(line => line.trim().length > 0);
   if (lines.length < 2) return [];
@@ -56,7 +84,7 @@ function parseCSV(text: string): Omit<ParsedTransaction, 'originType' | 'destId'
 
   const headers = headerLine.split(delimiter).map(h => h.trim().replace(/^"|"$/g, ''));
   let dateIdx = headers.findIndex(h => h.includes('date') || h.includes('data'));
-  let descIdx = headers.findIndex(h => h.includes('title') || h.includes('desc') || h.includes('histórico') || h.includes('lançamento') || h.includes('detalhe'));
+  let descIdx = headers.findIndex(h => h.includes('title') || h.includes('desc') || h.includes('histórico') || h.includes('historico') || h.includes('lançamento') || h.includes('lancamento') || h.includes('detalhe') || h.includes('memo') || h.includes('name'));
   let valIdx = headers.findIndex(h => h.includes('amount') || h.includes('valor') || h.includes('value'));
   if (dateIdx === -1) dateIdx = 0;
   if (descIdx === -1) descIdx = 1;
@@ -189,17 +217,21 @@ export function ImportTransactionsModal({ open, onOpenChange, onImported }: Impo
   useEffect(() => { if (!open) reset(); }, [open]);
 
   const processFile = (file: File) => {
-    if (!file.name.toLowerCase().endsWith('.csv')) {
-      toast({ title: 'Formato inválido', description: 'Por favor, selecione um arquivo .csv', variant: 'destructive' });
+    const lowerName = file.name.toLowerCase();
+    const isOFX = lowerName.endsWith('.ofx');
+    const isCSV = lowerName.endsWith('.csv');
+
+    if (!isCSV && !isOFX) {
+      toast({ title: 'Formato inválido', description: 'Por favor, selecione um arquivo .csv ou .ofx', variant: 'destructive' });
       return;
     }
     setFileName(file.name);
     const reader = new FileReader();
     reader.onload = (e) => {
       const text = e.target?.result as string;
-      let parsed = parseCSV(text);
+      let parsed = isOFX ? parseOFX(text) : parseCSV(text);
       if (parsed.length === 0) {
-        toast({ title: 'CSV inválido', description: 'Não foi possível encontrar colunas de Data, Descrição e Valor.', variant: 'destructive' });
+        toast({ title: 'Arquivo inválido', description: 'Não foi possível extrair transações. Verifique o formato do arquivo.', variant: 'destructive' });
         return;
       }
       parsed = applyRules(parsed, rules);
@@ -334,11 +366,11 @@ export function ImportTransactionsModal({ open, onOpenChange, onImported }: Impo
               }`}
             >
               <Upload className="h-10 w-10 mx-auto mb-4 text-muted-foreground" />
-              <p className="text-foreground font-medium mb-1">Arraste o arquivo CSV aqui</p>
+              <p className="text-foreground font-medium mb-1">Arraste o arquivo CSV ou OFX aqui</p>
               <p className="text-sm text-muted-foreground">ou clique para selecionar</p>
-              <p className="text-xs text-muted-foreground mt-3">Formato esperado: Data, Descrição, Valor</p>
+              <p className="text-xs text-muted-foreground mt-3">CSV (colunas detectadas automaticamente) ou OFX (padrão bancário)</p>
               <p className="text-xs text-muted-foreground mt-1">A conta/cartão de destino será escolhida na próxima etapa</p>
-              <input ref={fileInputRef} type="file" accept=".csv" onChange={handleFileChange} className="hidden" />
+              <input ref={fileInputRef} type="file" accept=".csv,.ofx" onChange={handleFileChange} className="hidden" />
             </div>
           </div>
         )}
