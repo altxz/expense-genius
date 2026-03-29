@@ -158,11 +158,11 @@ export function InvoiceDetailsModal({ open, onOpenChange, invoice, allExpenses, 
   };
 
   const content = (
-    <div className="flex flex-col flex-1 overflow-hidden min-h-0 w-full">
+    <div className="flex flex-col flex-1 overflow-hidden min-h-0">
       {/* Header card */}
-      <div className="bg-primary rounded-2xl p-4 sm:p-5 mx-3 sm:mx-4 mt-2 mb-4 text-primary-foreground overflow-hidden">
+      <div className="bg-primary rounded-2xl p-4 sm:p-5 mx-3 sm:mx-4 mt-2 mb-4 text-primary-foreground overflow-hidden shrink-0">
         <div className="flex items-center justify-between mb-3 gap-2">
-          <div className="flex items-center gap-2 min-w-0">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
             <CreditCard className="h-5 w-5 shrink-0" />
             <span className="font-bold text-sm sm:text-base truncate">{activeInvoice.cardName}</span>
           </div>
