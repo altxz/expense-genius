@@ -78,7 +78,12 @@ export function InvoiceDetailsModal({ open, onOpenChange, invoice, allExpenses, 
     activeInvoice.transactions.forEach(tx => {
       const cat = tx.final_category;
       if (!groups[cat]) {
-        groups[cat] = { label: getCategoryInfo(cat).label, total: 0, items: [] };
+        const info = getCategoryInfo(cat);
+        // Use the raw category name if getCategoryInfo falls back to 'Outros'
+        const label = info.value === 'outros' && cat !== 'outros'
+          ? cat.charAt(0).toUpperCase() + cat.slice(1)
+          : info.label;
+        groups[cat] = { label, total: 0, items: [] };
       }
       groups[cat].total += tx.value;
       groups[cat].items.push(tx);
