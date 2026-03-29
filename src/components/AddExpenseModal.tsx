@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Sparkles, Loader2, ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, X } from 'lucide-react';
 import { CATEGORIES, getCategoryInfo } from '@/lib/constants';
+import { getPaymentDate } from '@/lib/invoiceHelpers';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
