@@ -263,20 +263,15 @@ export function TransactionFeed({
     }));
   }, [expenses, allExpenses, startingMonthBalance, groupCards, invoicePeriods, cardDueDateMap, groupedExpenseIds, monthStart, monthEnd]);
 
-  const isInvoicePaid = (inv: InvoicePeriod) => {
-    if (inv.transactions.length === 0) return false;
-    return inv.transactions.every(tx => tx.is_paid);
-  };
-
-  const statusConfig = {
+  const statusConfig: Record<string, { label: string; className: string }> = {
     open: { label: 'Aberta', className: 'bg-emerald-500/15 text-emerald-600 border-emerald-500/30' },
     closed: { label: 'Fechada', className: 'bg-muted text-muted-foreground border-border' },
     overdue: { label: 'Vencida', className: 'bg-destructive/15 text-destructive border-destructive/30' },
+    paid: { label: 'Paga', className: 'bg-primary/15 text-primary border-primary/30' },
   };
 
   const getInvoiceDisplayStatus = (inv: InvoicePeriod) => {
-    if (isInvoicePaid(inv)) return { label: 'Paga', className: 'bg-primary/15 text-primary border-primary/30' };
-    return statusConfig[inv.status];
+    return statusConfig[inv.status] || statusConfig.open;
   };
 
   const hasContent = grouped.some(g => g.items.length > 0 || g.invoices.length > 0);
@@ -331,7 +326,7 @@ export function TransactionFeed({
                   {/* Invoice summaries (grouped mode) */}
                   {invoices.map(inv => {
                     const displayStatus = getInvoiceDisplayStatus(inv);
-                    const paid = isInvoicePaid(inv);
+                    const isPaid = inv.status === 'paid';
                     return (
                       <div
                         key={`inv-${inv.cardId}`}
@@ -356,7 +351,7 @@ export function TransactionFeed({
                           <span className="text-sm font-bold text-destructive">
                             {inv.total > 0 ? `-${formatCurrency(inv.total)}` : formatCurrency(0)}
                           </span>
-                          {!paid && inv.total > 0 && (
+                          {!isPaid && inv.total > 0 && (
                             <Button
                               size="sm"
                               variant="outline"
@@ -509,6 +504,8 @@ export function TransactionFeed({
           invoice={invoiceModal}
           allExpenses={allExpenses || expenses}
           cards={creditCards}
+          wallets={wallets}
+          onPaid={() => { setInvoiceModal(null); onDeleted(); }}
         />
       )}
     </div>

@@ -29,6 +29,10 @@ export interface Expense {
   tags: string[] | null;
   installment_group_id: string | null;
   installment_info: string | null;
+  invoice_month: string | null;
+  project_id: string | null;
+  debt_id: string | null;
+  payment_method: string | null;
 }
 
 interface ExpenseTableProps {
