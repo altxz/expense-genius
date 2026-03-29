@@ -345,7 +345,7 @@ export function TransactionFeed({
         <p className="text-center py-12 text-muted-foreground">Nenhuma transação encontrada.</p>
       ) : (
         <div className="space-y-5">
-          {grouped.map(({ dateKey, items, invoices, endOfDayBalance }) => {
+          {visibleGroups.map(({ dateKey, items, invoices, endOfDayBalance }) => {
             if (items.length === 0 && invoices.length === 0) return null;
             return (
               <div key={dateKey}>
@@ -501,17 +501,10 @@ export function TransactionFeed({
         </div>
       )}
 
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <p className="text-xs sm:text-sm text-muted-foreground">Página {page} de {totalPages}</p>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => onPageChange(page - 1)} className="rounded-xl">
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => onPageChange(page + 1)} className="rounded-xl">
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
+      {/* Infinite scroll sentinel */}
+      {hasMore && (
+        <div ref={sentinelRef} className="flex items-center justify-center py-6">
+          <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
         </div>
       )}
 
