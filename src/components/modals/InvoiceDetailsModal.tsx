@@ -5,12 +5,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { CreditCard, Calendar, Lock, Clock, AlertTriangle, Receipt, FileText, CheckCircle2 } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { CreditCard, Calendar, Lock, Clock, AlertTriangle, Receipt, CheckCircle2, Pencil, Trash2 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { formatCurrency, getCategoryInfo } from '@/lib/constants';
 import { getInvoicePeriod, matchExpensesToInvoice, formatInvoiceDate } from '@/lib/invoiceHelpers';
 import type { CreditCard as CreditCardType, InvoicePeriod } from '@/lib/invoiceHelpers';
 import type { Expense } from '@/components/ExpenseTable';
+import { EditExpenseModal } from '@/components/EditExpenseModal';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -23,6 +25,7 @@ interface InvoiceDetailsModalProps {
   cards: CreditCardType[];
   wallets?: { id: string; name: string }[];
   onPaid?: () => void;
+  refetch?: () => void;
 }
 
 const STATUS_CONFIG = {
@@ -45,13 +48,16 @@ function generateMonthOptions(): { value: string; label: string }[] {
   return options;
 }
 
-export function InvoiceDetailsModal({ open, onOpenChange, invoice, allExpenses, cards, wallets = [], onPaid }: InvoiceDetailsModalProps) {
+export function InvoiceDetailsModal({ open, onOpenChange, invoice, allExpenses, cards, wallets = [], onPaid, refetch }: InvoiceDetailsModalProps) {
   const isMobile = useIsMobile();
   const { user } = useAuth();
   const { toast } = useToast();
   const [selectedPeriod, setSelectedPeriod] = useState(`${new Date().getFullYear()}-${new Date().getMonth()}`);
   const [paying, setPaying] = useState(false);
   const [selectedWalletId, setSelectedWalletId] = useState<string>(wallets[0]?.id || '');
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Expense | null>(null);
+  const [deleteMode, setDeleteMode] = useState<'single' | 'all' | null>(null);
 
   const currentCard = cards.find(c => c.id === invoice.cardId);
 
@@ -67,7 +73,6 @@ export function InvoiceDetailsModal({ open, onOpenChange, invoice, allExpenses, 
   const monthOptions = useMemo(() => generateMonthOptions(), []);
   const isPaid = activeInvoice.status === 'paid';
 
-  // Group by category
   const byCategory = useMemo(() => {
     const groups: Record<string, { label: string; total: number; items: Expense[] }> = {};
     activeInvoice.transactions.forEach(tx => {
@@ -85,12 +90,45 @@ export function InvoiceDetailsModal({ open, onOpenChange, invoice, allExpenses, 
     return [...activeInvoice.transactions].sort((a, b) => a.date.localeCompare(b.date));
   }, [activeInvoice.transactions]);
 
+  const handleDelete = async (expense: Expense, mode: 'single' | 'all') => {
+    try {
+      if (mode === 'all' && expense.installment_group_id) {
+        const { error } = await supabase
+          .from('expenses')
+          .delete()
+          .eq('installment_group_id', expense.installment_group_id);
+        if (error) throw error;
+        toast({ title: 'Parcelas excluídas', description: 'Todas as parcelas foram removidas.' });
+      } else {
+        const { error } = await supabase.from('expenses').delete().eq('id', expense.id);
+        if (error) throw error;
+        toast({ title: 'Transação excluída' });
+      }
+      refetch?.();
+      onPaid?.();
+    } catch (err: any) {
+      toast({ title: 'Erro', description: err.message, variant: 'destructive' });
+    } finally {
+      setDeleteTarget(null);
+      setDeleteMode(null);
+    }
+  };
+
+  const onDeleteClick = (tx: Expense) => {
+    if (tx.installment_group_id) {
+      setDeleteTarget(tx);
+      setDeleteMode(null); // show choice dialog
+    } else {
+      setDeleteTarget(tx);
+      setDeleteMode('single'); // show simple confirm
+    }
+  };
+
   const handlePayInvoice = async () => {
     if (!user || !selectedWalletId || activeInvoice.total <= 0) return;
     setPaying(true);
 
     try {
-      // Create the payment transaction (debit from wallet)
       const dueDate = activeInvoice.dueDate;
       const dateStr = `${dueDate.getFullYear()}-${String(dueDate.getMonth() + 1).padStart(2, '0')}-${String(dueDate.getDate()).padStart(2, '0')}`;
 
@@ -109,6 +147,7 @@ export function InvoiceDetailsModal({ open, onOpenChange, invoice, allExpenses, 
       if (insertError) throw insertError;
 
       toast({ title: 'Fatura paga!', description: `Pagamento de ${formatCurrency(activeInvoice.total)} registrado.` });
+      refetch?.();
       onPaid?.();
       onOpenChange(false);
     } catch (err: any) {
@@ -187,7 +226,7 @@ export function InvoiceDetailsModal({ open, onOpenChange, invoice, allExpenses, 
             <div className="space-y-1">
               <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Todas as transações</h4>
               {chronological.map(tx => (
-                <div key={tx.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
+                <div key={tx.id} className="flex items-center justify-between py-2 border-b border-border last:border-0 group">
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium truncate">{tx.description}</p>
                     <p className="text-xs text-muted-foreground">
@@ -195,9 +234,25 @@ export function InvoiceDetailsModal({ open, onOpenChange, invoice, allExpenses, 
                       {tx.installment_info && ` • ${tx.installment_info}`}
                     </p>
                   </div>
-                  <span className="text-sm font-bold text-destructive shrink-0 ml-3">
-                    -{formatCurrency(tx.value)}
-                  </span>
+                  <div className="flex items-center gap-1 shrink-0 ml-2">
+                    <span className="text-sm font-bold text-destructive">
+                      -{formatCurrency(tx.value)}
+                    </span>
+                    <button
+                      onClick={() => setEditingExpense(tx)}
+                      className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                      title="Editar"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      onClick={() => onDeleteClick(tx)}
+                      className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                      title="Excluir"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -241,6 +296,69 @@ export function InvoiceDetailsModal({ open, onOpenChange, invoice, allExpenses, 
           </div>
         )}
       </div>
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(v) => { if (!v) { setDeleteTarget(null); setDeleteMode(null); } }}>
+        <AlertDialogContent className="rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {deleteTarget?.installment_group_id && deleteMode === null
+                ? 'Excluir parcela'
+                : 'Excluir transação?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteTarget?.installment_group_id && deleteMode === null
+                ? `Esta é a parcela ${deleteTarget.installment_info}. O que deseja excluir?`
+                : 'Esta ação não pode ser desfeita.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className={deleteTarget?.installment_group_id && deleteMode === null ? 'flex-col gap-2 sm:flex-col' : ''}>
+            {deleteTarget?.installment_group_id && deleteMode === null ? (
+              <>
+                <Button
+                  variant="outline"
+                  className="rounded-xl"
+                  onClick={() => { if (deleteTarget) handleDelete(deleteTarget, 'single'); }}
+                >
+                  Apenas esta parcela
+                </Button>
+                <Button
+                  variant="destructive"
+                  className="rounded-xl"
+                  onClick={() => { if (deleteTarget) handleDelete(deleteTarget, 'all'); }}
+                >
+                  Todas as parcelas do grupo
+                </Button>
+                <AlertDialogCancel className="rounded-xl">Cancelar</AlertDialogCancel>
+              </>
+            ) : (
+              <>
+                <AlertDialogCancel className="rounded-xl">Cancelar</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => { if (deleteTarget) handleDelete(deleteTarget, 'single'); }}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl"
+                >
+                  Excluir
+                </AlertDialogAction>
+              </>
+            )}
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Edit modal */}
+      {editingExpense && (
+        <EditExpenseModal
+          open={!!editingExpense}
+          expense={editingExpense}
+          onOpenChange={(v) => { if (!v) setEditingExpense(null); }}
+          onExpenseUpdated={() => {
+            setEditingExpense(null);
+            refetch?.();
+            onPaid?.();
+          }}
+        />
+      )}
     </div>
   );
 
