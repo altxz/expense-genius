@@ -21,13 +21,16 @@ interface DayData {
   projected?: boolean;
 }
 
-export function CashFlowChart() {
+interface CashFlowChartProps {
+  creditCards: any[];
+  wallets: { id: string; name: string; initial_balance: number }[];
+}
+
+export function CashFlowChart({ creditCards: propCards, wallets: propWallets }: CashFlowChartProps) {
   const { user } = useAuth();
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('month');
-  const [wallets, setWallets] = useState<any[]>([]);
   const [allExpenses, setAllExpenses] = useState<any[]>([]);
   const [recurringExpenses, setRecurringExpenses] = useState<any[]>([]);
-  const [creditCards, setCreditCards] = useState<any[]>([]);
   const [unpaidCreditExpenses, setUnpaidCreditExpenses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -56,20 +59,18 @@ export function CashFlowChart() {
     setLoading(true);
 
     const fetchAll = async () => {
-      const [walletsRes, expensesRes, recurringRes, cardsRes, unpaidRes] = await Promise.all([
-        supabase.from('wallets').select('initial_balance').eq('user_id', user.id),
-        // All user expenses (we need history before range for running balance)
-        supabase.from('expenses').select('*').eq('user_id', user.id).order('date'),
-        supabase.from('expenses').select('*').eq('user_id', user.id).eq('is_recurring', true),
-        supabase.from('credit_cards').select('id, name, due_day').eq('user_id', user.id),
+      const [expensesRes, recurringRes, unpaidRes] = await Promise.all([
+        // Fetch only needed columns instead of select('*')
+        supabase.from('expenses').select('value, type, credit_card_id, date, is_paid, is_recurring')
+          .eq('user_id', user.id).order('date'),
+        supabase.from('expenses').select('value, type, date, credit_card_id')
+          .eq('user_id', user.id).eq('is_recurring', true),
         supabase.from('expenses').select('value, credit_card_id, invoice_month')
           .eq('user_id', user.id).eq('is_paid', false).not('credit_card_id', 'is', null),
       ]);
 
-      setWallets(walletsRes.data || []);
       setAllExpenses(expensesRes.data || []);
       setRecurringExpenses(recurringRes.data || []);
-      setCreditCards(cardsRes.data || []);
       setUnpaidCreditExpenses(unpaidRes.data || []);
       setLoading(false);
     };
@@ -79,7 +80,7 @@ export function CashFlowChart() {
 
   const chartData = useMemo(() => {
     // 1) Base balance from wallets
-    const walletsBase = wallets.reduce((s, w) => s + Number(w.initial_balance || 0), 0);
+    const walletsBase = propWallets.reduce((s, w) => s + Number(w.initial_balance || 0), 0);
 
     // 2) Compute running balance up to rangeStart from all real transactions
     let preRangeBalance = walletsBase;
@@ -132,7 +133,7 @@ export function CashFlowChart() {
         billByCard[e.credit_card_id] = (billByCard[e.credit_card_id] || 0) + Number(e.value);
       }
     });
-    creditCards.forEach(card => {
+    propCards.forEach(card => {
       const bill = billByCard[card.id];
       if (!bill || bill <= 0) return;
       const days = eachDayOfInterval({ start: rangeStart, end: rangeEnd });
