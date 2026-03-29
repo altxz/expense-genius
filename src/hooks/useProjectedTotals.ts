@@ -37,7 +37,7 @@ export function useProjectedTotals(): ProjectedTotals {
   const [monthExpenses, setMonthExpenses] = useState<Expense[]>([]);
   const [invoiceExpenses, setInvoiceExpenses] = useState<Expense[]>([]);
   const [creditCards, setCreditCards] = useState<CreditCardType[]>([]);
-  const [wallets, setWallets] = useState<{ id: string; name: string }[]>([]);
+  const [wallets, setWallets] = useState<{ id: string; name: string; initial_balance: number }[]>([]);
   const [startingBalance, setStartingBalance] = useState(0);
   const [loading, setLoading] = useState(true);
 
