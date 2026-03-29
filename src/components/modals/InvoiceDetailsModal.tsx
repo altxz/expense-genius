@@ -160,27 +160,27 @@ export function InvoiceDetailsModal({ open, onOpenChange, invoice, allExpenses, 
   const content = (
     <div className="flex flex-col h-full">
       {/* Header card */}
-      <div className="bg-primary rounded-2xl p-5 mx-4 mt-2 mb-4 text-primary-foreground">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <CreditCard className="h-5 w-5" />
-            <span className="font-bold text-base">{activeInvoice.cardName}</span>
+      <div className="bg-primary rounded-2xl p-4 sm:p-5 mx-3 sm:mx-4 mt-2 mb-4 text-primary-foreground overflow-hidden">
+        <div className="flex items-center justify-between mb-3 gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <CreditCard className="h-5 w-5 shrink-0" />
+            <span className="font-bold text-sm sm:text-base truncate">{activeInvoice.cardName}</span>
           </div>
-          <div className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full ${statusInfo.bg} ${statusInfo.text}`}>
+          <div className={`flex items-center gap-1 text-[10px] sm:text-xs font-semibold px-2 py-1 rounded-full shrink-0 ${statusInfo.bg} ${statusInfo.text}`}>
             <StatusIcon className="h-3 w-3" />
-            {statusInfo.label}
+            <span className="whitespace-nowrap">{statusInfo.label}</span>
           </div>
         </div>
 
-        <div className="text-3xl font-extrabold mb-1">{formatCurrency(activeInvoice.total)}</div>
+        <div className="text-2xl sm:text-3xl font-extrabold mb-1">{formatCurrency(activeInvoice.total)}</div>
 
-        <div className="flex items-center gap-4 text-xs opacity-80">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs opacity-80">
           <div className="flex items-center gap-1">
-            <Calendar className="h-3 w-3" />
+            <Calendar className="h-3 w-3 shrink-0" />
             Fecha em {formatInvoiceDate(activeInvoice.periodEnd)}
           </div>
           <div className="flex items-center gap-1">
-            <Receipt className="h-3 w-3" />
+            <Receipt className="h-3 w-3 shrink-0" />
             Vence em {formatInvoiceDate(activeInvoice.dueDate)}
           </div>
         </div>
