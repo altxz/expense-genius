@@ -61,7 +61,7 @@ export default function Dashboard() {
   const projected = useProjectedTotals();
   const [modalOpen, setModalOpen] = useState(false);
   const [budgetTotals, setBudgetTotals] = useState({ totalBudget: 0, totalSpent: 0 });
-  const [hasOverdueCards, setHasOverdueCards] = useState(false);
+  
   const [dbCategories, setDbCategories] = useState<any[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
   const fetchCounterRef = useRef(0);
