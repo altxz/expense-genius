@@ -9,7 +9,7 @@ import { CreditCard, Clock, Lock, AlertTriangle, Wallet, Receipt, Loader2, Calen
 import { useAuth } from '@/contexts/AuthContext';
 import { useSelectedDate } from '@/contexts/DateContext';
 import { supabase } from '@/lib/supabase';
-import { formatCurrency, getCategoryInfo } from '@/lib/constants';
+import { formatCurrency } from '@/lib/constants';
 import { getInvoicePeriod, matchExpensesToInvoice, formatInvoiceDate } from '@/lib/invoiceHelpers';
 import type { CreditCard as CreditCardType, InvoicePeriod } from '@/lib/invoiceHelpers';
 import type { Expense } from '@/components/ExpenseTable';
