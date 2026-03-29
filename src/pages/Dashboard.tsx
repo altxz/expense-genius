@@ -191,6 +191,10 @@ export default function Dashboard() {
           <DashboardHeader />
           <main className="flex-1 p-3 sm:p-4 lg:p-8 pb-32 space-y-4 sm:space-y-6 overflow-auto">
             <InstallPwaPrompt />
+            <OnboardingWizard
+              open={showOnboarding}
+              onComplete={() => { setShowOnboarding(false); refetchSettings(); fetchExtraData(); }}
+            />
             <MonthSelector />
 
             {isLoading ? (
