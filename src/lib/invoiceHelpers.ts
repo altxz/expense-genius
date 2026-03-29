@@ -93,21 +93,30 @@ export function getPaymentDate(
   return new Date(dueYear, dueMonth, Math.min(dueDay, dueLastDay));
 }
 
+/**
+ * Build an invoice period where targetMonth/targetYear represent the DUE MONTH.
+ * The closing (cycle) month is the month BEFORE the due month.
+ */
 export function getInvoicePeriod(card: CreditCard, targetYear: number, targetMonth: number): Omit<InvoicePeriod, 'transactions' | 'total'> {
   const closingDay = getClosingDay(card);
 
-  const periodEnd = buildClosingDate(targetYear, targetMonth, closingDay);
+  // Cycle (closing) month = one month before due month
+  const cycleMonth = targetMonth === 0 ? 11 : targetMonth - 1;
+  const cycleYear = targetMonth === 0 ? targetYear - 1 : targetYear;
 
-  const prevMonth = targetMonth === 0 ? 11 : targetMonth - 1;
-  const prevYear = targetMonth === 0 ? targetYear - 1 : targetYear;
-  const prevClosing = buildClosingDate(prevYear, prevMonth, closingDay);
+  // Period end = closing date in the cycle month
+  const periodEnd = buildClosingDate(cycleYear, cycleMonth, closingDay);
+
+  // Period start = day after closing of the month before the cycle
+  const prevCycleMonth = cycleMonth === 0 ? 11 : cycleMonth - 1;
+  const prevCycleYear = cycleMonth === 0 ? cycleYear - 1 : cycleYear;
+  const prevClosing = buildClosingDate(prevCycleYear, prevCycleMonth, closingDay);
   const periodStart = new Date(prevClosing);
   periodStart.setDate(periodStart.getDate() + 1);
 
-  const dueMonth = targetMonth === 11 ? 0 : targetMonth + 1;
-  const dueYear = targetMonth === 11 ? targetYear + 1 : targetYear;
-  const dueLastDay = new Date(dueYear, dueMonth + 1, 0).getDate();
-  const dueDate = new Date(dueYear, dueMonth, Math.min(card.due_day, dueLastDay));
+  // Due date falls in targetMonth/targetYear
+  const dueLastDay = new Date(targetYear, targetMonth + 1, 0).getDate();
+  const dueDate = new Date(targetYear, targetMonth, Math.min(card.due_day, dueLastDay));
 
   const today = new Date();
   today.setHours(23, 59, 59, 999);
@@ -119,6 +128,7 @@ export function getInvoicePeriod(card: CreditCard, targetYear: number, targetMon
     status = 'closed';
   }
 
+  // monthLabel = due month (the reference for this invoice)
   const monthLabel = `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}`;
 
   return {
