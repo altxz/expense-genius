@@ -47,8 +47,8 @@ export default function AuthPage() {
     <div className="min-h-screen flex items-center justify-center bg-primary p-4">
       <Card className="w-full max-w-md rounded-2xl shadow-2xl border-0">
         <CardHeader className="text-center space-y-3 pb-2">
-          <div className="mx-auto mb-1">
-            <Logo size={64} showText={false} />
+          <div className="mx-auto mb-2">
+            <img src="/logo-full.svg" alt="Lumnia Logo" className="h-20 w-auto mx-auto" />
           </div>
           <CardTitle className="text-3xl font-bold">
             {isLogin ? 'Entrar' : 'Criar Conta'}
