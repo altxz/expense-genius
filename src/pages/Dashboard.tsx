@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { AlertTriangle } from 'lucide-react';
+import { OnboardingWizard } from '@/components/OnboardingWizard';
+import { useUserSettings } from '@/contexts/UserSettingsContext';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { SummaryCards } from '@/components/SummaryCards';
