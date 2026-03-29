@@ -301,12 +301,10 @@ export function CreditCardSummary() {
                   <p className="text-xs font-semibold text-muted-foreground mb-2">Últimas Transações</p>
                   <div className="space-y-2">
                     {last3.map(tx => {
-                      const catInfo = getCategoryInfo(tx.final_category);
                       return (
                         <div key={tx.id} className="flex items-center gap-3 rounded-xl bg-muted/30 px-3 py-2">
-                          <div className="h-7 w-7 rounded-lg flex items-center justify-center text-xs shrink-0"
-                            style={{ backgroundColor: catInfo.color + '22', color: catInfo.color }}>
-                            {catInfo.emoji}
+                          <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                            <Wallet className="h-3.5 w-3.5 text-primary" />
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-xs font-medium truncate">{tx.description}</p>
