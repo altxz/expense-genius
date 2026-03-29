@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Brain, AlertTriangle, Lightbulb } from 'lucide-react';
+import { Brain, AlertTriangle, Lightbulb, Info } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { formatCurrency, getCategoryInfo } from '@/lib/constants';
 import { CategoryStats } from '@/hooks/useAnalyticsData';
 
@@ -41,9 +42,19 @@ export function InsightsSection({ avgMonthly, categoryStats, weekdayAnalysis, pr
     <div className="grid gap-4 grid-cols-1 lg:grid-cols-3">
       <Card className="rounded-2xl border-0 shadow-md">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base font-semibold flex items-center gap-2">
-            <Brain className="h-4 w-4 text-ai" /> Padrões Descobertos
-          </CardTitle>
+          <div className="flex items-center gap-2">
+            <CardTitle className="text-base font-semibold flex items-center gap-2">
+              <Brain className="h-4 w-4 text-ai" /> Padrões Descobertos
+            </CardTitle>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Info className="h-4 w-4 text-muted-foreground hover:text-primary cursor-help transition-colors" />
+              </TooltipTrigger>
+              <TooltipContent className="max-w-[250px] text-xs">
+                <p>Padrões de comportamento financeiro identificados automaticamente com base nos seus dados.</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
         </CardHeader>
         <CardContent className="space-y-3">
           {patterns.length > 0 ? patterns.map((p, i) => (
@@ -57,9 +68,19 @@ export function InsightsSection({ avgMonthly, categoryStats, weekdayAnalysis, pr
 
       <Card className="rounded-2xl border-0 shadow-md">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base font-semibold flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4 text-destructive" /> Alertas Inteligentes
-          </CardTitle>
+          <div className="flex items-center gap-2">
+            <CardTitle className="text-base font-semibold flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-destructive" /> Alertas Inteligentes
+            </CardTitle>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Info className="h-4 w-4 text-muted-foreground hover:text-primary cursor-help transition-colors" />
+              </TooltipTrigger>
+              <TooltipContent className="max-w-[250px] text-xs">
+                <p>Avisos automáticos quando seus gastos fogem do padrão habitual.</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
         </CardHeader>
         <CardContent className="space-y-3">
           {alerts.length > 0 ? alerts.map((a, i) => (
@@ -73,9 +94,19 @@ export function InsightsSection({ avgMonthly, categoryStats, weekdayAnalysis, pr
 
       <Card className="rounded-2xl border-0 shadow-md">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base font-semibold flex items-center gap-2">
-            <Lightbulb className="h-4 w-4 text-accent" /> Recomendações
-          </CardTitle>
+          <div className="flex items-center gap-2">
+            <CardTitle className="text-base font-semibold flex items-center gap-2">
+              <Lightbulb className="h-4 w-4 text-accent" /> Recomendações
+            </CardTitle>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Info className="h-4 w-4 text-muted-foreground hover:text-primary cursor-help transition-colors" />
+              </TooltipTrigger>
+              <TooltipContent className="max-w-[250px] text-xs">
+                <p>Sugestões personalizadas para melhorar suas finanças com base nos seus hábitos.</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
         </CardHeader>
         <CardContent className="space-y-3">
           {recommendations.map((r, i) => (
