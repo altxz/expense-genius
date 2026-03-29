@@ -230,13 +230,13 @@ export default function Dashboard() {
                   {/* Destaque Topo: Fluxo de Caixa (Largura Total) */}
                   <div className="lg:col-span-2 flex flex-col min-h-[350px]"><CashFlowChart /></div>
 
-                  {/* Pares 1: Categorias e Balanço */}
+                  {/* Pares 1: Categorias e Subcategorias */}
                   <div className="flex flex-col min-h-[350px]"><TopCategoriesPie expenses={expenses} categories={dbCategories} /></div>
-                  <div className="flex flex-col min-h-[350px]"><IncomeVsExpenseChart /></div>
-
-                  {/* Pares 2: Caminho do Dinheiro */}
-                  <div className="flex flex-col min-h-[350px]"><WaterfallChart expenses={expenses} startingBalance={totalRealBalance - summary.totalIncome + summary.totalExpense} /></div>
                   <div className="flex flex-col min-h-[350px]"><SubcategoryTreemap expenses={expenses} categories={dbCategories} /></div>
+
+                  {/* Pares 2: Receita vs Despesas e Cascata */}
+                  <div className="flex flex-col min-h-[350px]"><IncomeVsExpenseChart /></div>
+                  <div className="flex flex-col min-h-[350px]"><WaterfallChart expenses={expenses} startingBalance={totalRealBalance - summary.totalIncome + summary.totalExpense} /></div>
 
                   {/* Pares 3: Origem e Rotina */}
                   <div className="flex flex-col min-h-[350px]"><IncomeSourcesPie expenses={expenses} categories={dbCategories} /></div>
