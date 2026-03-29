@@ -155,13 +155,20 @@ export function TransactionFeed({
     return m;
   }, [wallets]);
 
-  // Build feed items: move CC expenses to due date
+  // Selected month boundaries for strict filtering
+  const monthStart = `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}-01`;
+  const monthEndDate = new Date(targetYear, targetMonth + 1, 0);
+  const monthEnd = toDateKey(monthEndDate);
+
+  // Build feed items: move CC expenses to due date, filter strictly by selected month
   const grouped: DayGroup[] = useMemo(() => {
     const dayMap: Record<string, FeedItem[]> = {};
     const invoicesByDay: Record<string, InvoicePeriod[]> = {};
 
-    // Helper to ensure a day bucket exists
     const ensureDay = (key: string) => { if (!dayMap[key]) dayMap[key] = []; };
+
+    /** Check if a date key falls within the selected month */
+    const isInSelectedMonth = (dateKey: string) => dateKey >= monthStart && dateKey <= monthEnd;
 
     // Process each expense
     expenses.forEach(exp => {
@@ -176,7 +183,8 @@ export function TransactionFeed({
         }
 
         if (dueKey) {
-          // Move to due date (both grouped and ungrouped)
+          // Only show if the due date falls within the selected month
+          if (!isInSelectedMonth(dueKey)) return;
           ensureDay(dueKey);
           dayMap[dueKey].push({
             expense: exp,
@@ -184,49 +192,51 @@ export function TransactionFeed({
             isInvoiceItem: true,
           });
         } else {
-          // No matching invoice period, show on original date
+          // No matching invoice period — show on original date if in month
+          if (!isInSelectedMonth(exp.date)) return;
           ensureDay(exp.date);
           dayMap[exp.date].push({ expense: exp, isInvoiceItem: false });
         }
       } else {
-        // Non-CC expenses stay on their original date
+        // Non-CC expenses stay on their original date (already filtered by parent)
         ensureDay(exp.date);
         dayMap[exp.date].push({ expense: exp, isInvoiceItem: false });
       }
     });
 
-    // Add invoice summaries on their due dates (grouped mode only)
+    // Add invoice summaries on their due dates (grouped mode only) — only if due date is in selected month
     if (groupCards) {
       invoicePeriods.forEach(inv => {
         const key = toDateKey(inv.dueDate);
+        if (!isInSelectedMonth(key)) return;
         ensureDay(key);
         if (!invoicesByDay[key]) invoicesByDay[key] = [];
         invoicesByDay[key].push(inv);
       });
     }
 
-    // Calculate running balance using ALL expenses (ascending order)
+    // Calculate running balance — only consider flows within the selected month
     const allTxns = allExpenses || expenses;
 
-    // Build a complete map of non-CC daily flows
     const nonCcFlowByDay: Record<string, number> = {};
     allTxns.forEach(exp => {
       if (exp.type === 'transfer' || !exp.is_paid) return;
-      if (exp.credit_card_id) return; // CC expenses don't affect balance on purchase day
+      if (exp.credit_card_id) return;
       const key = exp.date;
+      if (key < monthStart || key > monthEnd) return;
       if (!nonCcFlowByDay[key]) nonCcFlowByDay[key] = 0;
       if (exp.type === 'income') nonCcFlowByDay[key] += exp.value;
       else nonCcFlowByDay[key] -= exp.value;
     });
 
-    // Invoice totals hit the balance on due date
+    // Invoice totals only hit balance if due date is in the selected month
     const invoiceTotalByDay: Record<string, number> = {};
     invoicePeriods.forEach(inv => {
       const key = toDateKey(inv.dueDate);
+      if (!isInSelectedMonth(key)) return;
       invoiceTotalByDay[key] = (invoiceTotalByDay[key] || 0) + inv.total;
     });
 
-    // Collect all days that matter for balance calculation
     const allDayKeys = new Set<string>([
       ...Object.keys(nonCcFlowByDay),
       ...Object.keys(invoiceTotalByDay),
@@ -242,7 +252,6 @@ export function TransactionFeed({
       balanceMap[day] = runningBalance;
     }
 
-    // Build sorted day groups (descending)
     const allDisplayDays = new Set<string>([...Object.keys(dayMap), ...Object.keys(invoicesByDay)]);
     const sortedDays = Array.from(allDisplayDays).sort((a, b) => b.localeCompare(a));
 
@@ -252,7 +261,7 @@ export function TransactionFeed({
       invoices: invoicesByDay[dateKey] || [],
       endOfDayBalance: balanceMap[dateKey] ?? startingMonthBalance,
     }));
-  }, [expenses, allExpenses, startingMonthBalance, groupCards, invoicePeriods, cardDueDateMap, groupedExpenseIds]);
+  }, [expenses, allExpenses, startingMonthBalance, groupCards, invoicePeriods, cardDueDateMap, groupedExpenseIds, monthStart, monthEnd]);
 
   const isInvoicePaid = (inv: InvoicePeriod) => {
     if (inv.transactions.length === 0) return false;
