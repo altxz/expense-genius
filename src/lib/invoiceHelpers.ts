@@ -154,7 +154,8 @@ export function matchExpensesToInvoice(
   expenses: Expense[],
   period: Omit<InvoicePeriod, 'transactions' | 'total'>
 ): InvoicePeriod {
-  const periodDueLabel = toMonthLabel(period.dueDate.getFullYear(), period.dueDate.getMonth());
+  // monthLabel is now the due month label (e.g. "2026-04")
+  const dueLabel = period.monthLabel;
 
   const matched = expenses.filter(e => {
     if (e.credit_card_id !== period.cardId) return false;
@@ -162,13 +163,13 @@ export function matchExpensesToInvoice(
 
     // Parcelas/projeções persistidas: fonte primária
     if (e.invoice_month) {
-      return e.invoice_month === period.monthLabel;
+      return e.invoice_month === dueLabel;
     }
 
     // Fallback: calcula mês efetivo de saída do caixa pela regra do cartão
     const paymentDate = getPaymentDate(e.date, { closingDay: period.closingDay, dueDay: period.dueDay });
     const paymentLabel = toMonthLabel(paymentDate.getFullYear(), paymentDate.getMonth());
-    return paymentLabel === periodDueLabel;
+    return paymentLabel === dueLabel;
   });
 
   const total = matched.reduce((s, e) => s + e.value, 0);
@@ -177,7 +178,7 @@ export function matchExpensesToInvoice(
   const isPaid = expenses.some(e =>
     e.type === 'expense' &&
     !e.credit_card_id &&
-    e.invoice_month === period.monthLabel &&
+    e.invoice_month === dueLabel &&
     e.description.startsWith('Pagamento fatura') &&
     e.wallet_id
   );
