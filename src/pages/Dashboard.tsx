@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { AlertTriangle, Lock, Unlock, RotateCcw, GripVertical } from 'lucide-react';
-import { Responsive } from 'react-grid-layout';
+import { ResponsiveGridLayout } from 'react-grid-layout';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { SummaryCards } from '@/components/SummaryCards';
