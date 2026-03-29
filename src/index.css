@@ -113,28 +113,3 @@
   }
 }
 
-.drag-handle {
-  cursor: grab;
-}
-.drag-handle:active {
-  cursor: grabbing;
-}
-
-.react-grid-item.react-grid-placeholder {
-  background: hsl(var(--primary) / 0.15);
-  border: 2px dashed hsl(var(--primary) / 0.4);
-  border-radius: var(--radius);
-}
-
-.react-grid-item > .react-resizable-handle::after {
-  border-color: hsl(var(--muted-foreground) / 0.4);
-}
-
-.react-grid-item {
-  transition: all 200ms ease;
-  overflow: hidden !important;
-}
-
-.react-resizable-handle {
-  display: none !important;
-}
