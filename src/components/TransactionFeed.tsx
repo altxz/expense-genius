@@ -1,5 +1,5 @@
-import { useMemo, useState, useEffect } from 'react';
-import { Clock, Utensils, Car, Gamepad2, Heart, Home, GraduationCap, Tag, ArrowLeftRight, ChevronLeft, ChevronRight, Wallet, Pencil, Trash2, CreditCard, Layers, LayoutList, Receipt, Pin } from 'lucide-react';
+import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
+import { Clock, Utensils, Car, Gamepad2, Heart, Home, GraduationCap, Tag, ArrowLeftRight, Wallet, Pencil, Trash2, CreditCard, Layers, LayoutList, Receipt, Pin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -26,6 +26,8 @@ const CATEGORY_ICONS: Record<string, { icon: typeof Utensils; bg: string; text: 
 
 const STORAGE_KEY = 'txfeed_group_cards';
 
+const ITEMS_PER_PAGE = 30;
+
 interface TransactionFeedProps {
   expenses: Expense[];
   allExpenses?: Expense[];
@@ -35,9 +37,6 @@ interface TransactionFeedProps {
   onDeleted: () => void;
   filters: { category: string };
   onFilterChange: (key: string, value: string) => void;
-  page: number;
-  totalPages: number;
-  onPageChange: (page: number) => void;
   wallets?: { id: string; name: string }[];
   startingMonthBalance?: number;
   creditCards?: CreditCardType[];
@@ -88,9 +87,6 @@ export function TransactionFeed({
   invoiceExpenses,
   loading,
   onDeleted,
-  page,
-  totalPages,
-  onPageChange,
   wallets = [],
   startingMonthBalance = 0,
   creditCards = [],
@@ -261,7 +257,59 @@ export function TransactionFeed({
     return statusConfig[inv.status] || statusConfig.open;
   };
 
+  // Infinite scroll state
+  const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  // Reset visible count when expenses change
+  useEffect(() => {
+    setVisibleCount(ITEMS_PER_PAGE);
+  }, [expenses]);
+
+  // IntersectionObserver for infinite scroll
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisibleCount(prev => prev + ITEMS_PER_PAGE);
+        }
+      },
+      { rootMargin: '200px' }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [grouped]);
+
   const hasContent = grouped.some(g => g.items.length > 0 || g.invoices.length > 0);
+
+  // Slice grouped items for infinite scroll
+  const visibleGroups = useMemo(() => {
+    let count = 0;
+    const result: typeof grouped = [];
+    for (const group of grouped) {
+      if (count >= visibleCount) break;
+      const remaining = visibleCount - count;
+      const totalItems = group.items.length + group.invoices.length;
+      if (totalItems <= remaining) {
+        result.push(group);
+        count += totalItems;
+      } else {
+        // Partially show items
+        result.push({
+          ...group,
+          items: group.items.slice(0, Math.max(0, remaining - group.invoices.length)),
+          invoices: group.invoices.slice(0, remaining),
+        });
+        count = visibleCount;
+      }
+    }
+    return result;
+  }, [grouped, visibleCount]);
+
+  const allItemsCount = grouped.reduce((s, g) => s + g.items.length + g.invoices.length, 0);
+  const hasMore = visibleCount < allItemsCount;
 
   return (
     <div className="space-y-4">
@@ -288,12 +336,16 @@ export function TransactionFeed({
       )}
 
       {loading ? (
-        <p className="text-center py-12 text-muted-foreground">Carregando...</p>
+        <div className="space-y-3">
+          {[1,2,3,4,5].map(i => (
+            <div key={i} className="h-16 rounded-xl bg-muted/60 animate-pulse" />
+          ))}
+        </div>
       ) : !hasContent ? (
         <p className="text-center py-12 text-muted-foreground">Nenhuma transação encontrada.</p>
       ) : (
         <div className="space-y-5">
-          {grouped.map(({ dateKey, items, invoices, endOfDayBalance }) => {
+          {visibleGroups.map(({ dateKey, items, invoices, endOfDayBalance }) => {
             if (items.length === 0 && invoices.length === 0) return null;
             return (
               <div key={dateKey}>
@@ -449,17 +501,10 @@ export function TransactionFeed({
         </div>
       )}
 
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <p className="text-xs sm:text-sm text-muted-foreground">Página {page} de {totalPages}</p>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => onPageChange(page - 1)} className="rounded-xl">
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => onPageChange(page + 1)} className="rounded-xl">
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
+      {/* Infinite scroll sentinel */}
+      {hasMore && (
+        <div ref={sentinelRef} className="flex items-center justify-center py-6">
+          <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
         </div>
       )}
 

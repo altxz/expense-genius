@@ -563,7 +563,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_starting_balance: {
+        Args: { p_before_date: string; p_user_id: string }
+        Returns: number
+      }
     }
     Enums: {
       [_ in never]: never
