@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { useSelectedDate } from '@/contexts/DateContext';
-import { formatCurrency, getCategoryInfo } from '@/lib/constants';
+import { formatCurrency, getCategoryInfo, getCategoryLabel } from '@/lib/constants';
 import { Clock, ArrowUpCircle, ArrowDownCircle, ArrowLeftRight, Wallet } from 'lucide-react';
 import type { Expense } from '@/components/ExpenseTable';
 import { InfoPopover } from '@/components/ui/info-popover';
