@@ -21,7 +21,7 @@ import { TransactionSummaryHeader } from '@/components/TransactionSummaryHeader'
 import { useProjectedTotals } from '@/hooks/useProjectedTotals';
 import type { Expense } from '@/components/ExpenseTable';
 
-const PAGE_SIZE = 30;
+
 
 export default function HistoryPage() {
   const { user, loading: authLoading } = useAuth();
