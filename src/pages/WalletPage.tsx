@@ -112,7 +112,10 @@ export default function WalletPage() {
   const [cardsLoading, setCardsLoading] = useState(true);
   const [cardModalOpen, setCardModalOpen] = useState(false);
   const [cardSaving, setCardSaving] = useState(false);
+  const [editingCardId, setEditingCardId] = useState<string | null>(null);
   const [cardForm, setCardForm] = useState({ name: '', limit_amount: '', closing_day: '25', due_day: '10', closing_strategy: 'fixed' as string, closing_days_before_due: '7' });
+  const [recalcDialogOpen, setRecalcDialogOpen] = useState(false);
+  const [pendingCardSave, setPendingCardSave] = useState<(() => Promise<void>) | null>(null);
 
   // ─── Invoice View state ───
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
