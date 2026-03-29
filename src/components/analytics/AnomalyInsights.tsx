@@ -4,7 +4,7 @@ import { TrendingUp, TrendingDown, Trophy, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSelectedDate } from '@/contexts/DateContext';
-import { getCategoryInfo, formatCurrency } from '@/lib/constants';
+import { getCategoryLabel, formatCurrency } from '@/lib/constants';
 
 interface Insight {
   category: string;
@@ -61,7 +61,7 @@ export function AnomalyInsights() {
         if (prev < 10) return; // skip negligible categories
 
         const pct = ((cur - prev) / prev) * 100;
-        const label = getCategoryInfo(cat).label;
+        const label = getCategoryLabel(cat);
 
         if (pct > 30) {
           results.push({ category: cat, label, currentAmount: cur, prevAmount: prev, pctChange: Math.round(pct), type: 'alert' });

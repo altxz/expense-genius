@@ -1,6 +1,6 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { TrendingUp, Brain, PiggyBank, Shield } from 'lucide-react';
-import { formatCurrency, getCategoryInfo } from '@/lib/constants';
+import { formatCurrency, getCategoryLabel } from '@/lib/constants';
 import { Progress } from '@/components/ui/progress';
 import { useProjectedTotals } from '@/hooks/useProjectedTotals';
 
@@ -64,7 +64,7 @@ export function OverviewCards({ avgMonthly, totalCurrent, totalPrevious, predict
           </div>
           <p className="text-2xl font-bold">{biggestSaving ? formatCurrency(biggestSaving.potential) : '—'}</p>
           {biggestSaving && (
-            <p className="text-xs mt-1 opacity-70">{getCategoryInfo(biggestSaving.category).label} • Potencial mensal</p>
+            <p className="text-xs mt-1 opacity-70">{getCategoryLabel(biggestSaving.category)} • Potencial mensal</p>
           )}
         </CardContent>
       </Card>

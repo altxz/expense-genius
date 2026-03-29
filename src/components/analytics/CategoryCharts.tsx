@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, ReferenceLine } from 'recharts';
-import { getCategoryInfo, formatCurrency } from '@/lib/constants';
+import { getCategoryInfo, getCategoryLabel, formatCurrency } from '@/lib/constants';
 import { CategoryStats } from '@/hooks/useAnalyticsData';
 import { Badge } from '@/components/ui/badge';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
@@ -40,12 +40,12 @@ export function CategoryCharts({ categoryStats, compare }: Props) {
   }, [user, startDate]);
 
   const pieData = categoryStats.slice(0, 7).map(s => ({
-    name: getCategoryInfo(s.category).label,
+    name: getCategoryLabel(s.category),
     value: Math.round(s.total),
   }));
 
   const barData = categoryStats.slice(0, 10).map(s => {
-    const label = getCategoryInfo(s.category).label;
+    const label = getCategoryLabel(s.category);
     return {
       name: label,
       atual: Math.round(s.total),
