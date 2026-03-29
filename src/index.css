@@ -113,8 +113,3 @@
   }
 }
 
-.popover-open-force-scroll {
-  pointer-events: auto !important;
-  touch-action: pan-y !important;
-}
-
