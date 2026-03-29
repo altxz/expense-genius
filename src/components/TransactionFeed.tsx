@@ -351,7 +351,7 @@ export function TransactionFeed({
                           <span className="text-sm font-bold text-destructive">
                             {inv.total > 0 ? `-${formatCurrency(inv.total)}` : formatCurrency(0)}
                           </span>
-                          {!paid && inv.total > 0 && (
+                          {!isPaid && inv.total > 0 && (
                             <Button
                               size="sm"
                               variant="outline"
