@@ -212,6 +212,7 @@ export default function HistoryPage() {
                 <TransactionFeed
                   expenses={paginatedExpenses}
                   allExpenses={filteredExpenses}
+                  invoiceExpenses={invoiceExpenses}
                   loading={loading}
                   onDeleted={fetchExpenses}
                   filters={{ category: filters.category }}
