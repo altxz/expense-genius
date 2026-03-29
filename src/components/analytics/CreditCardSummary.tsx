@@ -348,8 +348,8 @@ export function CreditCardSummary({ cards, allExpenses, wallets, refetch }: Cred
           cards={cards}
           wallets={wallets}
           onOpenChange={(open) => { if (!open) setSelectedInvoice(null); }}
-          onPaid={fetchData}
-          refetch={fetchData}
+           onPaid={refetch}
+           refetch={refetch}
         />
       )}
 

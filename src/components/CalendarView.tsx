@@ -9,37 +9,21 @@ import { Clock, ArrowUpCircle, ArrowDownCircle, ArrowLeftRight, Wallet } from 'l
 import type { Expense } from '@/components/ExpenseTable';
 import { InfoPopover } from '@/components/ui/info-popover';
 
-export function CalendarView() {
-  const { user } = useAuth();
-  const { selectedMonth, selectedYear, startDate, endDate } = useSelectedDate();
-  const [expenses, setExpenses] = useState<Expense[]>([]);
+interface CalendarViewProps {
+  expenses: Expense[];
+  wallets: { id: string; name: string }[];
+}
+
+export function CalendarView({ expenses, wallets }: CalendarViewProps) {
+  const { selectedMonth, selectedYear } = useSelectedDate();
   const [selectedDay, setSelectedDay] = useState<Date | undefined>();
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [walletMap, setWalletMap] = useState<Record<string, string>>({});
 
-  const fetchExpenses = useCallback(async () => {
-    if (!user) return;
-    const { data } = await supabase
-      .from('expenses')
-      .select('*')
-      .eq('user_id', user.id)
-      .gte('date', startDate)
-      .lt('date', endDate)
-      .order('date', { ascending: true });
-    setExpenses(data || []);
-  }, [user, startDate, endDate]);
-
-  useEffect(() => { fetchExpenses(); }, [fetchExpenses]);
-
-  useEffect(() => {
-    if (!user) return;
-    supabase.from('wallets').select('id, name').eq('user_id', user.id)
-      .then(({ data }) => {
-        const m: Record<string, string> = {};
-        (data || []).forEach(w => { m[w.id] = w.name; });
-        setWalletMap(m);
-      });
-  }, [user]);
+  const walletMap = useMemo(() => {
+    const m: Record<string, string> = {};
+    wallets.forEach(w => { m[w.id] = w.name; });
+    return m;
+  }, [wallets]);
 
   // Group expenses by date string
   const byDate = useMemo(() => {
