@@ -41,25 +41,34 @@ import type { Expense } from '@/components/ExpenseTable';
 const STORAGE_KEY = 'dashboard-grid-layouts';
 
 const defaultLayout = [
-  { i: 'income-vs-expense', x: 0, y: 0, w: 1, h: 2, minW: 1, minH: 2 },
-  { i: 'top-categories',    x: 1, y: 0, w: 1, h: 2, minW: 1, minH: 2 },
-  { i: 'savings-rate',      x: 2, y: 0, w: 1, h: 2, minW: 1, minH: 2 },
-  { i: 'waterfall',         x: 0, y: 2, w: 1, h: 2, minW: 1, minH: 2 },
-  { i: 'forecast',          x: 1, y: 2, w: 1, h: 2, minW: 1, minH: 2 },
-  { i: 'daily-spending',    x: 2, y: 2, w: 1, h: 2, minW: 1, minH: 2 },
-  { i: 'credit-usage',      x: 0, y: 4, w: 1, h: 2, minW: 1, minH: 2 },
-  { i: 'fixed-vs-variable', x: 1, y: 4, w: 1, h: 2, minW: 1, minH: 2 },
-  { i: 'subcategory-tree',  x: 2, y: 4, w: 1, h: 2, minW: 1, minH: 2 },
-  { i: 'week-comparison',   x: 0, y: 6, w: 1, h: 2, minW: 1, minH: 2 },
-  { i: 'income-sources',    x: 1, y: 6, w: 1, h: 2, minW: 1, minH: 2 },
-  { i: 'spending-heatmap',  x: 2, y: 6, w: 1, h: 2, minW: 1, minH: 2 },
-  { i: 'burndown',          x: 0, y: 8, w: 2, h: 2, minW: 1, minH: 2 },
-  { i: 'calendar',          x: 2, y: 8, w: 1, h: 2, minW: 1, minH: 2 },
+  // Row 0: Receitas vs Despesas (largo)
+  { i: 'income-vs-expense', x: 0, y: 0, w: 4, h: 2, minW: 2, minH: 2 },
+  // Row 2: dois quadrados
+  { i: 'top-categories',    x: 0, y: 2, w: 2, h: 2, minW: 1, minH: 2 },
+  { i: 'savings-rate',      x: 2, y: 2, w: 2, h: 2, minW: 1, minH: 2 },
+  // Row 4: Cascata (largo)
+  { i: 'waterfall',         x: 0, y: 4, w: 4, h: 2, minW: 2, minH: 2 },
+  // Row 6: dois quadrados
+  { i: 'forecast',          x: 0, y: 6, w: 2, h: 2, minW: 1, minH: 2 },
+  { i: 'daily-spending',    x: 2, y: 6, w: 2, h: 2, minW: 1, minH: 2 },
+  // Row 8: Burndown (largo)
+  { i: 'burndown',          x: 0, y: 8, w: 4, h: 2, minW: 2, minH: 2 },
+  // Row 10: dois quadrados
+  { i: 'credit-usage',      x: 0, y: 10, w: 2, h: 2, minW: 1, minH: 2 },
+  { i: 'fixed-vs-variable', x: 2, y: 10, w: 2, h: 2, minW: 1, minH: 2 },
+  // Row 12: dois quadrados
+  { i: 'subcategory-tree',  x: 0, y: 12, w: 2, h: 2, minW: 1, minH: 2 },
+  { i: 'week-comparison',   x: 2, y: 12, w: 2, h: 2, minW: 1, minH: 2 },
+  // Row 14: dois quadrados
+  { i: 'income-sources',    x: 0, y: 14, w: 2, h: 2, minW: 1, minH: 2 },
+  { i: 'spending-heatmap',  x: 2, y: 14, w: 2, h: 2, minW: 1, minH: 2 },
+  // Row 16: Calendário (largo)
+  { i: 'calendar',          x: 0, y: 16, w: 4, h: 2, minW: 2, minH: 2 },
 ];
 
 const defaultLayouts = {
   lg: defaultLayout,
-  md: defaultLayout.map(l => ({ ...l, w: l.i === 'burndown' ? 2 : 1, x: l.i === 'burndown' ? 0 : l.x > 1 ? l.x - 1 : l.x })),
+  md: defaultLayout.map(l => ({ ...l, w: Math.min(l.w, 4), x: Math.min(l.x, 0) })),
   sm: defaultLayout.map((l, idx) => ({ ...l, x: 0, y: idx * 2, w: 2 })),
   xs: defaultLayout.map((l, idx) => ({ ...l, x: 0, y: idx * 2, w: 1 })),
 };
@@ -345,8 +354,8 @@ export default function Dashboard() {
                     className="layout"
                     layouts={layouts}
                     breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
-                    cols={{ lg: 3, md: 2, sm: 2, xs: 1, xxs: 1 }}
-                    rowHeight={150}
+                    cols={{ lg: 4, md: 4, sm: 2, xs: 1, xxs: 1 }}
+                    rowHeight={160}
                     width={gridWidth}
                     isDraggable={isEditingLayout}
                     isResizable={false}
