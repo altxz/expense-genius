@@ -2,15 +2,14 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Upload, FileSpreadsheet, Loader2, AlertCircle, CheckCircle2, Zap, CreditCard, Wallet } from 'lucide-react';
+import { Upload, FileSpreadsheet, Loader2, CheckCircle2, Zap, CreditCard, Wallet, Copy } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { CategoryPicker } from '@/components/CategoryPicker';
-import { CATEGORIES } from '@/lib/constants';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 interface ParsedTransaction {
   date: string;
@@ -19,6 +18,8 @@ interface ParsedTransaction {
   type: 'income' | 'expense';
   selected: boolean;
   category: string;
+  originType: 'wallet' | 'credit_card';
+  destId: string;
   invoiceMonth?: string;
 }
 
@@ -28,10 +29,7 @@ interface AutomationRule {
   target_category: string;
 }
 
-interface WalletOption {
-  id: string;
-  name: string;
-}
+interface WalletOption { id: string; name: string }
 
 interface CreditCardOption {
   id: string;
@@ -48,9 +46,7 @@ interface ImportTransactionsModalProps {
   onImported: () => void;
 }
 
-type DestinationType = 'wallet' | 'credit_card';
-
-function parseCSV(text: string): ParsedTransaction[] {
+function parseCSV(text: string): Omit<ParsedTransaction, 'originType' | 'destId'>[] {
   const lines = text.split('\n').filter(line => line.trim().length > 0);
   if (lines.length < 2) return [];
 
@@ -58,7 +54,7 @@ function parseCSV(text: string): ParsedTransaction[] {
   const isNubank = headerLine.includes('date') && headerLine.includes('title') && headerLine.includes('amount');
   const delimiter = headerLine.includes(';') ? ';' : ',';
 
-  const transactions: ParsedTransaction[] = [];
+  const transactions: Omit<ParsedTransaction, 'originType' | 'destId'>[] = [];
 
   for (let i = 1; i < lines.length; i++) {
     const row = delimiter === ';'
@@ -83,21 +79,11 @@ function parseCSV(text: string): ParsedTransaction[] {
     let finalValue: number;
 
     if (isNubank) {
-      if (numericValue > 0) {
-        type = 'expense';
-        finalValue = numericValue;
-      } else {
-        type = 'income';
-        finalValue = Math.abs(numericValue);
-      }
+      if (numericValue > 0) { type = 'expense'; finalValue = numericValue; }
+      else { type = 'income'; finalValue = Math.abs(numericValue); }
     } else {
-      if (numericValue < 0) {
-        type = 'expense';
-        finalValue = Math.abs(numericValue);
-      } else {
-        type = 'income';
-        finalValue = numericValue;
-      }
+      if (numericValue < 0) { type = 'expense'; finalValue = Math.abs(numericValue); }
+      else { type = 'income'; finalValue = numericValue; }
     }
 
     let isoDate: string;
@@ -110,40 +96,26 @@ function parseCSV(text: string): ParsedTransaction[] {
       continue;
     }
 
-    const defaultCategory = type === 'income'
-      ? (rawDesc.toLowerCase().includes('pagamento') ? 'salary' : 'salary')
-      : 'outros';
+    const defaultCategory = type === 'income' ? 'salary' : 'outros';
 
-    transactions.push({
-      date: isoDate,
-      description: rawDesc,
-      value: finalValue,
-      type,
-      selected: true,
-      category: defaultCategory,
-    });
+    transactions.push({ date: isoDate, description: rawDesc, value: finalValue, type, selected: true, category: defaultCategory });
   }
 
   return transactions;
 }
 
-/** Calcula o mês da fatura (YYYY-MM) com base na data da compra e no dia de fechamento do cartão */
 function calcInvoiceMonth(purchaseDate: string, card: CreditCardOption): string {
   const [year, month, day] = purchaseDate.split('-').map(Number);
-
   let closingDay = card.closing_day;
   if (card.closing_strategy === 'relative') {
     closingDay = card.due_day - card.closing_days_before_due;
     if (closingDay <= 0) closingDay += 30;
   }
-
-  // Se a compra é após o fechamento, vai para a fatura do mês seguinte
   if (day > closingDay) {
     const nextMonth = month === 12 ? 1 : month + 1;
     const nextYear = month === 12 ? year + 1 : year;
     return `${nextYear}-${String(nextMonth).padStart(2, '0')}`;
   }
-
   return `${year}-${String(month).padStart(2, '0')}`;
 }
 
@@ -154,8 +126,6 @@ export function ImportTransactionsModal({ open, onOpenChange, onImported }: Impo
 
   const [wallets, setWallets] = useState<WalletOption[]>([]);
   const [creditCards, setCreditCards] = useState<CreditCardOption[]>([]);
-  const [destType, setDestType] = useState<DestinationType>('wallet');
-  const [destId, setDestId] = useState('');
   const [transactions, setTransactions] = useState<ParsedTransaction[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [fileName, setFileName] = useState('');
@@ -164,10 +134,9 @@ export function ImportTransactionsModal({ open, onOpenChange, onImported }: Impo
   const [rules, setRules] = useState<AutomationRule[]>([]);
   const [dbCategories, setDbCategories] = useState<{ id: string; name: string; parent_id: string | null; icon: string; color: string }[]>([]);
 
-  const selectedCard = useMemo(() => {
-    if (destType !== 'credit_card') return null;
-    return creditCards.find(c => c.id === destId) || null;
-  }, [destType, destId, creditCards]);
+  // "Apply to all" state
+  const [bulkOrigin, setBulkOrigin] = useState<'wallet' | 'credit_card'>('wallet');
+  const [bulkDestId, setBulkDestId] = useState('');
 
   useEffect(() => {
     if (!open || !user) return;
@@ -184,16 +153,7 @@ export function ImportTransactionsModal({ open, onOpenChange, onImported }: Impo
     });
   }, [open, user]);
 
-  // Recalculate invoice months when card selection changes
-  useEffect(() => {
-    if (!selectedCard || transactions.length === 0) return;
-    setTransactions(prev => prev.map(t => ({
-      ...t,
-      invoiceMonth: calcInvoiceMonth(t.date, selectedCard),
-    })));
-  }, [selectedCard]);
-
-  const applyRules = (txns: ParsedTransaction[], activeRules: AutomationRule[]): ParsedTransaction[] => {
+  const applyRules = (txns: Omit<ParsedTransaction, 'originType' | 'destId'>[], activeRules: AutomationRule[]) => {
     if (activeRules.length === 0) return txns;
     return txns.map(t => {
       if (t.type === 'income') return t;
@@ -213,18 +173,16 @@ export function ImportTransactionsModal({ open, onOpenChange, onImported }: Impo
   const reset = () => {
     setTransactions([]);
     setFileName('');
-    setDestId('');
-    setDestType('wallet');
     setStep('upload');
+    setBulkOrigin('wallet');
+    setBulkDestId('');
   };
 
-  useEffect(() => {
-    if (!open) reset();
-  }, [open]);
+  useEffect(() => { if (!open) reset(); }, [open]);
 
   const processFile = (file: File) => {
     if (!file.name.endsWith('.csv')) {
-      toast({ title: 'Formato inválido', description: 'Por favor, selecione um ficheiro .csv', variant: 'destructive' });
+      toast({ title: 'Formato inválido', description: 'Por favor, selecione um arquivo .csv', variant: 'destructive' });
       return;
     }
     setFileName(file.name);
@@ -238,12 +196,14 @@ export function ImportTransactionsModal({ open, onOpenChange, onImported }: Impo
       }
       parsed = applyRules(parsed, rules);
 
-      // If a credit card is already selected, calc invoice months
-      if (selectedCard) {
-        parsed = parsed.map(t => ({ ...t, invoiceMonth: calcInvoiceMonth(t.date, selectedCard) }));
-      }
+      // Add per-row origin defaults (empty = user must choose)
+      const full: ParsedTransaction[] = parsed.map(t => ({
+        ...t,
+        originType: 'wallet' as const,
+        destId: '',
+      }));
 
-      setTransactions(parsed);
+      setTransactions(full);
       setStep('preview');
     };
     reader.readAsText(file);
@@ -254,39 +214,64 @@ export function ImportTransactionsModal({ open, onOpenChange, onImported }: Impo
     setIsDragging(false);
     const file = e.dataTransfer.files[0];
     if (file) processFile(file);
-  }, [rules, selectedCard]);
+  }, [rules]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) processFile(file);
   };
 
-  const toggleAll = (checked: boolean) => {
-    setTransactions(prev => prev.map(t => ({ ...t, selected: checked })));
+  const toggleAll = (checked: boolean) => setTransactions(prev => prev.map(t => ({ ...t, selected: checked })));
+  const toggleOne = (index: number) => setTransactions(prev => prev.map((t, i) => i === index ? { ...t, selected: !t.selected } : t));
+  const updateCategory = (index: number, category: string) => setTransactions(prev => prev.map((t, i) => i === index ? { ...t, category } : t));
+
+  const updateOriginType = (index: number, origin: 'wallet' | 'credit_card') => {
+    setTransactions(prev => prev.map((t, i) => {
+      if (i !== index) return t;
+      return { ...t, originType: origin, destId: '', invoiceMonth: undefined };
+    }));
   };
 
-  const toggleOne = (index: number) => {
-    setTransactions(prev => prev.map((t, i) => i === index ? { ...t, selected: !t.selected } : t));
+  const updateDestId = (index: number, id: string) => {
+    setTransactions(prev => prev.map((t, i) => {
+      if (i !== index) return t;
+      let invoiceMonth: string | undefined;
+      if (t.originType === 'credit_card') {
+        const card = creditCards.find(c => c.id === id);
+        if (card) invoiceMonth = calcInvoiceMonth(t.date, card);
+      }
+      return { ...t, destId: id, invoiceMonth };
+    }));
   };
 
-  const updateCategory = (index: number, category: string) => {
-    setTransactions(prev => prev.map((t, i) => i === index ? { ...t, category } : t));
+  const applyToAll = () => {
+    if (!bulkDestId) return;
+    setTransactions(prev => prev.map(t => {
+      let invoiceMonth: string | undefined;
+      if (bulkOrigin === 'credit_card') {
+        const card = creditCards.find(c => c.id === bulkDestId);
+        if (card) invoiceMonth = calcInvoiceMonth(t.date, card);
+      }
+      return { ...t, originType: bulkOrigin, destId: bulkDestId, invoiceMonth };
+    }));
+    toast({ title: 'Aplicado a todas as linhas' });
   };
 
   const selectedCount = transactions.filter(t => t.selected).length;
   const rulesAppliedCount = transactions.filter(t => t.type === 'expense' && t.category !== 'outros').length;
-
-  const destOptions = destType === 'wallet' ? wallets : creditCards;
-  const hasNoDestOptions = destOptions.length === 0;
+  const allHaveDest = transactions.filter(t => t.selected).every(t => t.destId);
 
   const handleImport = async () => {
-    if (!user || !destId) return;
+    if (!user) return;
     const selected = transactions.filter(t => t.selected);
     if (selected.length === 0) return;
 
-    setImporting(true);
+    if (!selected.every(t => t.destId)) {
+      toast({ title: 'Destino obrigatório', description: 'Selecione uma conta ou cartão para todas as transações.', variant: 'destructive' });
+      return;
+    }
 
-    const isCreditCard = destType === 'credit_card';
+    setImporting(true);
 
     const rows = selected.map(t => ({
       user_id: user.id,
@@ -295,9 +280,9 @@ export function ImportTransactionsModal({ open, onOpenChange, onImported }: Impo
       value: t.value,
       type: t.type,
       final_category: t.category,
-      ...(isCreditCard
-        ? { credit_card_id: destId, invoice_month: t.invoiceMonth || null }
-        : { wallet_id: destId }
+      ...(t.originType === 'credit_card'
+        ? { credit_card_id: t.destId, invoice_month: t.invoiceMonth || null }
+        : { wallet_id: t.destId }
       ),
     }));
 
@@ -313,11 +298,13 @@ export function ImportTransactionsModal({ open, onOpenChange, onImported }: Impo
     }
   };
 
-  const formatCurrency = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  const fmtCurrency = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+  const bulkDestOptions = bulkOrigin === 'wallet' ? wallets : creditCards;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col">
+      <DialogContent className="max-w-5xl max-h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileSpreadsheet className="h-5 w-5 text-primary" />
@@ -327,83 +314,22 @@ export function ImportTransactionsModal({ open, onOpenChange, onImported }: Impo
 
         {step === 'upload' && (
           <div className="space-y-4">
-            {/* Destination selector */}
-            <div className="space-y-3 p-4 border rounded-xl bg-muted/30">
-              <Label className="text-sm font-semibold">Conta / Cartão de Destino</Label>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant={destType === 'wallet' ? 'default' : 'outline'}
-                  size="sm"
-                  className="gap-2 rounded-xl flex-1"
-                  onClick={() => { setDestType('wallet'); setDestId(''); }}
-                >
-                  <Wallet className="h-4 w-4" />
-                  Conta
-                </Button>
-                <Button
-                  type="button"
-                  variant={destType === 'credit_card' ? 'default' : 'outline'}
-                  size="sm"
-                  className="gap-2 rounded-xl flex-1"
-                  onClick={() => { setDestType('credit_card'); setDestId(''); }}
-                >
-                  <CreditCard className="h-4 w-4" />
-                  Cartão de Crédito
-                </Button>
-              </div>
-              <Select value={destId} onValueChange={setDestId}>
-                <SelectTrigger className="rounded-xl">
-                  <SelectValue placeholder={destType === 'wallet' ? 'Selecione a conta' : 'Selecione o cartão'} />
-                </SelectTrigger>
-                <SelectContent>
-                  {destOptions.map(o => (
-                    <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {destType === 'credit_card' && destId && selectedCard && (
-                <p className="text-xs text-muted-foreground">
-                  Fechamento: dia {selectedCard.closing_strategy === 'fixed' ? selectedCard.closing_day : `${selectedCard.closing_days_before_due} dias antes do vencimento`} · Vencimento: dia {selectedCard.due_day}
-                </p>
-              )}
-              {hasNoDestOptions && (
-                <div className="flex items-center gap-2 text-sm text-amber-600 bg-amber-50 dark:bg-amber-950/30 dark:text-amber-400 p-3 rounded-lg">
-                  <AlertCircle className="h-4 w-4 shrink-0" />
-                  {destType === 'wallet'
-                    ? 'Crie primeiro uma conta/carteira na página de Património.'
-                    : 'Cadastre um cartão de crédito na página de Cartões.'}
-                </div>
-              )}
-            </div>
-
-            {/* Drop zone */}
+            {/* Simple drop zone — no destination selection here */}
             <div
               onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
               onDragLeave={() => setIsDragging(false)}
               onDrop={handleDrop}
-              onClick={() => {
-                if (!destId) {
-                  toast({ title: 'Selecione o destino', description: 'Escolha uma conta ou cartão antes de importar.', variant: 'destructive' });
-                  return;
-                }
-                fileInputRef.current?.click();
-              }}
+              onClick={() => fileInputRef.current?.click()}
               className={`border-2 border-dashed rounded-xl p-12 text-center cursor-pointer transition-colors ${
-                !destId ? 'opacity-50 cursor-not-allowed' : ''
-              } ${isDragging ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}
+                isDragging ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
+              }`}
             >
               <Upload className="h-10 w-10 mx-auto mb-4 text-muted-foreground" />
-              <p className="text-foreground font-medium mb-1">Arraste o ficheiro CSV aqui</p>
+              <p className="text-foreground font-medium mb-1">Arraste o arquivo CSV aqui</p>
               <p className="text-sm text-muted-foreground">ou clique para selecionar</p>
               <p className="text-xs text-muted-foreground mt-3">Formato esperado: Data, Descrição, Valor</p>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".csv"
-                onChange={handleFileChange}
-                className="hidden"
-              />
+              <p className="text-xs text-muted-foreground mt-1">A conta/cartão de destino será escolhida na próxima etapa</p>
+              <input ref={fileInputRef} type="file" accept=".csv" onChange={handleFileChange} className="hidden" />
             </div>
           </div>
         )}
@@ -421,10 +347,41 @@ export function ImportTransactionsModal({ open, onOpenChange, onImported }: Impo
                   </span>
                 )}
               </div>
-              <div className="flex items-center gap-2 text-sm">
-                {destType === 'credit_card' ? <CreditCard className="h-4 w-4 text-muted-foreground" /> : <Wallet className="h-4 w-4 text-muted-foreground" />}
-                <span className="font-medium">{destOptions.find(o => o.id === destId)?.name}</span>
-              </div>
+
+              {/* Apply to all */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2 rounded-xl">
+                    <Copy className="h-3.5 w-3.5" />
+                    Aplicar a todos
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-72 p-3 space-y-3" align="end">
+                  <p className="text-xs font-semibold text-muted-foreground">Definir destino para todas as linhas</p>
+                  <Select value={bulkOrigin} onValueChange={(v) => { setBulkOrigin(v as any); setBulkDestId(''); }}>
+                    <SelectTrigger className="rounded-xl text-xs h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="wallet">Débito em conta</SelectItem>
+                      <SelectItem value="credit_card">Cartão de crédito</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select value={bulkDestId} onValueChange={setBulkDestId}>
+                    <SelectTrigger className="rounded-xl text-xs h-8">
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {bulkDestOptions.map(o => (
+                        <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button size="sm" className="w-full rounded-xl" disabled={!bulkDestId} onClick={applyToAll}>
+                    Aplicar
+                  </Button>
+                </PopoverContent>
+              </Popover>
             </div>
 
             <div className="border rounded-lg overflow-auto flex-1 min-h-0">
@@ -432,54 +389,82 @@ export function ImportTransactionsModal({ open, onOpenChange, onImported }: Impo
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-10">
-                      <Checkbox
-                        checked={selectedCount === transactions.length}
-                        onCheckedChange={(c) => toggleAll(!!c)}
-                      />
+                      <Checkbox checked={selectedCount === transactions.length} onCheckedChange={(c) => toggleAll(!!c)} />
                     </TableHead>
                     <TableHead>Data</TableHead>
                     <TableHead>Descrição</TableHead>
                     <TableHead>Tipo</TableHead>
                     <TableHead>Categoria</TableHead>
-                    {destType === 'credit_card' && <TableHead>Fatura</TableHead>}
+                    <TableHead>Origem</TableHead>
+                    <TableHead>Destino</TableHead>
                     <TableHead className="text-right">Valor</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {transactions.map((t, i) => (
-                    <TableRow key={i} className={!t.selected ? 'opacity-50' : ''}>
-                      <TableCell>
-                        <Checkbox checked={t.selected} onCheckedChange={() => toggleOne(i)} />
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap">{t.date}</TableCell>
-                      <TableCell className="max-w-[200px] truncate">{t.description}</TableCell>
-                      <TableCell>
-                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                          t.type === 'income'
-                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                            : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                        }`}>
-                          {t.type === 'income' ? 'Receita' : 'Despesa'}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <CategoryPicker
-                          categories={dbCategories}
-                          value={t.category}
-                          onValueChange={(v) => updateCategory(i, v)}
-                          placeholder="Categoria"
-                        />
-                      </TableCell>
-                      {destType === 'credit_card' && (
-                        <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
-                          {t.invoiceMonth || '—'}
+                  {transactions.map((t, i) => {
+                    const destOptions = t.originType === 'wallet' ? wallets : creditCards;
+                    const cardForRow = t.originType === 'credit_card' ? creditCards.find(c => c.id === t.destId) : null;
+
+                    return (
+                      <TableRow key={i} className={!t.selected ? 'opacity-50' : ''}>
+                        <TableCell>
+                          <Checkbox checked={t.selected} onCheckedChange={() => toggleOne(i)} />
                         </TableCell>
-                      )}
-                      <TableCell className={`text-right font-mono ${t.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
-                        {t.type === 'income' ? '+' : '-'}{formatCurrency(t.value)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                        <TableCell className="whitespace-nowrap text-xs">{t.date}</TableCell>
+                        <TableCell className="max-w-[160px] truncate text-xs">{t.description}</TableCell>
+                        <TableCell>
+                          <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
+                            t.type === 'income'
+                              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                              : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                          }`}>
+                            {t.type === 'income' ? 'Receita' : 'Despesa'}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <CategoryPicker
+                            categories={dbCategories}
+                            value={t.category}
+                            onValueChange={(v) => updateCategory(i, v)}
+                            placeholder="Categoria"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Select value={t.originType} onValueChange={(v) => updateOriginType(i, v as any)}>
+                            <SelectTrigger className="rounded-lg text-[10px] h-7 w-[100px]">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="wallet" className="text-xs">
+                                <span className="flex items-center gap-1"><Wallet className="h-3 w-3" /> Débito</span>
+                              </SelectItem>
+                              <SelectItem value="credit_card" className="text-xs">
+                                <span className="flex items-center gap-1"><CreditCard className="h-3 w-3" /> Crédito</span>
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell>
+                          <Select value={t.destId} onValueChange={(v) => updateDestId(i, v)}>
+                            <SelectTrigger className={`rounded-lg text-[10px] h-7 w-[120px] ${!t.destId ? 'border-destructive/50' : ''}`}>
+                              <SelectValue placeholder="Selecione..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {destOptions.map(o => (
+                                <SelectItem key={o.id} value={o.id} className="text-xs">{o.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {cardForRow && t.invoiceMonth && (
+                            <span className="text-[9px] text-muted-foreground block mt-0.5">Fatura: {t.invoiceMonth}</span>
+                          )}
+                        </TableCell>
+                        <TableCell className={`text-right font-mono text-xs ${t.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
+                          {t.type === 'income' ? '+' : '-'}{fmtCurrency(t.value)}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
@@ -488,16 +473,10 @@ export function ImportTransactionsModal({ open, onOpenChange, onImported }: Impo
 
         <DialogFooter className="gap-2 sm:gap-0">
           {step === 'preview' && (
-            <Button variant="outline" onClick={reset}>
-              Voltar
-            </Button>
+            <Button variant="outline" onClick={reset}>Voltar</Button>
           )}
           {step === 'preview' && (
-            <Button
-              onClick={handleImport}
-              disabled={importing || !destId || selectedCount === 0}
-              className="gap-2"
-            >
+            <Button onClick={handleImport} disabled={importing || selectedCount === 0 || !allHaveDest} className="gap-2">
               {importing && <Loader2 className="h-4 w-4 animate-spin" />}
               Confirmar Importação ({selectedCount})
             </Button>
