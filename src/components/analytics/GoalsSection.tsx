@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Target, Calculator } from 'lucide-react';
+import { Target, Calculator, Info } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { formatCurrency } from '@/lib/constants';
 
 interface Props {
@@ -27,9 +28,19 @@ export function GoalsSection({ avgMonthly, totalCurrentPeriod }: Props) {
     <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
       <Card className="rounded-2xl border-0 shadow-md">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base font-semibold flex items-center gap-2">
-            <Target className="h-4 w-4 text-primary" /> Metas
-          </CardTitle>
+          <div className="flex items-center gap-2">
+            <CardTitle className="text-base font-semibold flex items-center gap-2">
+              <Target className="h-4 w-4 text-primary" /> Metas
+            </CardTitle>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Info className="h-4 w-4 text-muted-foreground hover:text-primary cursor-help transition-colors" />
+              </TooltipTrigger>
+              <TooltipContent className="max-w-[250px] text-xs">
+                <p>Acompanhe o progresso das suas metas financeiras e veja quanto falta para atingi-las.</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
         </CardHeader>
         <CardContent className="space-y-5">
           {presetGoals.map((g, i) => {
@@ -56,9 +67,19 @@ export function GoalsSection({ avgMonthly, totalCurrentPeriod }: Props) {
 
       <Card className="rounded-2xl border-0 shadow-md">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base font-semibold flex items-center gap-2">
-            <Calculator className="h-4 w-4 text-ai" /> Simulador de Economia
-          </CardTitle>
+          <div className="flex items-center gap-2">
+            <CardTitle className="text-base font-semibold flex items-center gap-2">
+              <Calculator className="h-4 w-4 text-ai" /> Simulador de Economia
+            </CardTitle>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Info className="h-4 w-4 text-muted-foreground hover:text-primary cursor-help transition-colors" />
+              </TooltipTrigger>
+              <TooltipContent className="max-w-[250px] text-xs">
+                <p>Simule quanto tempo levará para atingir seu objetivo financeiro com base na economia mensal.</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">

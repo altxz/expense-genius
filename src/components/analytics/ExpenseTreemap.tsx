@@ -1,7 +1,8 @@
 import { useMemo, useEffect, useState } from 'react';
 import { Treemap, ResponsiveContainer, Tooltip } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { LayoutGrid } from 'lucide-react';
+import { LayoutGrid, Info } from 'lucide-react';
+import { Tooltip as InfoTooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatCurrency } from '@/lib/constants';
@@ -69,10 +70,20 @@ export function ExpenseTreemap({ categoryStats }: ExpenseTreemapProps) {
   return (
     <Card className="rounded-2xl border-border/50">
       <CardHeader className="pb-2">
-        <CardTitle className="text-base font-semibold flex items-center gap-2">
-          <LayoutGrid className="h-4 w-4 text-muted-foreground" />
-          Composição de Gastos
-        </CardTitle>
+        <div className="flex items-center gap-2">
+          <CardTitle className="text-base font-semibold flex items-center gap-2">
+            <LayoutGrid className="h-4 w-4 text-muted-foreground" />
+            Composição de Gastos
+          </CardTitle>
+          <InfoTooltip>
+            <TooltipTrigger asChild>
+              <Info className="h-4 w-4 text-muted-foreground hover:text-primary cursor-help transition-colors" />
+            </TooltipTrigger>
+            <TooltipContent className="max-w-[250px] text-xs">
+              <p>Mapa visual dos seus gastos por categoria — blocos maiores indicam maiores despesas.</p>
+            </TooltipContent>
+          </InfoTooltip>
+        </div>
       </CardHeader>
       <CardContent className="pt-0">
         <ResponsiveContainer width="100%" height={300}>
