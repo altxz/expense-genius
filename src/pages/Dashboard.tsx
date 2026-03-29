@@ -322,24 +322,23 @@ export default function Dashboard() {
                   )}
                 </div>
 
-                {/* Responsive Grid Layout */}
                 <div ref={gridContainerRef}>
-                  {(ResponsiveGridLayout as any)({
-                    className: "layout",
-                    layouts,
-                    breakpoints: { lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 },
-                    cols: { lg: 3, md: 2, sm: 2, xs: 1, xxs: 1 },
-                    rowHeight: 150,
-                    width: gridWidth,
-                    isDraggable: isEditingLayout,
-                    isResizable: isEditingLayout,
-                    draggableHandle: ".drag-handle",
-                    onLayoutChange: handleLayoutChange,
-                    compactType: "vertical",
-                    margin: [12, 12],
-                    containerPadding: [0, 0],
-                    useCSSTransforms: true,
-                    children:
+                  <ResponsiveGrid
+                    className="layout"
+                    layouts={layouts}
+                    breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
+                    cols={{ lg: 3, md: 2, sm: 2, xs: 1, xxs: 1 }}
+                    rowHeight={150}
+                    width={gridWidth}
+                    isDraggable={isEditingLayout}
+                    isResizable={isEditingLayout}
+                    draggableHandle=".drag-handle"
+                    onLayoutChange={handleLayoutChange}
+                    compactType="vertical"
+                    margin={[12, 12]}
+                    containerPadding={[0, 0]}
+                    useCSSTransforms
+                  >
                     {defaultLayout.map(item => {
                       const widget = widgetMap[item.i as keyof typeof widgetMap];
                       if (!widget) return null;
@@ -359,7 +358,7 @@ export default function Dashboard() {
                         </div>
                       );
                     })}
-                  </ResponsiveGridLayout>
+                  </ResponsiveGrid>
                 </div>
               </>
             )}
