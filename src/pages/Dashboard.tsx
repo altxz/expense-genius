@@ -225,36 +225,41 @@ export default function Dashboard() {
                 {/* Painel de Gráficos - Grid Estático */}
                 <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Painel de Análises</h2>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
-                  {/* Bloco 1: Visão Geral */}
-                  <div className="xl:col-span-2 flex flex-col min-h-[350px]"><CashFlowChart /></div>
-                  <div className="xl:col-span-1 flex flex-col min-h-[350px]"><TopCategoriesPie expenses={expenses} categories={dbCategories} /></div>
+                {/* Painel de Gráficos - Grid em Duplas */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+                  {/* Destaque Topo: Fluxo de Caixa (Largura Total) */}
+                  <div className="lg:col-span-2 flex flex-col min-h-[350px]"><CashFlowChart /></div>
 
-                  {/* Bloco 2: Entradas, Saídas e Tendências */}
-                  <div className="xl:col-span-1 flex flex-col min-h-[350px]"><IncomeVsExpenseChart /></div>
-                  <div className="xl:col-span-2 flex flex-col min-h-[350px]"><WaterfallChart expenses={expenses} startingBalance={totalRealBalance - summary.totalIncome + summary.totalExpense} /></div>
+                  {/* Pares 1: Categorias e Balanço */}
+                  <div className="flex flex-col min-h-[350px]"><TopCategoriesPie expenses={expenses} categories={dbCategories} /></div>
+                  <div className="flex flex-col min-h-[350px]"><IncomeVsExpenseChart /></div>
 
-                  {/* Bloco 3: Detalhamento de Categorias e Renda */}
-                  <div className="xl:col-span-2 flex flex-col min-h-[350px]"><SubcategoryTreemap expenses={expenses} categories={dbCategories} /></div>
-                  <div className="xl:col-span-1 flex flex-col min-h-[350px]"><IncomeSourcesPie expenses={expenses} categories={dbCategories} /></div>
+                  {/* Pares 2: Caminho do Dinheiro */}
+                  <div className="flex flex-col min-h-[350px]"><WaterfallChart expenses={expenses} startingBalance={totalRealBalance - summary.totalIncome + summary.totalExpense} /></div>
+                  <div className="flex flex-col min-h-[350px]"><SubcategoryTreemap expenses={expenses} categories={dbCategories} /></div>
 
-                  {/* Bloco 4: Hábitos Diários e Semanais */}
-                  <div className="xl:col-span-2 flex flex-col min-h-[350px]"><DailySpendingChart expenses={expenses} /></div>
-                  <div className="xl:col-span-1 flex flex-col min-h-[350px]"><WeekComparisonChart expenses={expenses} /></div>
+                  {/* Pares 3: Origem e Rotina */}
+                  <div className="flex flex-col min-h-[350px]"><IncomeSourcesPie expenses={expenses} categories={dbCategories} /></div>
+                  <div className="flex flex-col min-h-[350px]"><DailySpendingChart expenses={expenses} /></div>
 
-                  {/* Bloco 5: Saúde Financeira e Previsões (3 colunas iguais) */}
-                  <div className="xl:col-span-1 flex flex-col min-h-[350px]"><BurndownChart expenses={expenses} totalBudget={budgetTotals.totalBudget} /></div>
-                  <div className="xl:col-span-1 flex flex-col min-h-[350px]"><NetWorthChart /></div>
-                  <div className="xl:col-span-1 flex flex-col min-h-[350px]"><EndOfMonthForecast /></div>
+                  {/* Pares 4: Controle de Hábitos */}
+                  <div className="flex flex-col min-h-[350px]"><WeekComparisonChart expenses={expenses} /></div>
+                  <div className="flex flex-col min-h-[350px]"><BurndownChart expenses={expenses} totalBudget={budgetTotals.totalBudget} /></div>
 
-                  {/* Bloco 6: Indicadores de Perfil (3 colunas iguais) */}
-                  <div className="xl:col-span-1 flex flex-col min-h-[350px]"><FixedVsVariableChart expenses={expenses} /></div>
-                  <div className="xl:col-span-1 flex flex-col min-h-[350px]"><CreditUsageChart /></div>
-                  <div className="xl:col-span-1 flex flex-col min-h-[350px]"><SavingsRateGauge totalIncome={summary.totalIncome} totalExpense={summary.totalExpense} /></div>
+                  {/* Pares 5: Evolução e Previsão */}
+                  <div className="flex flex-col min-h-[350px]"><NetWorthChart /></div>
+                  <div className="flex flex-col min-h-[350px]"><EndOfMonthForecast /></div>
 
-                  {/* Bloco 7: Ferramentas Visuais Densas */}
-                  <div className="xl:col-span-2 flex flex-col min-h-[350px]"><SpendingHeatmap expenses={expenses} /></div>
-                  <div className="xl:col-span-1 flex flex-col min-h-[400px]"><CalendarView /></div>
+                  {/* Pares 6: Perfil de Gastos */}
+                  <div className="flex flex-col min-h-[350px]"><FixedVsVariableChart expenses={expenses} /></div>
+                  <div className="flex flex-col min-h-[350px]"><CreditUsageChart /></div>
+
+                  {/* Pares 7: Saúde e Mapa de Calor */}
+                  <div className="flex flex-col min-h-[350px]"><SavingsRateGauge totalIncome={summary.totalIncome} totalExpense={summary.totalExpense} /></div>
+                  <div className="flex flex-col min-h-[350px]"><SpendingHeatmap expenses={expenses} /></div>
+
+                  {/* Destaque Rodapé: Calendário (Largura Total) */}
+                  <div className="lg:col-span-2 flex flex-col min-h-[400px]"><CalendarView /></div>
                 </div>
               </>
             )}
