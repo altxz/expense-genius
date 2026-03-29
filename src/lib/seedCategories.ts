@@ -112,13 +112,22 @@ const DEFAULT_CATEGORIES: CategorySeed[] = [
 ];
 
 export async function seedDefaultCategories(userId: string) {
-  // Check if user already has categories
+  // Check if user already has ANY categories — skip if so
   const { count } = await supabase
     .from('categories')
     .select('*', { count: 'exact', head: true })
     .eq('user_id', userId);
 
   if (count && count > 0) return;
+
+  // Double-check with a small delay to avoid race conditions from multiple calls
+  await new Promise(r => setTimeout(r, 300));
+  const { count: recheck } = await supabase
+    .from('categories')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', userId);
+
+  if (recheck && recheck > 0) return;
 
   let sortOrder = 0;
 
