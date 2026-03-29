@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { TrendingUp } from 'lucide-react';
+import { TrendingUp, Info } from 'lucide-react';
+import { Tooltip as InfoTooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Line, ComposedChart } from 'recharts';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -50,10 +51,20 @@ export function NetWorthChart() {
   return (
     <Card className="rounded-2xl border-border/50 h-full flex flex-col">
       <CardHeader className="pb-2">
-        <CardTitle className="text-base font-semibold flex items-center gap-2">
-          <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          Evolução do Património Líquido
-        </CardTitle>
+        <div className="flex items-center gap-2">
+          <CardTitle className="text-base font-semibold flex items-center gap-2">
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            Evolução do Património Líquido
+          </CardTitle>
+          <InfoTooltip>
+            <TooltipTrigger asChild>
+              <Info className="h-4 w-4 text-muted-foreground hover:text-primary cursor-help transition-colors" />
+            </TooltipTrigger>
+            <TooltipContent className="max-w-[250px] text-xs">
+              <p>Seu patrimônio líquido ao longo dos meses (Tudo que você tem menos tudo que você deve).</p>
+            </TooltipContent>
+          </InfoTooltip>
+        </div>
       </CardHeader>
       <CardContent className="flex-1 min-h-0 pt-0 pb-4">
         <ResponsiveContainer width="100%" height="100%">

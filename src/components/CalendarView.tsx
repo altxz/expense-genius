@@ -5,7 +5,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useSelectedDate } from '@/contexts/DateContext';
 import { supabase } from '@/lib/supabase';
 import { formatCurrency, getCategoryInfo } from '@/lib/constants';
-import { Clock, ArrowUpCircle, ArrowDownCircle, ArrowLeftRight, Wallet } from 'lucide-react';
+import { Clock, ArrowUpCircle, ArrowDownCircle, ArrowLeftRight, Wallet, Info } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { Expense } from '@/components/ExpenseTable';
 
 export function CalendarView() {
@@ -70,6 +71,17 @@ export function CalendarView() {
   return (
     <div className="h-full flex flex-col">
       <div className="rounded-2xl border bg-card p-4 w-full overflow-hidden h-full flex flex-col">
+        <div className="flex items-center gap-2 mb-2">
+          <h3 className="text-sm font-semibold">Calendário</h3>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Info className="h-4 w-4 text-muted-foreground hover:text-primary cursor-help transition-colors" />
+            </TooltipTrigger>
+            <TooltipContent className="max-w-[250px] text-xs">
+              <p>Visão diária de todas as transações, vencimentos de faturas e recebimentos do mês.</p>
+            </TooltipContent>
+          </Tooltip>
+        </div>
         <Calendar
           mode="single"
           selected={selectedDay}

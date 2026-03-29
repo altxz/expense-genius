@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ComposedChart, Bar, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine } from 'recharts';
-import { TrendingUp, TrendingDown } from 'lucide-react';
+import { TrendingUp, TrendingDown, Info } from 'lucide-react';
+import { Tooltip as InfoTooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { formatCurrency } from '@/lib/constants';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -201,7 +202,17 @@ export function CashFlowChart() {
     <Card className="rounded-2xl border-0 shadow-md h-full flex flex-col">
       <CardHeader className="pb-2">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <CardTitle className="text-base font-semibold">Fluxo de Caixa</CardTitle>
+          <div className="flex items-center gap-2">
+            <CardTitle className="text-base font-semibold">Fluxo de Caixa</CardTitle>
+            <InfoTooltip>
+              <TooltipTrigger asChild>
+                <Info className="h-4 w-4 text-muted-foreground hover:text-primary cursor-help transition-colors" />
+              </TooltipTrigger>
+              <TooltipContent className="max-w-[250px] text-xs">
+                <p>Mostra o saldo real da sua conta ao longo do tempo, somando entradas e subtraindo saídas dia a dia.</p>
+              </TooltipContent>
+            </InfoTooltip>
+          </div>
           <div className="flex items-center gap-2 sm:gap-3">
             <Select value={timeFilter} onValueChange={v => setTimeFilter(v as TimeFilter)}>
               <SelectTrigger className="h-8 w-[130px] sm:w-[160px] rounded-xl text-xs">
