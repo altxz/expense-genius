@@ -269,7 +269,7 @@ export function InvoiceDetailsModal({ open, onOpenChange, invoice, allExpenses, 
             <CheckCircle2 className="h-5 w-5" />
             <span className="font-semibold">Fatura paga</span>
           </div>
-        ) : activeInvoice.total > 0 ? (
+        ) : activeInvoice.total > 0.01 && chronological.length > 0 ? (
           <div className="space-y-3">
             {wallets.length > 0 && (
               <Select value={selectedWalletId} onValueChange={setSelectedWalletId}>
@@ -293,7 +293,7 @@ export function InvoiceDetailsModal({ open, onOpenChange, invoice, allExpenses, 
             </Button>
           </div>
         ) : (
-          <div className="text-center py-2 text-muted-foreground text-sm">
+          <div className="text-center py-4 text-muted-foreground text-sm font-medium">
             Nenhum valor a pagar
           </div>
         )}
