@@ -160,8 +160,19 @@ export function EditExpenseModal({ open, expense, onOpenChange, onExpenseUpdated
                 </div>
               )}
 
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Categoria</Label>
+              {isCredit && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Fatura de Referência</Label>
+                  <Select value={invoiceMonth} onValueChange={setInvoiceMonth}>
+                    <SelectTrigger className="rounded-xl h-11"><SelectValue placeholder="Mês da fatura" /></SelectTrigger>
+                    <SelectContent>
+                      {invoiceOptions.map(ym => <SelectItem key={ym} value={ym}>{formatInvoiceLabel(ym)}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[11px] text-muted-foreground">Altere para mover esta despesa para outra fatura.</p>
+                </div>
+              )}
+
                 <CategoryPicker
                   categories={dbCategories}
                   value={finalCategory}
