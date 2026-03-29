@@ -29,6 +29,8 @@ const STORAGE_KEY = 'txfeed_group_cards';
 interface TransactionFeedProps {
   expenses: Expense[];
   allExpenses?: Expense[];
+  /** All credit card expenses across all months for invoice matching */
+  invoiceExpenses?: Expense[];
   loading: boolean;
   onDeleted: () => void;
   filters: { category: string };
