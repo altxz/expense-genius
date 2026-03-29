@@ -21,6 +21,7 @@ const CATEGORY_ICONS: Record<string, { icon: typeof Utensils; bg: string; text: 
 
 interface TransactionFeedProps {
   expenses: Expense[];
+  allExpenses?: Expense[]; // all filtered expenses (not paginated) for cumulative balance
   loading: boolean;
   onDeleted: () => void;
   filters: { category: string };
@@ -48,7 +49,7 @@ function formatGroupDate(dateStr: string): string {
   return date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', weekday: 'long' });
 }
 
-export function TransactionFeed({ expenses, loading, onDeleted, page, totalPages, onPageChange, wallets = [], startingMonthBalance = 0 }: TransactionFeedProps) {
+export function TransactionFeed({ expenses, allExpenses, loading, onDeleted, page, totalPages, onPageChange, wallets = [], startingMonthBalance = 0 }: TransactionFeedProps) {
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [deletingExpense, setDeletingExpense] = useState<Expense | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -67,30 +68,48 @@ export function TransactionFeed({ expenses, loading, onDeleted, page, totalPages
       onDeleted();
     }
   };
-  const grouped = useMemo(() => {
+
+  // Calculate cumulative end-of-day balances using ALL expenses (not just paginated)
+  const dayBalanceMap = useMemo(() => {
+    const txns = allExpenses || expenses;
     const groups: Record<string, Expense[]> = {};
-    expenses.forEach(exp => {
-      const key = exp.date;
-      if (!groups[key]) groups[key] = [];
-      groups[key].push(exp);
+    txns.forEach(exp => {
+      if (!groups[exp.date]) groups[exp.date] = [];
+      groups[exp.date].push(exp);
     });
-    const sorted = Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
+    const sortedDays = Object.keys(groups).sort();
 
     let runningBalance = startingMonthBalance;
-    const result: { dateKey: string; items: Expense[]; endOfDayBalance: number }[] = [];
+    const map: Record<string, number> = {};
 
-    for (const [dateKey, items] of sorted) {
-      for (const exp of items) {
+    for (const day of sortedDays) {
+      for (const exp of groups[day]) {
         if (exp.type === 'transfer') continue;
         if (!exp.is_paid) continue;
         if (exp.type === 'income') runningBalance += exp.value;
         else if (!exp.credit_card_id) runningBalance -= exp.value;
       }
-      result.push({ dateKey, items, endOfDayBalance: runningBalance });
+      map[day] = runningBalance;
     }
 
-    return result.reverse();
-  }, [expenses, startingMonthBalance]);
+    return map;
+  }, [allExpenses, expenses, startingMonthBalance]);
+
+  // Group only the paginated expenses for display
+  const grouped = useMemo(() => {
+    const groups: Record<string, Expense[]> = {};
+    expenses.forEach(exp => {
+      if (!groups[exp.date]) groups[exp.date] = [];
+      groups[exp.date].push(exp);
+    });
+    return Object.entries(groups)
+      .sort(([a], [b]) => b.localeCompare(a))
+      .map(([dateKey, items]) => ({
+        dateKey,
+        items,
+        endOfDayBalance: dayBalanceMap[dateKey] ?? startingMonthBalance,
+      }));
+  }, [expenses, dayBalanceMap, startingMonthBalance]);
 
   const walletMap = useMemo(() => {
     const m: Record<string, string> = {};
