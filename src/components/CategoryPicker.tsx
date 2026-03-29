@@ -84,7 +84,7 @@ export function CategoryPicker({ categories, value, onValueChange, placeholder =
           <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[--radix-popover-trigger-width] p-0 rounded-xl" align="start">
+      <PopoverContent className="min-w-[220px] w-[--radix-popover-trigger-width] p-0 rounded-xl" align="start">
         <div className="max-h-72 overflow-y-auto py-1">
           <Accordion type="single" collapsible defaultValue={defaultAccordion}>
             {grouped.map(group => {
