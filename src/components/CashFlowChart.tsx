@@ -198,7 +198,7 @@ export function CashFlowChart() {
   }
 
   return (
-    <Card className="rounded-2xl border-0 shadow-md">
+    <Card className="rounded-2xl border-0 shadow-md h-full flex flex-col">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between gap-2">
           <CardTitle className="text-base font-semibold">Fluxo de Caixa</CardTitle>
