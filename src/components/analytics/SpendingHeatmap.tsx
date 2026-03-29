@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { formatCurrency } from '@/lib/constants';
 import { useSelectedDate } from '@/contexts/DateContext';
 import type { Expense } from '@/components/ExpenseTable';
