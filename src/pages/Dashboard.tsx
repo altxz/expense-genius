@@ -321,7 +321,7 @@ export default function Dashboard() {
 
                 {/* Responsive Grid Layout */}
                 <div ref={gridContainerRef}>
-                  <Responsive
+                  <ResponsiveGridLayout
                     className="layout"
                     layouts={layouts}
                     breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
@@ -356,7 +356,7 @@ export default function Dashboard() {
                         </div>
                       );
                     })}
-                  </Responsive>
+                  </ResponsiveGridLayout>
                 </div>
               </>
             )}
