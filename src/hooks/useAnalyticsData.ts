@@ -204,6 +204,6 @@ export function useAnalyticsData(filters: AnalyticsFilters) {
     expenses, loading, monthlyData, categoryStats,
     totalCurrentPeriod, totalPreviousPeriod, avgMonthly,
     predictedNextMonth, financialScore, weekdayAnalysis,
-    biggestSavingOpportunity, creditCards, refetch: fetchExpenses,
+    biggestSavingOpportunity, refetch: fetchExpenses,
   };
 }
