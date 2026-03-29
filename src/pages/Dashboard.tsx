@@ -264,20 +264,22 @@ export default function Dashboard() {
 
   // Map of widget id → { title, component }
   const widgetMap = useMemo(() => ({
-    'income-vs-expense': { title: 'Receitas vs Despesas', comp: <IncomeVsExpenseChart /> },
-    'top-categories':    { title: 'Top Categorias',       comp: <TopCategoriesPie expenses={expenses} categories={dbCategories} /> },
-    'savings-rate':      { title: 'Taxa de Poupança',     comp: <SavingsRateGauge totalIncome={summary.totalIncome} totalExpense={summary.totalExpense} /> },
-    'waterfall':         { title: 'Cascata',              comp: <WaterfallChart expenses={expenses} startingBalance={totalRealBalance - summary.totalIncome + summary.totalExpense} /> },
-    'forecast':          { title: 'Previsão',             comp: <EndOfMonthForecast /> },
-    'daily-spending':    { title: 'Gastos Diários',       comp: <DailySpendingChart expenses={expenses} /> },
-    'credit-usage':      { title: 'Uso do Cartão',        comp: <CreditUsageChart /> },
-    'fixed-vs-variable': { title: 'Fixo vs Variável',     comp: <FixedVsVariableChart expenses={expenses} /> },
-    'subcategory-tree':  { title: 'Subcategorias',        comp: <SubcategoryTreemap expenses={expenses} categories={dbCategories} /> },
-    'week-comparison':   { title: 'Comparação Semanal',   comp: <WeekComparisonChart expenses={expenses} /> },
-    'income-sources':    { title: 'Fontes de Receita',    comp: <IncomeSourcesPie expenses={expenses} categories={dbCategories} /> },
-    'spending-heatmap':  { title: 'Mapa de Calor',        comp: <SpendingHeatmap expenses={expenses} /> },
-    'burndown':          { title: 'Burndown',             comp: <BurndownChart expenses={expenses} totalBudget={budgetTotals.totalBudget} /> },
-    'calendar':          { title: 'Calendário',           comp: <CalendarView /> },
+    'cashflow':          { title: 'Fluxo de Caixa',       comp: <CashFlowChart /> },
+    'income_expense':    { title: 'Receitas vs Despesas',  comp: <IncomeVsExpenseChart /> },
+    'categories':        { title: 'Categorias',            comp: <TopCategoriesPie expenses={expenses} categories={dbCategories} /> },
+    'trends':            { title: 'Cascata',               comp: <WaterfallChart expenses={expenses} startingBalance={totalRealBalance - summary.totalIncome + summary.totalExpense} /> },
+    'forecast':          { title: 'Previsão',              comp: <EndOfMonthForecast /> },
+    'networth':          { title: 'Evolução Patrimonial',  comp: <NetWorthChart /> },
+    'fixed_variable':    { title: 'Fixo vs Variável',      comp: <FixedVsVariableChart expenses={expenses} /> },
+    'credit':            { title: 'Uso do Cartão',         comp: <CreditUsageChart /> },
+    'income_sources':    { title: 'Fontes de Receita',     comp: <IncomeSourcesPie expenses={expenses} categories={dbCategories} /> },
+    'savings':           { title: 'Taxa de Poupança',      comp: <SavingsRateGauge totalIncome={summary.totalIncome} totalExpense={summary.totalExpense} /> },
+    'daily_spending':    { title: 'Gastos Diários',        comp: <DailySpendingChart expenses={expenses} /> },
+    'burndown':          { title: 'Burndown',              comp: <BurndownChart expenses={expenses} totalBudget={budgetTotals.totalBudget} /> },
+    'heatmap':           { title: 'Mapa de Calor',         comp: <SpendingHeatmap expenses={expenses} /> },
+    'week_comparison':   { title: 'Comparação Semanal',    comp: <WeekComparisonChart expenses={expenses} /> },
+    'subcategory_tree':  { title: 'Subcategorias',         comp: <SubcategoryTreemap expenses={expenses} categories={dbCategories} /> },
+    'calendar':          { title: 'Calendário',            comp: <CalendarView /> },
   }), [expenses, dbCategories, summary, totalRealBalance, budgetTotals]);
 
   if (authLoading) return <div className="min-h-screen flex items-center justify-center bg-background"><span className="text-muted-foreground font-medium">Carregando...</span></div>;
