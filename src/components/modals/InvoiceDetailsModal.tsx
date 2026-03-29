@@ -8,7 +8,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { CreditCard, Calendar, Lock, Clock, AlertTriangle, Receipt, CheckCircle2, Pencil, Trash2 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { formatCurrency, getCategoryInfo } from '@/lib/constants';
+import { formatCurrency, getCategoryLabel } from '@/lib/constants';
 import { getInvoicePeriod, matchExpensesToInvoice, formatInvoiceDate } from '@/lib/invoiceHelpers';
 import type { CreditCard as CreditCardType, InvoicePeriod } from '@/lib/invoiceHelpers';
 import type { Expense } from '@/components/ExpenseTable';
@@ -78,12 +78,7 @@ export function InvoiceDetailsModal({ open, onOpenChange, invoice, allExpenses, 
     activeInvoice.transactions.forEach(tx => {
       const cat = tx.final_category;
       if (!groups[cat]) {
-        const info = getCategoryInfo(cat);
-        // Use the raw category name if getCategoryInfo falls back to 'Outros'
-        const label = info.value === 'outros' && cat !== 'outros'
-          ? cat.charAt(0).toUpperCase() + cat.slice(1)
-          : info.label;
-        groups[cat] = { label, total: 0, items: [] };
+        groups[cat] = { label: getCategoryLabel(cat), total: 0, items: [] };
       }
       groups[cat].total += tx.value;
       groups[cat].items.push(tx);

@@ -15,7 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { PlusCircle, Trash2, FolderKanban, AlertTriangle } from 'lucide-react';
-import { formatCurrency, formatDate, getCategoryInfo } from '@/lib/constants';
+import { formatCurrency, formatDate, getCategoryLabel } from '@/lib/constants';
 import { useToast } from '@/hooks/use-toast';
 
 interface Project {
@@ -305,12 +305,12 @@ export default function ProjectsPage() {
                 ) : (
                   <div className="space-y-2">
                     {projectExpenses.map(exp => {
-                      const cat = getCategoryInfo(exp.final_category);
+                      const catLabel = getCategoryLabel(exp.final_category);
                       return (
                         <div key={exp.id} className="flex items-center justify-between p-3 rounded-xl border">
                           <div className="min-w-0">
                             <p className="text-sm font-medium truncate">{exp.description}</p>
-                            <p className="text-xs text-muted-foreground">{formatDate(exp.date)} · {cat.label}</p>
+                            <p className="text-xs text-muted-foreground">{formatDate(exp.date)} · {catLabel}</p>
                           </div>
                           <span className={`font-semibold text-sm shrink-0 ml-3 ${exp.type === 'income' ? 'text-emerald-500' : 'text-destructive'}`}>
                             {exp.type === 'income' ? '+' : '-'}{formatCurrency(exp.value)}

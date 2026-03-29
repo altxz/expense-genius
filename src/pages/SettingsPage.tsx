@@ -16,7 +16,7 @@ import { SecuritySection } from '@/components/settings/SecuritySection';
 import { PlansSection } from '@/components/settings/PlansSection';
 import { CategoriesSection } from '@/components/settings/CategoriesSection';
 import { ModulesSection } from '@/components/settings/ModulesSection';
-import { getCategoryInfo } from '@/lib/constants';
+import { getCategoryLabel } from '@/lib/constants';
 import { Loader2, Save, User, Sparkles, Zap, Bell, Shield, Crown, Tag, ToggleRight } from 'lucide-react';
 
 const DEFAULT_SETTINGS = {
@@ -84,7 +84,7 @@ export default function SettingsPage() {
       setStats({
         totalExpenses: expenses.length,
         mostActiveMonth: topMonth ? new Date(topMonth[0] + '-01').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }) : '',
-        favoriteCategory: topCat ? getCategoryInfo(topCat[0]).label : '',
+        favoriteCategory: topCat ? getCategoryLabel(topCat[0]) : '',
       });
     }
 
