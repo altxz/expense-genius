@@ -5,7 +5,7 @@ import { useSelectedDate } from '@/contexts/DateContext';
 import { getInvoicePeriod, matchExpensesToInvoice } from '@/lib/invoiceHelpers';
 import type { CreditCard as CreditCardType } from '@/lib/invoiceHelpers';
 import type { Expense } from '@/components/ExpenseTable';
-import { getCategoryInfo } from '@/lib/constants';
+
 
 export interface ProjectedTotals {
   totalIncome: number;
@@ -130,7 +130,7 @@ export function useProjectedTotals(): ProjectedTotals {
       totalExpense,
       balance: totalIncome - totalExpense,
       projectedBalance: startingBalance + totalIncome - totalExpense,
-      largestCategory: largest ? { name: getCategoryInfo(largest[0]).label, total: largest[1], categoryKey: largest[0] } : null,
+      largestCategory: largest ? { name: largest[0], total: largest[1], categoryKey: largest[0] } : null,
     };
   }, [monthExpenses, invoiceTotals, startingBalance]);
 
