@@ -44,6 +44,7 @@ export function EndOfMonthForecast({ creditCards: propCards, wallets: propWallet
 
   const chartData = useMemo(() => {
     const walletsTotal = propWallets.reduce((s, w: any) => s + (w.initial_balance || 0), 0);
+    let realBalance = walletsTotal;
     allTxns.forEach((t: any) => {
       if (t.type === 'transfer') return;
       if (t.type === 'income') realBalance += t.value;
@@ -68,7 +69,7 @@ export function EndOfMonthForecast({ creditCards: propCards, wallets: propWallet
     // Credit card bills
     const billByCard: Record<string, number> = {};
     unpaidCredit.forEach((e: any) => { billByCard[e.credit_card_id] = (billByCard[e.credit_card_id] || 0) + e.value; });
-    creditCards.forEach((c: any) => {
+    propCards.forEach((c: any) => {
       const due = Math.min(c.due_day || 10, daysInMonth);
       if (due > todayDay && billByCard[c.id]) {
         futureByDay[due] = (futureByDay[due] || 0) - billByCard[c.id];
@@ -81,7 +82,7 @@ export function EndOfMonthForecast({ creditCards: propCards, wallets: propWallet
     }
 
     return points;
-  }, [wallets, allTxns, recurring, creditCards, unpaidCredit, todayDay, daysInMonth]);
+  }, [propWallets, allTxns, recurring, propCards, unpaidCredit, todayDay, daysInMonth]);
 
   const endBalance = chartData[chartData.length - 1]?.saldo || 0;
 
