@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { DollarSign } from 'lucide-react';
+import { Logo } from '@/components/Logo';
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
@@ -47,8 +47,8 @@ export default function AuthPage() {
     <div className="min-h-screen flex items-center justify-center bg-primary p-4">
       <Card className="w-full max-w-md rounded-2xl shadow-2xl border-0">
         <CardHeader className="text-center space-y-3 pb-2">
-          <div className="mx-auto w-16 h-16 rounded-2xl bg-accent flex items-center justify-center mb-1">
-            <DollarSign className="h-8 w-8 text-accent-foreground" />
+          <div className="mx-auto mb-1">
+            <Logo size={64} showText={false} />
           </div>
           <CardTitle className="text-3xl font-bold">
             {isLogin ? 'Entrar' : 'Criar Conta'}
