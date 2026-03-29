@@ -60,8 +60,10 @@ function DashboardSkeleton() {
 export default function Dashboard() {
   const { user, loading: authLoading } = useAuth();
   const { startDate, endDate, selectedMonth, selectedYear } = useSelectedDate();
+  const { settings: userSettings, refetch: refetchSettings } = useUserSettings();
   const projected = useProjectedTotals();
   const [modalOpen, setModalOpen] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const [budgetTotals, setBudgetTotals] = useState({ totalBudget: 0, totalSpent: 0 });
   
   const [dbCategories, setDbCategories] = useState<any[]>([]);
