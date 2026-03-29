@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { AlertTriangle, RotateCcw, GripVertical, LayoutDashboard, Check } from 'lucide-react';
+import { AlertTriangle, RotateCcw, GripHorizontal, LayoutDashboard, Check, Maximize2 } from 'lucide-react';
 import { ResponsiveGridLayout as RGLBase } from 'react-grid-layout';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -230,6 +230,21 @@ export default function Dashboard() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(allLayouts)); } catch { /* */ }
   }, []);
 
+  const toggleWidgetSize = useCallback((widgetId: string) => {
+    setLayouts(prev => {
+      const updated: any = {};
+      for (const bp of Object.keys(prev)) {
+        updated[bp] = (prev as any)[bp].map((item: any) => {
+          if (item.i !== widgetId) return item;
+          const newW = item.w >= 2 ? 1 : 2;
+          return { ...item, w: newW };
+        });
+      }
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(updated)); } catch { /* */ }
+      return updated;
+    });
+  }, []);
+
   const handleResetLayout = useCallback(() => {
     setLayouts(defaultLayouts);
     localStorage.removeItem(STORAGE_KEY);
@@ -334,7 +349,7 @@ export default function Dashboard() {
                     rowHeight={150}
                     width={gridWidth}
                     isDraggable={isEditingLayout}
-                    isResizable={isEditingLayout}
+                    isResizable={false}
                     draggableHandle=".drag-handle"
                     onLayoutChange={handleLayoutChange}
                     compactType="vertical"
@@ -346,17 +361,27 @@ export default function Dashboard() {
                       const widget = widgetMap[item.i as keyof typeof widgetMap];
                       if (!widget) return null;
                       return (
-                        <div key={item.i} className="w-full h-full">
+                        <div key={item.i} className="w-full h-full relative">
+                          {widget.comp}
                           {isEditingLayout && (
-                            <div className="drag-handle flex items-center justify-center gap-1.5 py-1 bg-primary/5 border border-dashed border-primary/30 rounded-t-xl text-primary/70 hover:bg-primary/10 transition-colors">
-                              <GripVertical className="h-3.5 w-3.5" />
-                              <span className="text-[10px] font-semibold uppercase tracking-wider select-none">{widget.title}</span>
-                              <GripVertical className="h-3.5 w-3.5" />
+                            <div className="absolute inset-0 bg-black/5 dark:bg-white/5 rounded-2xl z-10 pointer-events-none">
+                              <div className="absolute top-2 right-2 flex items-center gap-1 pointer-events-auto">
+                                <button
+                                  className="drag-handle p-1.5 rounded-lg bg-card/90 border border-border shadow-sm hover:bg-accent transition-colors cursor-grab active:cursor-grabbing"
+                                  title="Mover"
+                                >
+                                  <GripHorizontal className="h-4 w-4 text-muted-foreground" />
+                                </button>
+                                <button
+                                  onClick={() => toggleWidgetSize(item.i)}
+                                  className="p-1.5 rounded-lg bg-card/90 border border-border shadow-sm hover:bg-accent transition-colors"
+                                  title="Redimensionar"
+                                >
+                                  <Maximize2 className="h-4 w-4 text-muted-foreground" />
+                                </button>
+                              </div>
                             </div>
                           )}
-                          <div className={`w-full ${isEditingLayout ? 'h-[calc(100%-28px)]' : 'h-full'}`}>
-                            {widget.comp}
-                          </div>
                         </div>
                       );
                     })}
