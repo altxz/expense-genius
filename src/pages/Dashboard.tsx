@@ -22,6 +22,7 @@ import { CalendarView } from '@/components/CalendarView';
 import { IncomeVsExpenseChart } from '@/components/analytics/IncomeVsExpenseChart';
 import { TopExpensesList } from '@/components/analytics/TopExpensesList';
 import { CreditUsageChart } from '@/components/analytics/CreditUsageChart';
+import { CreditCardSummary } from '@/components/analytics/CreditCardSummary';
 import { EndOfMonthForecast } from '@/components/analytics/EndOfMonthForecast';
 import { DailySpendingChart } from '@/components/analytics/DailySpendingChart';
 import { FixedVsVariableChart } from '@/components/analytics/FixedVsVariableChart';
