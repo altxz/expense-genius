@@ -453,7 +453,7 @@ export default function WalletPage() {
         <AppSidebar />
         <div className="flex-1 flex flex-col min-w-0">
           <DashboardHeader />
-          <main className="flex-1 p-3 sm:p-4 lg:p-8 space-y-4 sm:space-y-6 overflow-auto">
+          <main className="flex-1 p-3 sm:p-4 lg:p-8 pb-32 space-y-4 sm:space-y-6 overflow-auto">
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Minha Carteira</h1>
               <p className="text-xs sm:text-sm text-muted-foreground mt-1">Contas, ativos e cartões de crédito</p>
