@@ -1,12 +1,12 @@
 import { useState, useCallback, ReactNode, useMemo, useRef, useEffect } from 'react';
-import ReactGridLayout from 'react-grid-layout';
+// @ts-expect-error - react-grid-layout types don't match ESM exports
+import { ResponsiveGridLayout, Layout } from 'react-grid-layout';
 import { GripVertical, Lock, Unlock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 
-type RGLLayout = ReactGridLayout.Layout;
-type RGLLayouts = ReactGridLayout.Layouts;
-const Responsive = ReactGridLayout.Responsive;
+type LayoutItem = { i: string; x: number; y: number; w: number; h: number; minW?: number; minH?: number };
+type LayoutsMap = Record<string, LayoutItem[]>;
 
 export interface GridWidget {
   id: string;
@@ -28,8 +28,8 @@ const COLS = { lg: 12, md: 8, sm: 4 };
 const BREAKPOINTS = { lg: 1024, md: 768, sm: 0 };
 const ROW_HEIGHT = 80;
 
-function buildLayouts(widgets: GridWidget[]): RGLLayouts {
-  const layouts: RGLLayouts = { lg: [], md: [], sm: [] };
+function buildLayouts(widgets: GridWidget[]): LayoutsMap {
+  const layouts: LayoutsMap = { lg: [], md: [], sm: [] };
   for (const w of widgets) {
     for (const bp of ['lg', 'md', 'sm'] as const) {
       const def = w.defaultLayout[bp];
@@ -47,7 +47,7 @@ function buildLayouts(widgets: GridWidget[]): RGLLayouts {
   return layouts;
 }
 
-function loadLayouts(key: string, widgets: GridWidget[]): RGLLayouts {
+function loadLayouts(key: string, widgets: GridWidget[]): LayoutsMap {
   try {
     const saved = localStorage.getItem(key);
     if (saved) return JSON.parse(saved);
@@ -57,7 +57,7 @@ function loadLayouts(key: string, widgets: GridWidget[]): RGLLayouts {
 
 export function DashboardGrid({ widgets, storageKey = 'dashboard-grid-layouts' }: DashboardGridProps) {
   const defaultLayouts = useMemo(() => buildLayouts(widgets), [widgets]);
-  const [layouts, setLayouts] = useState<RGLLayouts>(() => loadLayouts(storageKey, widgets));
+  const [layouts, setLayouts] = useState<LayoutsMap>(() => loadLayouts(storageKey, widgets));
   const [locked, setLocked] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(1200);
@@ -73,7 +73,7 @@ export function DashboardGrid({ widgets, storageKey = 'dashboard-grid-layouts' }
     return () => obs.disconnect();
   }, []);
 
-  const handleLayoutChange = useCallback((_: RGLLayout[], allLayouts: RGLLayouts) => {
+  const handleLayoutChange = useCallback((_current: LayoutItem[], allLayouts: LayoutsMap) => {
     setLayouts(allLayouts);
     try {
       localStorage.setItem(storageKey, JSON.stringify(allLayouts));
@@ -84,6 +84,8 @@ export function DashboardGrid({ widgets, storageKey = 'dashboard-grid-layouts' }
     setLayouts(defaultLayouts);
     localStorage.removeItem(storageKey);
   }, [defaultLayouts, storageKey]);
+
+  const Comp = ResponsiveGridLayout as any;
 
   return (
     <div className="relative" ref={containerRef}>
@@ -104,7 +106,7 @@ export function DashboardGrid({ widgets, storageKey = 'dashboard-grid-layouts' }
         )}
       </div>
 
-      <Responsive
+      <Comp
         className="layout"
         layouts={layouts}
         breakpoints={BREAKPOINTS}
@@ -116,8 +118,8 @@ export function DashboardGrid({ widgets, storageKey = 'dashboard-grid-layouts' }
         draggableHandle=".drag-handle"
         onLayoutChange={handleLayoutChange}
         compactType="vertical"
-        margin={[12, 12] as [number, number]}
-        containerPadding={[0, 0] as [number, number]}
+        margin={[12, 12]}
+        containerPadding={[0, 0]}
         useCSSTransforms
       >
         {widgets.map((widget) => (
@@ -135,7 +137,7 @@ export function DashboardGrid({ widgets, storageKey = 'dashboard-grid-layouts' }
             </Card>
           </div>
         ))}
-      </Responsive>
+      </Comp>
     </div>
   );
 }
