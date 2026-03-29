@@ -54,7 +54,7 @@ export function CreditUsageChart() {
       </CardHeader>
       <CardContent className="flex-1 min-h-0 pb-4">
         <ResponsiveContainer width="100%" height="100%">
-          <RadialBarChart cx="50%" cy="50%" innerRadius="30%" outerRadius="90%" data={data} startAngle={180} endAngle={0}>
+          <RadialBarChart cx="50%" cy="60%" innerRadius="40%" outerRadius="100%" data={data} startAngle={180} endAngle={0}>
             <RadialBar dataKey="pct" background cornerRadius={6} label={{ position: 'insideStart', fill: '#fff', fontSize: 10, formatter: (v: number) => `${v}%` }} />
             <Tooltip formatter={(v: number, name: string, entry: any) => [`${v}% (${formatCurrency(entry.payload.used)} / ${formatCurrency(entry.payload.limit)})`, entry.payload.name]} />
             <Legend iconType="circle" wrapperStyle={{ fontSize: 10 }} formatter={(_, entry: any) => entry?.payload?.name || ''} />
