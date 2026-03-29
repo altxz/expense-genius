@@ -78,6 +78,12 @@ export default function HistoryPage() {
     setStartingMonthBalance(priorBalance);
   }, [user, startDate]);
 
+  const fetchCreditCards = useCallback(async () => {
+    if (!user) return;
+    const { data } = await supabase.from('credit_cards').select('*').eq('user_id', user.id);
+    setCreditCards((data || []) as CreditCardType[]);
+  }, [user]);
+
   const fetchSubscriptions = useCallback(async () => {
     if (!user) return;
     setSubLoading(true);
