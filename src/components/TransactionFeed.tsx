@@ -514,6 +514,21 @@ export function TransactionFeed({
 
                         {/* Quick actions */}
                         <div className="shrink-0 flex items-center gap-0.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                          {isPending && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 rounded-lg hover:bg-emerald-500/10 hover:text-emerald-600"
+                                  onClick={() => handleMarkAsPaid(exp)}
+                                >
+                                  <Check className="h-3.5 w-3.5 text-emerald-600" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>{isIncome ? 'Confirmar recebimento' : 'Confirmar pagamento'}</TooltipContent>
+                            </Tooltip>
+                          )}
                           <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg" onClick={() => setEditingExpense(exp)}>
                             <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
                           </Button>
