@@ -96,6 +96,9 @@ export function EditExpenseModal({ open, expense, onOpenChange, onExpenseUpdated
   const canConvertToInstallment = !isExistingInstallment && type !== 'transfer';
   const invoiceOptions = useMemo(() => generateInvoiceOptions(), []);
 
+  // Determine if this is an existing recurring transaction (template-based siblings)
+  const isExistingRecurring = expense.is_recurring && !isExistingInstallment;
+
   useEffect(() => {
     if (!user || !open) return;
     // Reset state from the expense being edited
