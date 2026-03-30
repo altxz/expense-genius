@@ -1,14 +1,13 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { AlertTriangle } from 'lucide-react';
 import { OnboardingWizard } from '@/components/OnboardingWizard';
 import { useUserSettings } from '@/contexts/UserSettingsContext';
 
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { SummaryCards } from '@/components/SummaryCards';
 import { AddExpenseModal } from '@/components/AddExpenseModal';
 import { DashboardHeader } from '@/components/DashboardHeader';
 import { InstallPwaPrompt } from '@/components/InstallPwaPrompt';
-import { AnomalyInsights } from '@/components/analytics/AnomalyInsights';
+import { SmartAlertsCarousel, SmartAlert } from '@/components/SmartAlertsCarousel';
+import { useAnomalyAlerts } from '@/hooks/useAnomalyAlerts';
 import { AppSidebar } from '@/components/AppSidebar';
 import { MonthSelector } from '@/components/MonthSelector';
 import { SidebarProvider } from '@/components/ui/sidebar';
@@ -62,6 +61,7 @@ export default function Dashboard() {
   const { startDate, endDate, selectedMonth, selectedYear } = useSelectedDate();
   const { settings: userSettings, loading: settingsLoading, refetch: refetchSettings } = useUserSettings();
   const projected = useProjectedTotals();
+  const anomalyAlerts = useAnomalyAlerts();
   const [modalOpen, setModalOpen] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [budgetTotals, setBudgetTotals] = useState({ totalBudget: 0, totalSpent: 0 });
@@ -201,27 +201,28 @@ export default function Dashboard() {
               <DashboardSkeleton />
             ) : (
               <>
-                <AnomalyInsights />
-
-                {budgetAlerts.length > 0 && (
-                  <Alert variant="destructive" className="rounded-xl border-destructive/50 bg-destructive/10">
-                    <AlertTriangle className="h-4 w-4" />
-                    <AlertDescription className="font-medium text-sm">
-                      Atenção: Você está quase ultrapassando seu orçamento em{' '}
-                      <span className="font-bold">{budgetAlerts.join(' e ')}</span>!
-                    </AlertDescription>
-                  </Alert>
-                )}
-
-                {projected.projectedBalance < 0 && (
-                  <Alert variant="destructive" className="rounded-xl border-destructive/50 bg-destructive/10">
-                    <AlertTriangle className="h-4 w-4" />
-                    <AlertDescription className="font-medium text-sm">
-                      Alerta: Seu saldo previsto está negativo ({new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(projected.projectedBalance)}).
-                      Revise suas despesas e faturas do mês.
-                    </AlertDescription>
-                  </Alert>
-                )}
+                {(() => {
+                  const allAlerts: SmartAlert[] = [...anomalyAlerts];
+                  if (projected.projectedBalance < 0) {
+                    allAlerts.unshift({
+                      id: 'negative-balance',
+                      type: 'critical',
+                      icon: 'wallet',
+                      title: 'Saldo previsto negativo',
+                      description: `${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(projected.projectedBalance)}. Revise suas despesas.`,
+                    });
+                  }
+                  budgetAlerts.forEach((label, i) => {
+                    allAlerts.push({
+                      id: `budget-${i}`,
+                      type: 'warning',
+                      icon: 'budget',
+                      title: `Orçamento: ${label}`,
+                      description: 'Você está próximo de ultrapassar o limite definido para esta categoria.',
+                    });
+                  });
+                  return <SmartAlertsCarousel alerts={allAlerts} />;
+                })()}
 
                 <SummaryCards
                   balance={projected.projectedBalance}
