@@ -216,14 +216,18 @@ export function EditExpenseModal({ open, expense, onOpenChange, onExpenseUpdated
         if (error) throw error;
         toast({ title: 'Recorrência ativada!', description: 'Esta transação será replicada automaticamente todo mês.' });
       } else {
-        // Normal single update
+        // Normal single update — also clear recurring if it was turned off
+        const recurringFields = !wantInstallment && expense.is_recurring
+          ? { is_recurring: false, frequency: null }
+          : {};
         const { error } = await supabase.from('expenses').update({
           ...baseFields,
           value: parsedValue,
+          ...recurringFields,
         }).eq('id', expense.id);
 
         if (error) throw error;
-        toast({ title: 'Transação atualizada!' });
+        toast({ title: expense.is_recurring && !wantInstallment ? 'Recorrência desativada!' : 'Transação atualizada!' });
       }
 
       onExpenseUpdated();
