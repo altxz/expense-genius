@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, lazy, Suspense } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { AppSidebar } from '@/components/AppSidebar';
@@ -7,16 +7,17 @@ import { SidebarProvider } from '@/components/ui/sidebar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { OverviewCards } from '@/components/analytics/OverviewCards';
-import { CategoryCharts } from '@/components/analytics/CategoryCharts';
-import { InsightsSection } from '@/components/analytics/InsightsSection';
-import { TrendsCharts } from '@/components/analytics/TrendsCharts';
-import { ExpenseTreemap } from '@/components/analytics/ExpenseTreemap';
-import { EmergencyFundCard } from '@/components/analytics/EmergencyFundCard';
-import { NetWorthChart } from '@/components/analytics/NetWorthChart';
-import { GoalsSection } from '@/components/analytics/GoalsSection';
 import { useAnalyticsData, AnalyticsFilters } from '@/hooks/useAnalyticsData';
 import { Skeleton } from '@/components/ui/skeleton';
+
+const OverviewCards = lazy(() => import('@/components/analytics/OverviewCards').then(m => ({ default: m.OverviewCards })));
+const CategoryCharts = lazy(() => import('@/components/analytics/CategoryCharts').then(m => ({ default: m.CategoryCharts })));
+const InsightsSection = lazy(() => import('@/components/analytics/InsightsSection').then(m => ({ default: m.InsightsSection })));
+const TrendsCharts = lazy(() => import('@/components/analytics/TrendsCharts').then(m => ({ default: m.TrendsCharts })));
+const ExpenseTreemap = lazy(() => import('@/components/analytics/ExpenseTreemap').then(m => ({ default: m.ExpenseTreemap })));
+const EmergencyFundCard = lazy(() => import('@/components/analytics/EmergencyFundCard').then(m => ({ default: m.EmergencyFundCard })));
+const NetWorthChart = lazy(() => import('@/components/analytics/NetWorthChart').then(m => ({ default: m.NetWorthChart })));
+const GoalsSection = lazy(() => import('@/components/analytics/GoalsSection').then(m => ({ default: m.GoalsSection })));
 
 export default function AnalyticsPage() {
   const { user, loading: authLoading } = useAuth();
