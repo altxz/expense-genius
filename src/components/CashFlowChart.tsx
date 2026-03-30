@@ -105,6 +105,33 @@ export function CashFlowChart({ creditCards: propCards, wallets: propWallets }: 
       }
     });
 
+    // Virtual recurring contributions to preRangeBalance:
+    // For each recurring tx, count how many months between its start and rangeStart
+    // it would have contributed, minus real entries already counted above
+    recurringExpenses.forEach(r => {
+      if (r.type === 'transfer' || r.credit_card_id) return;
+      const rDate = new Date(r.date + 'T12:00:00');
+      // Count months from (rDate month+1) to (rangeStart month - 1) where virtual entries would exist
+      // but only if the recurring tx itself is already counted in allExpenses for its original month
+      const rStartMonth = rDate.getFullYear() * 12 + rDate.getMonth();
+      const rangeMonth = rangeStart.getFullYear() * 12 + rangeStart.getMonth();
+      // For each month between original+1 and rangeStart-1, check if a real entry exists
+      for (let m = rStartMonth + 1; m < rangeMonth; m++) {
+        const yr = Math.floor(m / 12);
+        const mo = m % 12;
+        const daysInM = new Date(yr, mo + 1, 0).getDate();
+        const day = Math.min(rDate.getDate(), daysInM);
+        const virtualDateStr = `${yr}-${String(mo + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        // Check if a real entry already covers this
+        const alreadyCounted = allExpenses.some(e =>
+          e.is_recurring && e.type === r.type && e.date === virtualDateStr && Math.abs(Number(e.value) - Number(r.value)) < 0.01
+        );
+        if (alreadyCounted) continue;
+        if (r.type === 'income') preRangeBalance += Number(r.value);
+        else preRangeBalance -= Number(r.value);
+      }
+    });
+
     // 3) Build in-range transactions by date (all, regardless of is_paid)
     const txByDate: Record<string, { income: number; expense: number }> = {};
     allExpenses.forEach(e => {
