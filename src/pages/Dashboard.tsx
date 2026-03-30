@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef, lazy, Suspense } from 'react';
 
 import { useUserSettings } from '@/contexts/UserSettingsContext';
 
@@ -17,26 +17,32 @@ import { useSelectedDate } from '@/contexts/DateContext';
 import { supabase } from '@/lib/supabase';
 import { getCategoryInfo } from '@/lib/constants';
 import { Navigate } from 'react-router-dom';
-import { CashFlowChart } from '@/components/CashFlowChart';
-import { HealthScore } from '@/components/HealthScore';
-import { CalendarView } from '@/components/CalendarView';
-import { IncomeVsExpenseChart } from '@/components/analytics/IncomeVsExpenseChart';
-import { TopExpensesList } from '@/components/analytics/TopExpensesList';
-import { CreditUsageChart } from '@/components/analytics/CreditUsageChart';
-import { CreditCardSummary } from '@/components/analytics/CreditCardSummary';
-import { EndOfMonthForecast } from '@/components/analytics/EndOfMonthForecast';
-import { DailySpendingChart } from '@/components/analytics/DailySpendingChart';
-import { FixedVsVariableChart } from '@/components/analytics/FixedVsVariableChart';
-import { SubcategoryTreemap } from '@/components/analytics/SubcategoryTreemap';
-import { SavingsRateGauge } from '@/components/analytics/SavingsRateGauge';
-import { WeekComparisonChart } from '@/components/analytics/WeekComparisonChart';
-import { IncomeSourcesPie } from '@/components/analytics/IncomeSourcesPie';
-import { WaterfallChart } from '@/components/analytics/WaterfallChart';
-import { SpendingHeatmap } from '@/components/analytics/SpendingHeatmap';
-import { BurndownChart } from '@/components/analytics/BurndownChart';
-import { NetWorthChart } from '@/components/analytics/NetWorthChart';
 import { useProjectedTotals } from '@/hooks/useProjectedTotals';
 import { getInvoicePeriod, matchExpensesToInvoice } from '@/lib/invoiceHelpers';
+
+// Lazy load all chart/widget components
+const CashFlowChart = lazy(() => import('@/components/CashFlowChart').then(m => ({ default: m.CashFlowChart })));
+const HealthScore = lazy(() => import('@/components/HealthScore').then(m => ({ default: m.HealthScore })));
+const CalendarView = lazy(() => import('@/components/CalendarView').then(m => ({ default: m.CalendarView })));
+const IncomeVsExpenseChart = lazy(() => import('@/components/analytics/IncomeVsExpenseChart').then(m => ({ default: m.IncomeVsExpenseChart })));
+const TopExpensesList = lazy(() => import('@/components/analytics/TopExpensesList').then(m => ({ default: m.TopExpensesList })));
+const CreditUsageChart = lazy(() => import('@/components/analytics/CreditUsageChart').then(m => ({ default: m.CreditUsageChart })));
+const CreditCardSummary = lazy(() => import('@/components/analytics/CreditCardSummary').then(m => ({ default: m.CreditCardSummary })));
+const EndOfMonthForecast = lazy(() => import('@/components/analytics/EndOfMonthForecast').then(m => ({ default: m.EndOfMonthForecast })));
+const DailySpendingChart = lazy(() => import('@/components/analytics/DailySpendingChart').then(m => ({ default: m.DailySpendingChart })));
+const FixedVsVariableChart = lazy(() => import('@/components/analytics/FixedVsVariableChart').then(m => ({ default: m.FixedVsVariableChart })));
+const SubcategoryTreemap = lazy(() => import('@/components/analytics/SubcategoryTreemap').then(m => ({ default: m.SubcategoryTreemap })));
+const SavingsRateGauge = lazy(() => import('@/components/analytics/SavingsRateGauge').then(m => ({ default: m.SavingsRateGauge })));
+const WeekComparisonChart = lazy(() => import('@/components/analytics/WeekComparisonChart').then(m => ({ default: m.WeekComparisonChart })));
+const IncomeSourcesPie = lazy(() => import('@/components/analytics/IncomeSourcesPie').then(m => ({ default: m.IncomeSourcesPie })));
+const WaterfallChart = lazy(() => import('@/components/analytics/WaterfallChart').then(m => ({ default: m.WaterfallChart })));
+const SpendingHeatmap = lazy(() => import('@/components/analytics/SpendingHeatmap').then(m => ({ default: m.SpendingHeatmap })));
+const BurndownChart = lazy(() => import('@/components/analytics/BurndownChart').then(m => ({ default: m.BurndownChart })));
+const NetWorthChart = lazy(() => import('@/components/analytics/NetWorthChart').then(m => ({ default: m.NetWorthChart })));
+
+function ChartFallback() {
+  return <Skeleton className="h-full w-full min-h-[280px] rounded-2xl" />;
+}
 
 function DashboardSkeleton() {
   return (
