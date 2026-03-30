@@ -237,6 +237,7 @@ export default function Dashboard() {
                   prevBalance={prevSummary.balance}
                   prevIncome={prevSummary.totalIncome}
                   prevExpense={prevSummary.totalExpense}
+                  pendingInStartingBalance={projected.pendingInStartingBalance}
                   healthScore={
                     <HealthScore
                       totalIncome={projected.totalIncome}

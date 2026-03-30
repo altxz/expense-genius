@@ -1,8 +1,9 @@
 import { ReactNode } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { ArrowDownCircle, ArrowUpCircle, TrendingUp, TrendingDown, Wallet } from 'lucide-react';
+import { ArrowDownCircle, ArrowUpCircle, TrendingUp, TrendingDown, Wallet, Info } from 'lucide-react';
 import { formatCurrency } from '@/lib/constants';
 import { useNavigate } from 'react-router-dom';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface SummaryCardsProps {
   balance: number;
@@ -12,6 +13,7 @@ interface SummaryCardsProps {
   prevBalance?: number;
   prevIncome?: number;
   prevExpense?: number;
+  pendingInStartingBalance?: number;
   healthScore?: ReactNode;
 }
 
@@ -47,7 +49,7 @@ function SummaryCard({ children, className, onClick }: { children: ReactNode; cl
   );
 }
 
-export function SummaryCards({ balance, totalIncome, totalExpense, largestCategory, prevBalance, prevIncome, prevExpense, healthScore }: SummaryCardsProps) {
+export function SummaryCards({ balance, totalIncome, totalExpense, largestCategory, prevBalance, prevIncome, prevExpense, pendingInStartingBalance, healthScore }: SummaryCardsProps) {
   const navigate = useNavigate();
 
   return (
@@ -62,7 +64,21 @@ export function SummaryCards({ balance, totalIncome, totalExpense, largestCatego
               <Wallet className="h-4 w-4 sm:h-5 sm:w-5" />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-[10px] sm:text-xs font-medium opacity-80 whitespace-nowrap">Saldo Total</p>
+              <div className="flex items-center gap-1">
+                <p className="text-[10px] sm:text-xs font-medium opacity-80 whitespace-nowrap">Saldo Projetado</p>
+                {pendingInStartingBalance != null && pendingInStartingBalance > 0 && (
+                  <TooltipProvider delayDuration={200}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="h-3 w-3 opacity-60 cursor-help shrink-0" />
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" className="max-w-[220px] text-xs">
+                        <p>Considerando {formatCurrency(pendingInStartingBalance)} em despesas pendentes de meses anteriores</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+              </div>
               <p className={`text-sm sm:text-lg lg:text-xl font-bold tracking-tight truncate ${balance < 0 ? 'text-red-300' : ''}`}>
                 {balance >= 0 ? '+' : ''}{formatCurrency(balance)}
               </p>
