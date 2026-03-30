@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
@@ -8,18 +9,28 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { DateProvider } from "@/contexts/DateContext";
 import { UserSettingsProvider } from "@/contexts/UserSettingsContext";
 import { AuthenticatedExtras } from "@/components/AuthenticatedExtras";
-import Dashboard from "./pages/Dashboard";
-import AuthPage from "./pages/AuthPage";
-import CategoriesPage from "./pages/CategoriesPage";
-import HistoryPage from "./pages/HistoryPage";
-import SettingsPage from "./pages/SettingsPage";
-import AnalyticsPage from "./pages/AnalyticsPage";
-import WalletPage from "./pages/WalletPage";
-import BudgetPage from "./pages/BudgetPage";
-import ProjectsPage from "./pages/ProjectsPage";
-import NotFound from "./pages/NotFound";
+
+// Lazy load all route pages
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const AuthPage = lazy(() => import("./pages/AuthPage"));
+const CategoriesPage = lazy(() => import("./pages/CategoriesPage"));
+const HistoryPage = lazy(() => import("./pages/HistoryPage"));
+const SettingsPage = lazy(() => import("./pages/SettingsPage"));
+const AnalyticsPage = lazy(() => import("./pages/AnalyticsPage"));
+const WalletPage = lazy(() => import("./pages/WalletPage"));
+const BudgetPage = lazy(() => import("./pages/BudgetPage"));
+const ProjectsPage = lazy(() => import("./pages/ProjectsPage"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
+
+function PageFallback() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <span className="text-muted-foreground font-medium animate-pulse">Carregando...</span>
+    </div>
+  );
+}
 
 const App = () => (
   <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
@@ -31,18 +42,20 @@ const App = () => (
           <DateProvider>
             <UserSettingsProvider>
               <BrowserRouter>
-                <Routes>
-                  <Route path="/" element={<Dashboard />} />
-                  <Route path="/auth" element={<AuthPage />} />
-                  <Route path="/categorias" element={<CategoriesPage />} />
-                  <Route path="/historico" element={<HistoryPage />} />
-                  <Route path="/configuracoes" element={<SettingsPage />} />
-                  <Route path="/analytics" element={<AnalyticsPage />} />
-                  <Route path="/wallet" element={<WalletPage />} />
-                  <Route path="/orcamento" element={<BudgetPage />} />
-                  <Route path="/projetos" element={<ProjectsPage />} />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
+                <Suspense fallback={<PageFallback />}>
+                  <Routes>
+                    <Route path="/" element={<Dashboard />} />
+                    <Route path="/auth" element={<AuthPage />} />
+                    <Route path="/categorias" element={<CategoriesPage />} />
+                    <Route path="/historico" element={<HistoryPage />} />
+                    <Route path="/configuracoes" element={<SettingsPage />} />
+                    <Route path="/analytics" element={<AnalyticsPage />} />
+                    <Route path="/wallet" element={<WalletPage />} />
+                    <Route path="/orcamento" element={<BudgetPage />} />
+                    <Route path="/projetos" element={<ProjectsPage />} />
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </Suspense>
                 <AuthenticatedExtras />
               </BrowserRouter>
             </UserSettingsProvider>
