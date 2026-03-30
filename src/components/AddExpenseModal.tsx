@@ -10,7 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Sparkles, Loader2, ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, X } from 'lucide-react';
+import { Sparkles, Loader2, ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, X, Repeat, Hash } from 'lucide-react';
 import { CATEGORIES, getCategoryInfo } from '@/lib/constants';
 import { getPaymentDate } from '@/lib/invoiceHelpers';
 import { supabase } from '@/lib/supabase';
@@ -46,6 +46,18 @@ function calcInvoiceMonth(card: CreditCardOption, expenseDate: string): string {
     closing_days_before_due: card.closing_days_before_due,
   });
   return `${payDate.getFullYear()}-${String(payDate.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function advanceDateByMonths(dateStr: string, months: number): string {
+  const d = new Date(dateStr + 'T12:00:00');
+  d.setMonth(d.getMonth() + months);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function advanceInvoiceMonth(ym: string, months: number): string {
+  const [y, m] = ym.split('-').map(Number);
+  const d = new Date(y, m - 1 + months, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
 function formatInvoiceLabel(ym: string): string {
@@ -97,10 +109,11 @@ export function AddExpenseModal({ open, onOpenChange, onExpenseAdded }: AddExpen
   const [paymentMethod, setPaymentMethod] = useState<'debit' | 'credit'>('debit');
   const [destinationWalletId, setDestinationWalletId] = useState<string>('');
   const [isRecurring, setIsRecurring] = useState(false);
+  const [recurringMode, setRecurringMode] = useState<'fixed' | 'limited'>('fixed');
+  const [repeatCount, setRepeatCount] = useState('2');
+  const [installmentValueType, setInstallmentValueType] = useState<'total' | 'per_installment'>('total');
   const [frequency, setFrequency] = useState<string>('monthly');
   const [creditCardId, setCreditCardId] = useState<string>('');
-  const [installments, setInstallments] = useState('1');
-  const [installmentValueType, setInstallmentValueType] = useState<'total' | 'per_installment'>('total');
   const [walletId, setWalletId] = useState<string>('');
   const [invoiceMonth, setInvoiceMonth] = useState<string>('');
   const [wallets, setWallets] = useState<WalletOption[]>([]);
@@ -195,6 +208,8 @@ export function AddExpenseModal({ open, onOpenChange, onExpenseAdded }: AddExpen
   const handleSave = async () => {
     const isTransfer = type === 'transfer';
     const isCredit = type === 'expense' && paymentMethod === 'credit';
+    const isRepeatMode = isRecurring && recurringMode === 'limited';
+    const numRepeats = isRepeatMode ? (parseInt(repeatCount) || 2) : 1;
 
     if (isTransfer) {
       if (!value || !walletId || !destinationWalletId) {
@@ -225,55 +240,61 @@ export function AddExpenseModal({ open, onOpenChange, onExpenseAdded }: AddExpen
     }
 
     setSaving(true);
-    const numInstallments = isCredit ? (parseInt(installments) || 1) : 1;
 
-    if (isCredit && numInstallments > 1 && invoiceMonth) {
-      // Generate one record per installment with shared group id
+    if (isRepeatMode && numRepeats > 1) {
+      // Generate multiple records with installment_group_id
       const groupId = crypto.randomUUID();
       const inputValue = parseFloat(value);
-      const perInstallment = installmentValueType === 'total'
-        ? Math.round((inputValue / numInstallments) * 100) / 100
+      const perUnit = installmentValueType === 'total'
+        ? Math.round((inputValue / numRepeats) * 100) / 100
         : inputValue;
-      const [baseY, baseM] = invoiceMonth.split('-').map(Number);
+      const baseInvoice = isCredit && invoiceMonth ? invoiceMonth : null;
 
-      const rows = Array.from({ length: numInstallments }, (_, i) => {
-        const m = new Date(baseY, baseM - 1 + i, 1);
-        const im = `${m.getFullYear()}-${String(m.getMonth() + 1).padStart(2, '0')}`;
-        return {
+      const rows = Array.from({ length: numRepeats }, (_, i) => {
+        const row: Record<string, unknown> = {
           user_id: user?.id,
-          date,
           description: description.trim(),
-          value: perInstallment,
+          value: perUnit,
           category_ai: categoryAi || null,
           final_category: finalCategory,
           type,
-          payment_method: 'credit',
+          payment_method: type === 'expense' ? paymentMethod : 'debit',
           is_recurring: false,
           frequency: null,
-          credit_card_id: creditCardId,
-          installments: numInstallments,
-          wallet_id: null,
+          credit_card_id: isCredit ? creditCardId : null,
+          installments: numRepeats,
+          wallet_id: isCredit ? null : (walletId || null),
           destination_wallet_id: null,
-          invoice_month: im,
-          is_paid: false,
+          is_paid: i === 0 ? isPaid : false,
           notes: notes.trim() || null,
           tags: tags.length > 0 ? tags : null,
           installment_group_id: groupId,
-          installment_info: `${i + 1}/${numInstallments}`,
+          installment_info: `${i + 1}/${numRepeats}`,
           project_id: projectId || null,
         };
+
+        if (isCredit && baseInvoice) {
+          row.date = date;
+          row.invoice_month = advanceInvoiceMonth(baseInvoice, i);
+        } else {
+          row.date = i === 0 ? date : advanceDateByMonths(date, i);
+          row.invoice_month = null;
+        }
+
+        return row;
       });
 
       const { error } = await supabase.from('expenses').insert(rows);
       if (error) {
         toast({ title: 'Erro ao salvar', description: error.message, variant: 'destructive' });
       } else {
-        toast({ title: 'Parcelas criadas!', description: `${numInstallments} parcelas salvas com sucesso.` });
+        toast({ title: 'Lançamentos criados!', description: `${numRepeats} lançamentos de R$ ${perUnit.toFixed(2)} salvos.` });
         resetForm();
         onOpenChange(false);
         onExpenseAdded();
       }
     } else {
+      // Single record (fixed recurring or one-off)
       const { error } = await supabase.from('expenses').insert({
         user_id: user?.id,
         date,
@@ -283,8 +304,8 @@ export function AddExpenseModal({ open, onOpenChange, onExpenseAdded }: AddExpen
         final_category: isTransfer ? 'transferencia' : finalCategory,
         type,
         payment_method: isTransfer ? null : (type === 'expense' ? paymentMethod : 'debit'),
-        is_recurring: isTransfer ? false : isRecurring,
-        frequency: isRecurring && !isTransfer ? frequency : null,
+        is_recurring: isTransfer ? false : (isRecurring && recurringMode === 'fixed'),
+        frequency: (isRecurring && recurringMode === 'fixed' && !isTransfer) ? frequency : null,
         credit_card_id: isCredit ? creditCardId : null,
         installments: 1,
         wallet_id: (isTransfer || (type === 'expense' && paymentMethod === 'debit') || type === 'income') ? (walletId || null) : null,
@@ -317,9 +338,10 @@ export function AddExpenseModal({ open, onOpenChange, onExpenseAdded }: AddExpen
     setType('expense');
     setPaymentMethod('debit');
     setIsRecurring(false);
+    setRecurringMode('fixed');
+    setRepeatCount('2');
     setFrequency('monthly');
     setCreditCardId('');
-    setInstallments('1');
     setInstallmentValueType('total');
     setWalletId('');
     setDestinationWalletId('');
@@ -487,52 +509,15 @@ export function AddExpenseModal({ open, onOpenChange, onExpenseAdded }: AddExpen
               {/* Credit card fields */}
               {type === 'expense' && paymentMethod === 'credit' && (
                 <>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div className="sm:col-span-2 space-y-1.5 min-w-0">
-                      <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Cartão <span className="text-destructive">*</span></Label>
-                      <Select value={creditCardId} onValueChange={setCreditCardId}>
-                        <SelectTrigger className="rounded-xl h-11"><SelectValue placeholder="Selecione" /></SelectTrigger>
-                        <SelectContent>
-                          {creditCards.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-1.5 min-w-0">
-                      <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Parcelas</Label>
-                      <Input type="number" min="1" max="72" value={installments} onChange={e => setInstallments(e.target.value)} className="rounded-xl h-11" />
-                    </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Cartão <span className="text-destructive">*</span></Label>
+                    <Select value={creditCardId} onValueChange={setCreditCardId}>
+                      <SelectTrigger className="rounded-xl h-11"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                      <SelectContent>
+                        {creditCards.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
                   </div>
-                  {parseInt(installments) > 1 && (
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Tipo de Valor</Label>
-                      <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-secondary">
-                        <button
-                          type="button"
-                          onClick={() => setInstallmentValueType('total')}
-                          className={`rounded-lg py-2 text-xs sm:text-sm font-semibold transition-all ${
-                            installmentValueType === 'total' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-                          }`}
-                        >
-                          Valor Total
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setInstallmentValueType('per_installment')}
-                          className={`rounded-lg py-2 text-xs sm:text-sm font-semibold transition-all ${
-                            installmentValueType === 'per_installment' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-                          }`}
-                        >
-                          Valor da Parcela
-                        </button>
-                      </div>
-                      <p className="text-[11px] text-muted-foreground">
-                        {installmentValueType === 'total'
-                          ? `O valor será dividido em ${installments}x de R$ ${value ? (parseFloat(value) / parseInt(installments)).toFixed(2) : '0,00'}`
-                          : `Total: R$ ${value ? (parseFloat(value) * parseInt(installments)).toFixed(2) : '0,00'} em ${installments}x de R$ ${value || '0,00'}`
-                        }
-                      </p>
-                    </div>
-                  )}
                   {creditCardId && (
                     <div className="space-y-1.5">
                       <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Fatura</Label>
@@ -588,27 +573,118 @@ export function AddExpenseModal({ open, onOpenChange, onExpenseAdded }: AddExpen
                 <Switch checked={isPaid} onCheckedChange={setIsPaid} />
               </div>
 
-              {/* Recurring */}
-              <label className="flex items-center gap-3 rounded-xl border p-3 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={isRecurring}
-                  onChange={e => setIsRecurring(e.target.checked)}
-                  className="h-4 w-4 rounded border-muted-foreground accent-primary"
-                />
-                <div>
-                  <span className="text-sm font-medium">Recorrente / Assinatura</span>
-                  <p className="text-xs text-muted-foreground">Conta fixa mensal ou anual</p>
+              {/* Recurring / Repeat */}
+              <div className="flex items-center justify-between rounded-xl border p-3">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Repeat className="h-4 w-4 text-primary shrink-0" />
+                  <div className="min-w-0">
+                    <span className="text-sm font-medium">Recorrente / Repetir</span>
+                    <p className="text-xs text-muted-foreground">Conta fixa ou parcelamento</p>
+                  </div>
                 </div>
-              </label>
+                <Switch checked={isRecurring} onCheckedChange={setIsRecurring} />
+              </div>
+
               {isRecurring && (
-                <Select value={frequency} onValueChange={setFrequency}>
-                  <SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="monthly">Mensal</SelectItem>
-                    <SelectItem value="annual">Anual</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 space-y-3">
+                  {/* Mode selector */}
+                  <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-secondary">
+                    <button
+                      type="button"
+                      onClick={() => setRecurringMode('fixed')}
+                      className={`flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs sm:text-sm font-semibold transition-all ${
+                        recurringMode === 'fixed' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      <Repeat className="h-3.5 w-3.5" />
+                      Fixa
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRecurringMode('limited')}
+                      className={`flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs sm:text-sm font-semibold transition-all ${
+                        recurringMode === 'limited' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      <Hash className="h-3.5 w-3.5" />
+                      Repetir vezes
+                    </button>
+                  </div>
+
+                  {recurringMode === 'fixed' ? (
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Frequência</Label>
+                      <Select value={frequency} onValueChange={setFrequency}>
+                        <SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="monthly">Mensal</SelectItem>
+                          <SelectItem value="annual">Anual</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-[11px] text-muted-foreground">
+                        Este lançamento será replicado automaticamente todo mês/ano.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Número de Repetições</Label>
+                        <Input
+                          type="number"
+                          min="2"
+                          max="72"
+                          value={repeatCount}
+                          onChange={e => setRepeatCount(e.target.value)}
+                          className="rounded-xl h-11"
+                        />
+                      </div>
+
+                      {(parseInt(repeatCount) || 0) > 1 && (
+                        <>
+                          <div className="space-y-1.5">
+                            <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Tipo de Valor</Label>
+                            <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-secondary">
+                              <button
+                                type="button"
+                                onClick={() => setInstallmentValueType('total')}
+                                className={`rounded-lg py-2 text-xs sm:text-sm font-semibold transition-all ${
+                                  installmentValueType === 'total' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                                }`}
+                              >
+                                Valor Total
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setInstallmentValueType('per_installment')}
+                                className={`rounded-lg py-2 text-xs sm:text-sm font-semibold transition-all ${
+                                  installmentValueType === 'per_installment' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                                }`}
+                              >
+                                Valor da Parcela
+                              </button>
+                            </div>
+                          </div>
+
+                          {value && parseFloat(value) > 0 && (
+                            <div className="rounded-lg bg-background/80 border p-2.5 text-center">
+                              <p className="text-xs text-muted-foreground">Resumo</p>
+                              <p className="text-lg font-bold text-primary">
+                                {parseInt(repeatCount)}x de R$ {installmentValueType === 'total'
+                                  ? (parseFloat(value) / parseInt(repeatCount)).toFixed(2)
+                                  : parseFloat(value).toFixed(2)}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                Total: R$ {installmentValueType === 'total'
+                                  ? parseFloat(value).toFixed(2)
+                                  : (parseFloat(value) * parseInt(repeatCount)).toFixed(2)}
+                              </p>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
               )}
 
               {/* More options accordion */}
