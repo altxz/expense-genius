@@ -171,6 +171,43 @@ export function EditExpenseModal({ open, expense, onOpenChange, onExpenseUpdated
         invoice_month: isCredit ? (invoiceMonth || null) : null,
       };
 
+      // Editing a projected recurring occurrence and choosing "only this":
+      // create a real one-off entry for this month without changing the recurring template.
+      if (scope === 'single' && isProjectedOccurrence && expense.is_recurring && !isExistingInstallment) {
+        const oneOffRow = {
+          user_id: user!.id,
+          description: description.trim(),
+          value: parsedValue,
+          type: expense.type,
+          final_category: finalCategory,
+          category_ai: expense.category_ai,
+          credit_card_id: expense.credit_card_id,
+          wallet_id: walletId || null,
+          destination_wallet_id: expense.destination_wallet_id,
+          debt_id: expense.debt_id,
+          project_id: expense.project_id,
+          is_paid: isPaid,
+          is_recurring: false,
+          frequency: null,
+          installments: 1,
+          installment_group_id: null,
+          installment_info: null,
+          payment_method: expense.payment_method,
+          notes: notes.trim() || null,
+          tags: tags.length > 0 ? tags : null,
+          date,
+          invoice_month: isCredit ? (invoiceMonth || null) : null,
+        };
+
+        const { error: insertOneOffError } = await supabase.from('expenses').insert(oneOffRow);
+        if (insertOneOffError) throw insertOneOffError;
+
+        toast({ title: 'Alteração aplicada apenas nesta ocorrência!' });
+        onExpenseUpdated();
+        setSaving(false);
+        return;
+      }
+
       if (wantInstallment && canConvertToInstallment && installmentMode === 'limited') {
         // Convert single expense to installment/repeat plan
         const installmentValue = valueMode === 'total'
