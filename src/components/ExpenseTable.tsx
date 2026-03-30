@@ -48,14 +48,39 @@ interface ExpenseTableProps {
 
 export function ExpenseTable({ expenses, loading, onDeleted, filters, onFilterChange, page, totalPages, onPageChange }: ExpenseTableProps) {
   const { toast } = useToast();
+  const [deletingExpense, setDeletingExpense] = useState<Expense | null>(null);
+  const [deleteMode, setDeleteMode] = useState<'single' | 'all' | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
-  const handleDelete = async (id: string) => {
-    const { error } = await supabase.from('expenses').delete().eq('id', id);
-    if (error) {
-      toast({ title: 'Erro', description: error.message, variant: 'destructive' });
-    } else {
-      toast({ title: 'Despesa excluída' });
+  const handleDeleteClick = (exp: Expense) => {
+    setDeletingExpense(exp);
+    setDeleteMode(exp.is_recurring ? null : 'single');
+  };
+
+  const handleDelete = async (mode: 'single' | 'all') => {
+    if (!deletingExpense) return;
+    setDeleting(true);
+    try {
+      if (mode === 'all') {
+        const { error } = await supabase.from('expenses').delete()
+          .eq('description', deletingExpense.description)
+          .eq('type', deletingExpense.type)
+          .eq('value', deletingExpense.value)
+          .eq('is_recurring', true);
+        if (error) throw error;
+        toast({ title: 'Todas as recorrências excluídas' });
+      } else {
+        const { error } = await supabase.from('expenses').delete().eq('id', deletingExpense.id);
+        if (error) throw error;
+        toast({ title: 'Despesa excluída' });
+      }
       onDeleted();
+    } catch (err: any) {
+      toast({ title: 'Erro', description: err.message, variant: 'destructive' });
+    } finally {
+      setDeleting(false);
+      setDeletingExpense(null);
+      setDeleteMode(null);
     }
   };
 
