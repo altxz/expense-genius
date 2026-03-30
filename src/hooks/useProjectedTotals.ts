@@ -15,8 +15,10 @@ export interface ProjectedTotals {
   totalExpense: number;
   /** income - expense */
   balance: number;
-  /** Starting balance from previous months */
+  /** Projected starting balance from previous months (paid + pending) */
   startingBalance: number;
+  /** Amount of pending (unpaid) expenses included in startingBalance */
+  pendingInStartingBalance: number;
   /** startingBalance + income - expense */
   projectedBalance: number;
   /** Largest spending category (including CC) */
@@ -36,9 +38,9 @@ export function useProjectedTotals(): ProjectedTotals {
   const { startDate, endDate, selectedMonth, selectedYear } = useSelectedDate();
   const [monthExpenses, setMonthExpenses] = useState<Expense[]>([]);
   const [invoiceExpenses, setInvoiceExpenses] = useState<Expense[]>([]);
+  const [historicalExpenses, setHistoricalExpenses] = useState<Expense[]>([]);
   const [creditCards, setCreditCards] = useState<CreditCardType[]>([]);
   const [wallets, setWallets] = useState<{ id: string; name: string; initial_balance: number }[]>([]);
-  const [startingBalance, setStartingBalance] = useState(0);
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
@@ -48,9 +50,9 @@ export function useProjectedTotals(): ProjectedTotals {
     const [
       { data: expData },
       { data: ccExpData },
+      { data: historicalData },
       { data: cardsData },
       { data: walletsData },
-      { data: balanceResult },
     ] = await Promise.all([
       // Month expenses with specific columns
       supabase.from('expenses').select(EXPENSE_COLS).eq('user_id', user.id)
@@ -58,26 +60,66 @@ export function useProjectedTotals(): ProjectedTotals {
       // CC expenses for invoice matching (only needed cols)
       supabase.from('expenses').select(EXPENSE_COLS).eq('user_id', user.id)
         .not('credit_card_id', 'is', null),
+      // All non-CC expenses before startDate (for projected starting balance) — ignoring is_paid
+      supabase.from('expenses').select('id, value, type, credit_card_id, is_paid, final_category')
+        .eq('user_id', user.id).lt('date', startDate).is('credit_card_id', null),
       supabase.from('credit_cards').select('*').eq('user_id', user.id),
       supabase.from('wallets').select('id, name, initial_balance').eq('user_id', user.id).order('name'),
-      // Use server-side RPC instead of fetching all transactions
-      supabase.rpc('get_starting_balance', {
-        p_user_id: user.id,
-        p_before_date: startDate,
-      }),
     ]);
 
     setMonthExpenses((expData || []) as Expense[]);
     setInvoiceExpenses((ccExpData || []) as Expense[]);
+    setHistoricalExpenses((historicalData || []) as any[]);
     setCreditCards((cardsData || []) as CreditCardType[]);
     setWallets((walletsData || []).map((w: any) => ({ id: w.id, name: w.name, initial_balance: w.initial_balance ?? 0 })));
-
-    // Starting balance comes from the RPC now (server-side calculation)
-    setStartingBalance(balanceResult ?? 0);
     setLoading(false);
   }, [user, startDate, endDate]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  // Calculate projected starting balance
+  const { startingBalance, pendingInStartingBalance } = useMemo(() => {
+    // 1. Sum of all wallet initial balances
+    const walletSum = wallets.reduce((s, w) => s + w.initial_balance, 0);
+
+    // 2. All non-CC, non-transfer historical transactions (regardless of is_paid)
+    const nonTransfers = historicalExpenses.filter((e: any) => e.type !== 'transfer');
+    const historicalIncome = nonTransfers.filter((e: any) => e.type === 'income').reduce((s: number, e: any) => s + e.value, 0);
+    const historicalDebit = nonTransfers.filter((e: any) => e.type !== 'income').reduce((s: number, e: any) => s + e.value, 0);
+
+    // Calculate pending amount (unpaid expenses that are being projected)
+    const pendingExpenses = nonTransfers.filter((e: any) => e.type !== 'income' && !e.is_paid);
+    const pendingIncome = nonTransfers.filter((e: any) => e.type === 'income' && !e.is_paid);
+    const pendingAmount = pendingExpenses.reduce((s: number, e: any) => s + e.value, 0)
+      - pendingIncome.reduce((s: number, e: any) => s + e.value, 0);
+
+    // 3. CC invoice totals for months before the selected month
+    let ccInvoiceTotal = 0;
+    if (creditCards.length > 0) {
+      const ccPool = invoiceExpenses.length > 0 ? invoiceExpenses : [];
+      // Iterate through previous months (up to 24 months back to be safe)
+      const selectedDate = new Date(selectedYear, selectedMonth, 1);
+      
+      creditCards.forEach(card => {
+        // Go back up to 24 months
+        for (let i = 1; i <= 24; i++) {
+          const dt = new Date(selectedDate);
+          dt.setMonth(dt.getMonth() - i);
+          const m = dt.getMonth();
+          const y = dt.getFullYear();
+          const period = getInvoicePeriod(card, y, m);
+          const invoice = matchExpensesToInvoice(ccPool, period);
+          // Only count if there are actual transactions and invoice is NOT already paid
+          if (invoice.total > 0 && invoice.status !== 'paid') {
+            ccInvoiceTotal += invoice.total;
+          }
+        }
+      });
+    }
+
+    const balance = walletSum + historicalIncome - historicalDebit - ccInvoiceTotal;
+    return { startingBalance: balance, pendingInStartingBalance: pendingAmount };
+  }, [wallets, historicalExpenses, creditCards, invoiceExpenses, selectedMonth, selectedYear]);
 
   // Build invoice periods for the selected month (due month)
   const invoiceTotals = useMemo(() => {
@@ -88,7 +130,6 @@ export function useProjectedTotals(): ProjectedTotals {
     const byCategory: Record<string, number> = {};
 
     creditCards.forEach(card => {
-      // getInvoicePeriod now expects the DUE month directly
       const period = getInvoicePeriod(card, selectedYear, selectedMonth);
       const invoice = matchExpensesToInvoice(ccPool, period);
       total += invoice.total;
@@ -131,6 +172,7 @@ export function useProjectedTotals(): ProjectedTotals {
   return {
     ...result,
     startingBalance,
+    pendingInStartingBalance,
     loading,
     refetch: fetchData,
     monthExpenses,

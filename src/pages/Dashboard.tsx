@@ -164,13 +164,27 @@ export default function Dashboard() {
     [projected.creditCards]
   );
 
+  // Previous month summary including CC invoices
   const prevSummary = useMemo(() => {
     const nonTransfers = prevExpenses.filter((e: any) => e.type !== 'transfer');
     const income = nonTransfers.filter((e: any) => e.type === 'income').reduce((s: number, e: any) => s + e.value, 0);
     const cashExpenses = nonTransfers.filter((e: any) => e.type !== 'income' && !e.credit_card_id);
     const expenseTotal = cashExpenses.reduce((s: number, e: any) => s + e.value, 0);
-    return { totalIncome: income, totalExpense: expenseTotal, balance: income - expenseTotal };
-  }, [prevExpenses]);
+
+    // Include CC invoice totals for previous month
+    let ccTotal = 0;
+    if (projected.creditCards.length > 0) {
+      const ccPool = projected.invoiceExpenses;
+      projected.creditCards.forEach((card: any) => {
+        const period = require('@/lib/invoiceHelpers').getInvoicePeriod(card, prevYear, prevMonth);
+        const invoice = require('@/lib/invoiceHelpers').matchExpensesToInvoice(ccPool, period);
+        ccTotal += invoice.total;
+      });
+    }
+
+    const totalExp = expenseTotal + ccTotal;
+    return { totalIncome: income, totalExpense: totalExp, balance: income - totalExp };
+  }, [prevExpenses, projected.creditCards, projected.invoiceExpenses, prevYear, prevMonth]);
 
   if (authLoading) return <div className="min-h-screen flex items-center justify-center bg-background"><span className="text-muted-foreground font-medium">Carregando...</span></div>;
   if (!user) return <Navigate to="/auth" replace />;
