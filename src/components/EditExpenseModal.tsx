@@ -80,6 +80,7 @@ export function EditExpenseModal({ open, expense, onOpenChange, onExpenseUpdated
   const [wallets, setWallets] = useState<{ id: string; name: string }[]>([]);
   const [dbCategories, setDbCategories] = useState<{ id: string; name: string; parent_id: string | null; icon: string; color: string }[]>([]);
   const [showRecurringConfirm, setShowRecurringConfirm] = useState(false);
+  const [isProjectedOccurrence, setIsProjectedOccurrence] = useState(false);
 
   // Installment conversion state — initialize from existing expense
   const [wantInstallment, setWantInstallment] = useState(expense.is_recurring || false);
@@ -107,14 +108,25 @@ export function EditExpenseModal({ open, expense, onOpenChange, onExpenseUpdated
     setNumInstallments(expense.installments > 1 ? expense.installments : 2);
     setValueMode('per_installment');
     setFrequency(expense.frequency || 'monthly');
+
+    const projectedCheck = isExistingRecurring
+      ? supabase.from('expenses').select('date, is_recurring').eq('id', expense.id).maybeSingle()
+      : Promise.resolve({ data: null } as any);
+
     Promise.all([
       supabase.from('wallets').select('id, name').eq('user_id', user.id).order('name'),
       supabase.from('categories').select('id, name, parent_id, icon, color').eq('user_id', user.id).eq('active', true).order('sort_order'),
-    ]).then(([walletsRes, catsRes]) => {
+      projectedCheck,
+    ]).then(([walletsRes, catsRes, projectedRes]) => {
       setWallets(walletsRes.data || []);
       setDbCategories(catsRes.data || []);
+      if (projectedRes?.data?.is_recurring) {
+        setIsProjectedOccurrence(projectedRes.data.date !== expense.date);
+      } else {
+        setIsProjectedOccurrence(false);
+      }
     });
-  }, [user, open]);
+  }, [user, open, expense, isExistingRecurring]);
 
   const handleAddTag = () => {
     const t = tagInput.trim().toLowerCase();
