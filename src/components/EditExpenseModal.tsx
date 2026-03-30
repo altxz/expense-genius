@@ -564,13 +564,36 @@ export function EditExpenseModal({ open, expense, onOpenChange, onExpenseUpdated
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)} className="rounded-xl">Cancelar</Button>
-            <Button onClick={handleSave} disabled={saving} className={`rounded-xl font-semibold transition-colors ${style.accent}`}>
-              {saving ? 'Salvando...' : wantInstallment ? (installmentMode === 'fixed' ? 'Ativar Recorrência' : `Parcelar em ${numInstallments}x`) : 'Salvar'}
-            </Button>
-          </div>
-        </ResponsiveModalFooter>
-    </ResponsiveModal>
-  );
+           <div className="flex gap-2">
+             <Button variant="outline" onClick={() => onOpenChange(false)} className="rounded-xl">Cancelar</Button>
+             <Button onClick={handleSaveClick} disabled={saving} className={`rounded-xl font-semibold transition-colors ${style.accent}`}>
+               {saving ? 'Salvando...' : wantInstallment ? (installmentMode === 'fixed' ? 'Ativar Recorrência' : `Parcelar em ${numInstallments}x`) : 'Salvar'}
+             </Button>
+           </div>
+         </ResponsiveModalFooter>
+
+         {/* Recurring edit scope confirmation dialog */}
+         <AlertDialog open={showRecurringConfirm} onOpenChange={setShowRecurringConfirm}>
+           <AlertDialogContent className="rounded-2xl max-w-[calc(100vw-2rem)]">
+             <AlertDialogHeader>
+               <AlertDialogTitle>Alterar transação recorrente</AlertDialogTitle>
+               <AlertDialogDescription>
+                 {isExistingInstallment
+                   ? 'Esta transação faz parte de um parcelamento. Deseja alterar apenas esta parcela ou todas as parcelas?'
+                   : 'Esta transação é recorrente. Deseja alterar apenas esta ocorrência ou todas as recorrências?'}
+               </AlertDialogDescription>
+             </AlertDialogHeader>
+             <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+               <AlertDialogCancel className="rounded-xl" onClick={() => setShowRecurringConfirm(false)}>Cancelar</AlertDialogCancel>
+               <Button variant="outline" className="rounded-xl" onClick={() => doSave('single')}>
+                 {isExistingInstallment ? 'Apenas esta parcela' : 'Apenas esta'}
+               </Button>
+               <Button className={`rounded-xl font-semibold ${style.accent}`} onClick={() => doSave('all')}>
+                 {isExistingInstallment ? 'Todas as parcelas' : 'Todas as recorrências'}
+               </Button>
+             </AlertDialogFooter>
+           </AlertDialogContent>
+         </AlertDialog>
+     </ResponsiveModal>
+   );
 }
