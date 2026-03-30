@@ -38,6 +38,14 @@ export function DateProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  const goToCurrentMonth = () => {
+    const today = new Date();
+    setMonth(today.getMonth());
+    setYear(today.getFullYear());
+  };
+
+  const isCurrentMonth = month === new Date().getMonth() && year === new Date().getFullYear();
+
   const monthKey = `${year}-${String(month + 1).padStart(2, '0')}-01`;
   const startDate = `${year}-${String(month + 1).padStart(2, '0')}-01`;
   
