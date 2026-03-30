@@ -238,15 +238,14 @@ export function EditExpenseModal({ open, expense, onOpenChange, onExpenseUpdated
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg rounded-2xl max-h-[90vh] overflow-y-auto p-0 gap-0 w-[calc(100vw-2rem)]">
-        <div className={`px-4 pt-4 pb-0 rounded-t-2xl transition-colors duration-200 ${style.bg}`}>
-          <DialogHeader className="pb-3">
-            <DialogTitle className="text-lg font-bold flex items-center gap-2">
+    <ResponsiveModal open={open} onOpenChange={onOpenChange}>
+        <div className={`px-3 pt-3 pb-0 rounded-t-2xl transition-colors duration-200 ${style.bg}`}>
+          <ResponsiveModalHeader className="pb-3">
+            <ResponsiveModalTitle className="text-lg font-bold flex items-center gap-2">
               {type === 'income' ? <ArrowUpCircle className="h-5 w-5 text-emerald-600" /> : type === 'transfer' ? <ArrowLeftRight className="h-5 w-5 text-primary" /> : <ArrowDownCircle className="h-5 w-5 text-destructive" />}
               Editar {type === 'income' ? 'Receita' : type === 'transfer' ? 'Transferência' : 'Despesa'}
-            </DialogTitle>
-          </DialogHeader>
+            </ResponsiveModalTitle>
+          </ResponsiveModalHeader>
           <div className={`mt-2 mb-3 rounded-xl border-2 bg-background/80 backdrop-blur-sm transition-colors ${style.valueBorder}`}>
             <div className="flex items-center px-3 sm:px-4 py-3">
               <span className="text-base sm:text-lg font-bold text-muted-foreground mr-2">R$</span>
@@ -257,7 +256,7 @@ export function EditExpenseModal({ open, expense, onOpenChange, onExpenseUpdated
           </div>
         </div>
 
-        <div className="p-4 pt-2 space-y-4">
+        <div className="flex-1 overflow-y-auto p-3 pt-2 space-y-3">
           {/* Existing installment alert */}
           {isExistingInstallment && expense.installment_info && (
             <Alert className="rounded-xl border-primary/30 bg-primary/5">
@@ -465,7 +464,7 @@ export function EditExpenseModal({ open, expense, onOpenChange, onExpenseUpdated
           )}
         </div>
 
-        <DialogFooter className="p-4 pt-0 gap-2 flex-row justify-between">
+        <ResponsiveModalFooter className="p-3 pt-0 gap-2 flex-row justify-between">
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive rounded-xl">
@@ -489,8 +488,7 @@ export function EditExpenseModal({ open, expense, onOpenChange, onExpenseUpdated
               {saving ? 'Salvando...' : wantInstallment ? (installmentMode === 'fixed' ? 'Ativar Recorrência' : `Parcelar em ${numInstallments}x`) : 'Salvar'}
             </Button>
           </div>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </ResponsiveModalFooter>
+    </ResponsiveModal>
   );
 }
