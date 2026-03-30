@@ -75,6 +75,7 @@ export function EditExpenseModal({ open, expense, onOpenChange, onExpenseUpdated
   const [tags, setTags] = useState<string[]>(expense.tags || []);
   const [tagInput, setTagInput] = useState('');
   const [invoiceMonth, setInvoiceMonth] = useState(expense.invoice_month || '');
+  const [frequency, setFrequency] = useState(expense.frequency || 'monthly');
   const [saving, setSaving] = useState(false);
   const [wallets, setWallets] = useState<{ id: string; name: string }[]>([]);
   const [dbCategories, setDbCategories] = useState<{ id: string; name: string; parent_id: string | null; icon: string; color: string }[]>([]);
@@ -155,6 +156,7 @@ export function EditExpenseModal({ open, expense, onOpenChange, onExpenseUpdated
           installment_group_id: groupId,
           installment_info: `1/${numInstallments}`,
           is_recurring: false,
+          frequency: null,
           ...(isCredit && baseInvoice ? { invoice_month: baseInvoice } : {}),
         }).eq('id', expense.id);
 
@@ -203,7 +205,10 @@ export function EditExpenseModal({ open, expense, onOpenChange, onExpenseUpdated
           ...baseFields,
           value: parsedValue,
           is_recurring: true,
-          frequency: 'monthly',
+          frequency,
+          installments: 1,
+          installment_group_id: null,
+          installment_info: null,
         }).eq('id', expense.id);
 
         if (error) throw error;
@@ -328,7 +333,7 @@ export function EditExpenseModal({ open, expense, onOpenChange, onExpenseUpdated
                           }`}
                         >
                           <Repeat className="h-3.5 w-3.5" />
-                          Fixa
+                          Fixo (Mensal/Anual)
                         </button>
                         <button
                           type="button"
@@ -338,14 +343,24 @@ export function EditExpenseModal({ open, expense, onOpenChange, onExpenseUpdated
                           }`}
                         >
                           <Hash className="h-3.5 w-3.5" />
-                          Repetir vezes
+                          Repetir Vezes (Parcelar)
                         </button>
                       </div>
 
                       {installmentMode === 'fixed' ? (
-                        <p className="text-[11px] text-muted-foreground">
-                          Este lançamento será replicado automaticamente todo mês.
-                        </p>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Frequência</Label>
+                          <Select value={frequency} onValueChange={setFrequency}>
+                            <SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="monthly">Mensal</SelectItem>
+                              <SelectItem value="annual">Anual</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <p className="text-[11px] text-muted-foreground">
+                            Isso salva um único registro com recorrência ativa (mensal ou anual).
+                          </p>
+                        </div>
                       ) : (
                         <div className="space-y-3">
                           <div className="space-y-1.5">
@@ -400,7 +415,7 @@ export function EditExpenseModal({ open, expense, onOpenChange, onExpenseUpdated
                               <p className="text-[11px] text-muted-foreground mt-1">
                                 Isso criará {numInstallments} lançamentos de R$ {valueMode === 'total'
                                   ? (parseFloat(value) / numInstallments).toFixed(2)
-                                  : parseFloat(value).toFixed(2)} nos próximos {numInstallments} meses.
+                                  : parseFloat(value).toFixed(2)} nos próximos meses.
                               </p>
                             </div>
                           )}
