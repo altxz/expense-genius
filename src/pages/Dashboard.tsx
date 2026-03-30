@@ -1,14 +1,13 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { AlertTriangle } from 'lucide-react';
 import { OnboardingWizard } from '@/components/OnboardingWizard';
 import { useUserSettings } from '@/contexts/UserSettingsContext';
 
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { SummaryCards } from '@/components/SummaryCards';
 import { AddExpenseModal } from '@/components/AddExpenseModal';
 import { DashboardHeader } from '@/components/DashboardHeader';
 import { InstallPwaPrompt } from '@/components/InstallPwaPrompt';
-import { AnomalyInsights } from '@/components/analytics/AnomalyInsights';
+import { SmartAlertsCarousel, SmartAlert } from '@/components/SmartAlertsCarousel';
+import { useAnomalyAlerts } from '@/hooks/useAnomalyAlerts';
 import { AppSidebar } from '@/components/AppSidebar';
 import { MonthSelector } from '@/components/MonthSelector';
 import { SidebarProvider } from '@/components/ui/sidebar';
