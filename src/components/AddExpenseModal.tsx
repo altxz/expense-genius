@@ -208,6 +208,8 @@ export function AddExpenseModal({ open, onOpenChange, onExpenseAdded }: AddExpen
   const handleSave = async () => {
     const isTransfer = type === 'transfer';
     const isCredit = type === 'expense' && paymentMethod === 'credit';
+    const isRepeatMode = isRecurring && recurringMode === 'limited';
+    const numRepeats = isRepeatMode ? (parseInt(repeatCount) || 2) : 1;
 
     if (isTransfer) {
       if (!value || !walletId || !destinationWalletId) {
@@ -238,55 +240,61 @@ export function AddExpenseModal({ open, onOpenChange, onExpenseAdded }: AddExpen
     }
 
     setSaving(true);
-    const numInstallments = isCredit ? (parseInt(installments) || 1) : 1;
 
-    if (isCredit && numInstallments > 1 && invoiceMonth) {
-      // Generate one record per installment with shared group id
+    if (isRepeatMode && numRepeats > 1) {
+      // Generate multiple records with installment_group_id
       const groupId = crypto.randomUUID();
       const inputValue = parseFloat(value);
-      const perInstallment = installmentValueType === 'total'
-        ? Math.round((inputValue / numInstallments) * 100) / 100
+      const perUnit = installmentValueType === 'total'
+        ? Math.round((inputValue / numRepeats) * 100) / 100
         : inputValue;
-      const [baseY, baseM] = invoiceMonth.split('-').map(Number);
+      const baseInvoice = isCredit && invoiceMonth ? invoiceMonth : null;
 
-      const rows = Array.from({ length: numInstallments }, (_, i) => {
-        const m = new Date(baseY, baseM - 1 + i, 1);
-        const im = `${m.getFullYear()}-${String(m.getMonth() + 1).padStart(2, '0')}`;
-        return {
+      const rows = Array.from({ length: numRepeats }, (_, i) => {
+        const row: Record<string, unknown> = {
           user_id: user?.id,
-          date,
           description: description.trim(),
-          value: perInstallment,
+          value: perUnit,
           category_ai: categoryAi || null,
           final_category: finalCategory,
           type,
-          payment_method: 'credit',
+          payment_method: type === 'expense' ? paymentMethod : 'debit',
           is_recurring: false,
           frequency: null,
-          credit_card_id: creditCardId,
-          installments: numInstallments,
-          wallet_id: null,
+          credit_card_id: isCredit ? creditCardId : null,
+          installments: numRepeats,
+          wallet_id: isCredit ? null : (walletId || null),
           destination_wallet_id: null,
-          invoice_month: im,
-          is_paid: false,
+          is_paid: i === 0 ? isPaid : false,
           notes: notes.trim() || null,
           tags: tags.length > 0 ? tags : null,
           installment_group_id: groupId,
-          installment_info: `${i + 1}/${numInstallments}`,
+          installment_info: `${i + 1}/${numRepeats}`,
           project_id: projectId || null,
         };
+
+        if (isCredit && baseInvoice) {
+          row.date = date;
+          row.invoice_month = advanceInvoiceMonth(baseInvoice, i);
+        } else {
+          row.date = i === 0 ? date : advanceDateByMonths(date, i);
+          row.invoice_month = null;
+        }
+
+        return row;
       });
 
       const { error } = await supabase.from('expenses').insert(rows);
       if (error) {
         toast({ title: 'Erro ao salvar', description: error.message, variant: 'destructive' });
       } else {
-        toast({ title: 'Parcelas criadas!', description: `${numInstallments} parcelas salvas com sucesso.` });
+        toast({ title: 'Lançamentos criados!', description: `${numRepeats} lançamentos de R$ ${perUnit.toFixed(2)} salvos.` });
         resetForm();
         onOpenChange(false);
         onExpenseAdded();
       }
     } else {
+      // Single record (fixed recurring or one-off)
       const { error } = await supabase.from('expenses').insert({
         user_id: user?.id,
         date,
@@ -296,8 +304,8 @@ export function AddExpenseModal({ open, onOpenChange, onExpenseAdded }: AddExpen
         final_category: isTransfer ? 'transferencia' : finalCategory,
         type,
         payment_method: isTransfer ? null : (type === 'expense' ? paymentMethod : 'debit'),
-        is_recurring: isTransfer ? false : isRecurring,
-        frequency: isRecurring && !isTransfer ? frequency : null,
+        is_recurring: isTransfer ? false : (isRecurring && recurringMode === 'fixed'),
+        frequency: (isRecurring && recurringMode === 'fixed' && !isTransfer) ? frequency : null,
         credit_card_id: isCredit ? creditCardId : null,
         installments: 1,
         wallet_id: (isTransfer || (type === 'expense' && paymentMethod === 'debit') || type === 'income') ? (walletId || null) : null,
@@ -330,9 +338,10 @@ export function AddExpenseModal({ open, onOpenChange, onExpenseAdded }: AddExpen
     setType('expense');
     setPaymentMethod('debit');
     setIsRecurring(false);
+    setRecurringMode('fixed');
+    setRepeatCount('2');
     setFrequency('monthly');
     setCreditCardId('');
-    setInstallments('1');
     setInstallmentValueType('total');
     setWalletId('');
     setDestinationWalletId('');
