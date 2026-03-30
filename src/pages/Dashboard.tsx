@@ -245,13 +245,15 @@ export default function Dashboard() {
                   prevExpense={prevSummary.totalExpense}
                   pendingInStartingBalance={projected.pendingInStartingBalance}
                   healthScore={
-                    <HealthScore
-                      totalIncome={projected.totalIncome}
-                      totalExpense={projected.totalExpense}
-                      totalBudget={budgetTotals.totalBudget}
-                      totalSpentInBudget={budgetTotals.totalSpent}
-                      hasOverdueCards={hasOverdueCardsComputed}
-                    />
+                    <Suspense fallback={<Skeleton className="h-16 w-full rounded-xl" />}>
+                      <HealthScore
+                        totalIncome={projected.totalIncome}
+                        totalExpense={projected.totalExpense}
+                        totalBudget={budgetTotals.totalBudget}
+                        totalSpentInBudget={budgetTotals.totalSpent}
+                        hasOverdueCards={hasOverdueCardsComputed}
+                      />
+                    </Suspense>
                   }
                 />
 
