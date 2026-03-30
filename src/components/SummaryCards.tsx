@@ -58,7 +58,7 @@ export function SummaryCards({ balance, totalIncome, totalExpense, largestCatego
       {/* Bloco Esquerdo: Os 4 cards de métricas */}
       <div className={`grid gap-3 sm:gap-4 grid-cols-2 ${healthScore ? 'lg:col-span-2' : 'col-span-full lg:col-span-4 lg:grid-cols-4'}`}>
 
-        <SummaryCard className="bg-primary text-primary-foreground">
+        <SummaryCard className="bg-primary dark:bg-card dark:border dark:border-primary/30 text-primary-foreground dark:text-foreground">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-primary-foreground/20 flex items-center justify-center shrink-0">
               <Wallet className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -87,7 +87,7 @@ export function SummaryCards({ balance, totalIncome, totalExpense, largestCatego
           </div>
         </SummaryCard>
 
-        <SummaryCard className="bg-success text-success-foreground cursor-pointer hover:opacity-90 transition-opacity" onClick={() => navigate('/historico?type=income')}>
+        <SummaryCard className="bg-success dark:bg-card dark:border dark:border-success/30 text-success-foreground dark:text-foreground cursor-pointer hover:opacity-90 transition-opacity" onClick={() => navigate('/historico?type=income')}>
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
               <ArrowUpCircle className="h-4 w-4 sm:h-5 sm:w-5" />
