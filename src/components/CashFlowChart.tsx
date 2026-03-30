@@ -108,25 +108,25 @@ export function CashFlowChart({ creditCards: propCards, wallets: propWallets }: 
     // Virtual recurring contributions to preRangeBalance:
     // For each recurring tx, count how many months between its start and rangeStart
     // it would have contributed, minus real entries already counted above
+    // Build a lookup of real entries by month signature for fast duplicate detection
+    const realByMonthSig = new Set<string>();
+    allExpenses.forEach(e => {
+      if (e.type === 'transfer') return;
+      const ym = e.date.substring(0, 7); // 'YYYY-MM'
+      realByMonthSig.add(`${ym}|${e.type}|${Number(e.value).toFixed(2)}`);
+    });
+
     recurringExpenses.forEach(r => {
       if (r.type === 'transfer' || r.credit_card_id) return;
       const rDate = new Date(r.date + 'T12:00:00');
-      // Count months from (rDate month+1) to (rangeStart month - 1) where virtual entries would exist
-      // but only if the recurring tx itself is already counted in allExpenses for its original month
       const rStartMonth = rDate.getFullYear() * 12 + rDate.getMonth();
       const rangeMonth = rangeStart.getFullYear() * 12 + rangeStart.getMonth();
-      // For each month between original+1 and rangeStart-1, check if a real entry exists
       for (let m = rStartMonth + 1; m < rangeMonth; m++) {
         const yr = Math.floor(m / 12);
         const mo = m % 12;
-        const daysInM = new Date(yr, mo + 1, 0).getDate();
-        const day = Math.min(rDate.getDate(), daysInM);
-        const virtualDateStr = `${yr}-${String(mo + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        // Check if a real entry already covers this
-        const alreadyCounted = allExpenses.some(e =>
-          e.is_recurring && e.type === r.type && e.date === virtualDateStr && Math.abs(Number(e.value) - Number(r.value)) < 0.01
-        );
-        if (alreadyCounted) continue;
+        const monthKey = `${yr}-${String(mo + 1).padStart(2, '0')}`;
+        const sig = `${monthKey}|${r.type}|${Number(r.value).toFixed(2)}`;
+        if (realByMonthSig.has(sig)) continue;
         if (r.type === 'income') preRangeBalance += Number(r.value);
         else preRangeBalance -= Number(r.value);
       }
@@ -167,9 +167,20 @@ export function CashFlowChart({ creditCards: propCards, wallets: propWallets }: 
     // Recurring projections — project into ALL days in range (not just future)
     // To avoid double-counting, check if a real transaction already exists for this
     // recurring item in the same month
+    // Build signature set for real expenses in range to detect duplicates
+    const realInRangeSignatures = new Set<string>();
+    allExpenses.forEach(e => {
+      if (e.date >= rangeStartStr && e.date <= rangeEndStr) {
+        realInRangeSignatures.add(`${e.type}|${Number(e.value).toFixed(2)}`);
+      }
+    });
+
     recurringExpenses.forEach(r => {
       if (r.type === 'transfer') return;
       if (r.credit_card_id) return; // CC recurring handled by invoice logic
+      // Check if a matching real entry already exists in this month's range
+      const rSig = `${r.type}|${Number(r.value).toFixed(2)}`;
+      if (realInRangeSignatures.has(rSig)) return;
       const origDay = parseISO(r.date).getDate();
       const recurringStartStr = r.date; // original start date
       // Project into each month in range
@@ -186,13 +197,6 @@ export function CashFlowChart({ creditCards: propCards, wallets: propWallets }: 
         if (projStr < rangeStartStr || projStr > rangeEndStr) return;
         // Only project if the recurring tx started on or before this projected date
         if (recurringStartStr > projStr) return;
-        // Check if a real transaction already exists on this date (avoid double-count)
-        const realOnDate = txByDate[projStr];
-        // We check allExpenses for a matching recurring entry on this exact date
-        const alreadyHasReal = allExpenses.some(e =>
-          e.is_recurring && e.type === r.type && e.date === projStr && Math.abs(Number(e.value) - Number(r.value)) < 0.01
-        );
-        if (alreadyHasReal) return;
         if (!projByDate[projStr]) projByDate[projStr] = { income: 0, expense: 0 };
         if (r.type === 'income') projByDate[projStr].income += Number(r.value);
         else projByDate[projStr].expense += Number(r.value);
