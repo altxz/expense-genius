@@ -100,7 +100,7 @@ export function SummaryCards({ balance, totalIncome, totalExpense, largestCatego
           </div>
         </SummaryCard>
 
-        <SummaryCard className="bg-destructive text-destructive-foreground cursor-pointer hover:opacity-90 transition-opacity" onClick={() => navigate('/historico?type=expense')}>
+        <SummaryCard className="bg-destructive dark:bg-card dark:border dark:border-destructive/30 text-destructive-foreground dark:text-foreground cursor-pointer hover:opacity-90 transition-opacity" onClick={() => navigate('/historico?type=expense')}>
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-destructive-foreground/20 flex items-center justify-center shrink-0">
               <ArrowDownCircle className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -114,7 +114,7 @@ export function SummaryCards({ balance, totalIncome, totalExpense, largestCatego
         </SummaryCard>
 
         <SummaryCard
-          className={`bg-pink text-pink-foreground ${largestCategory ? 'cursor-pointer hover:opacity-90 transition-opacity' : ''}`}
+          className={`bg-pink dark:bg-card dark:border dark:border-pink/30 text-pink-foreground dark:text-foreground ${largestCategory ? 'cursor-pointer hover:opacity-90 transition-opacity' : ''}`}
           onClick={() => largestCategory && navigate(`/historico?category=${encodeURIComponent(largestCategory.categoryKey)}`)}
         >
           <div className="flex items-center gap-2">
