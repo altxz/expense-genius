@@ -506,7 +506,7 @@ export function TransactionFeed({
                           <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg" onClick={() => setEditingExpense(exp)}>
                             <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
                           </Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg hover:bg-destructive/10 hover:text-destructive" onClick={() => setDeletingExpense(exp)}>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg hover:bg-destructive/10 hover:text-destructive" onClick={() => handleDeleteClick(exp)}>
                             <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
                           </Button>
                         </div>
@@ -536,18 +536,35 @@ export function TransactionFeed({
         />
       )}
 
-      <AlertDialog open={!!deletingExpense} onOpenChange={(open) => { if (!open) setDeletingExpense(null); }}>
+      <AlertDialog open={!!deletingExpense} onOpenChange={(open) => { if (!open) { setDeletingExpense(null); setDeleteMode(null); } }}>
         <AlertDialogContent className="rounded-2xl">
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir transação?</AlertDialogTitle>
-            <AlertDialogDescription>Tem certeza que deseja excluir esta transação? Esta ação não pode ser desfeita.</AlertDialogDescription>
+            <AlertDialogDescription>
+              {deletingExpense?.is_recurring && deleteMode === null
+                ? 'Esta é uma transação recorrente. Deseja excluir apenas este lançamento ou todos os lançamentos recorrentes?'
+                : 'Tem certeza que deseja excluir esta transação? Esta ação não pode ser desfeita.'}
+            </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="rounded-xl">Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl">
-              {deleting ? 'Excluindo...' : 'Excluir'}
-            </AlertDialogAction>
+          <AlertDialogFooter className={deletingExpense?.is_recurring && deleteMode === null ? 'flex-col sm:flex-row gap-2' : ''}>
+            <AlertDialogCancel className="rounded-xl" onClick={() => { setDeletingExpense(null); setDeleteMode(null); }}>Cancelar</AlertDialogCancel>
+            {deletingExpense?.is_recurring && deleteMode === null ? (
+              <>
+                <Button variant="outline" className="rounded-xl" disabled={deleting} onClick={() => handleDelete('single')}>
+                  Apenas esta
+                </Button>
+                <Button variant="destructive" className="rounded-xl" disabled={deleting} onClick={() => handleDelete('all')}>
+                  {deleting ? 'Excluindo...' : 'Todas as recorrências'}
+                </Button>
+              </>
+            ) : (
+              <AlertDialogAction onClick={() => handleDelete('single')} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl">
+                {deleting ? 'Excluindo...' : 'Excluir'}
+              </AlertDialogAction>
+            )}
           </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
         </AlertDialogContent>
       </AlertDialog>
 
