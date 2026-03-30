@@ -136,14 +136,16 @@ export function EditExpenseModal({ open, expense, onOpenChange, onExpenseUpdated
         invoice_month: isCredit ? (invoiceMonth || null) : null,
       };
 
-      if (wantInstallment && canConvertToInstallment) {
-        // Convert single expense to installment plan
+      if (wantInstallment && canConvertToInstallment && installmentMode === 'limited') {
+        // Convert single expense to installment/repeat plan
         const installmentValue = valueMode === 'total'
           ? Math.round((parsedValue / numInstallments) * 100) / 100
           : parsedValue;
 
         const groupId = crypto.randomUUID();
-        const baseInvoice = invoiceMonth || `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+        const baseInvoice = isCredit
+          ? (invoiceMonth || `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`)
+          : null;
 
         // Update existing expense as installment 1
         const { error: updateError } = await supabase.from('expenses').update({
@@ -151,7 +153,8 @@ export function EditExpenseModal({ open, expense, onOpenChange, onExpenseUpdated
           value: installmentValue,
           installment_group_id: groupId,
           installment_info: `1/${numInstallments}`,
-          invoice_month: baseInvoice,
+          is_recurring: false,
+          ...(isCredit && baseInvoice ? { invoice_month: baseInvoice } : {}),
         }).eq('id', expense.id);
 
         if (updateError) throw updateError;
@@ -159,9 +162,8 @@ export function EditExpenseModal({ open, expense, onOpenChange, onExpenseUpdated
         // Generate remaining installments (2..N)
         const newInstallments = [];
         for (let i = 2; i <= numInstallments; i++) {
-          newInstallments.push({
+          const row: Record<string, unknown> = {
             user_id: user!.id,
-            date: advanceDateByMonths(date, i - 1),
             description: description.trim(),
             value: installmentValue,
             type: expense.type,
@@ -176,15 +178,35 @@ export function EditExpenseModal({ open, expense, onOpenChange, onExpenseUpdated
             installments: numInstallments,
             installment_group_id: groupId,
             installment_info: `${i}/${numInstallments}`,
-            invoice_month: advanceInvoiceMonth(baseInvoice, i - 1),
             payment_method: expense.payment_method,
-          });
+          };
+
+          if (isCredit && baseInvoice) {
+            row.date = date;
+            row.invoice_month = advanceInvoiceMonth(baseInvoice, i - 1);
+          } else {
+            row.date = advanceDateByMonths(date, i - 1);
+            row.invoice_month = null;
+          }
+
+          newInstallments.push(row);
         }
 
         const { error: insertError } = await supabase.from('expenses').insert(newInstallments);
         if (insertError) throw insertError;
 
         toast({ title: 'Parcelamento criado!', description: `Transação dividida em ${numInstallments}x de R$ ${installmentValue.toFixed(2)}` });
+      } else if (wantInstallment && canConvertToInstallment && installmentMode === 'fixed') {
+        // Convert to fixed recurring
+        const { error } = await supabase.from('expenses').update({
+          ...baseFields,
+          value: parsedValue,
+          is_recurring: true,
+          frequency: 'monthly',
+        }).eq('id', expense.id);
+
+        if (error) throw error;
+        toast({ title: 'Recorrência ativada!', description: 'Esta transação será replicada automaticamente todo mês.' });
       } else {
         // Normal single update
         const { error } = await supabase.from('expenses').update({
