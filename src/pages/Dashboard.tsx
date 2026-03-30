@@ -258,33 +258,35 @@ export default function Dashboard() {
                 {/* Painel de Gráficos */}
                 <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Painel de Análises</h2>
 
+                <Suspense fallback={<div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 lg:gap-6"><ChartFallback /><ChartFallback /><ChartFallback /><ChartFallback /></div>}>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 lg:gap-6">
-                  <div className="lg:col-span-2 flex flex-col min-h-[280px] sm:min-h-[350px]"><CreditCardSummary cards={projected.creditCards} allExpenses={projected.invoiceExpenses} wallets={projected.wallets} refetch={projected.refetch} /></div>
-                  <div className="lg:col-span-2 flex flex-col min-h-[280px] sm:min-h-[350px]"><CashFlowChart creditCards={projected.creditCards} wallets={projected.wallets} /></div>
+                  <div className="lg:col-span-2 flex flex-col min-h-[280px] sm:min-h-[350px]"><Suspense fallback={<ChartFallback />}><CreditCardSummary cards={projected.creditCards} allExpenses={projected.invoiceExpenses} wallets={projected.wallets} refetch={projected.refetch} /></Suspense></div>
+                  <div className="lg:col-span-2 flex flex-col min-h-[280px] sm:min-h-[350px]"><Suspense fallback={<ChartFallback />}><CashFlowChart creditCards={projected.creditCards} wallets={projected.wallets} /></Suspense></div>
 
-                  <div className="flex flex-col min-h-[280px] sm:min-h-[350px]"><TopExpensesList expenses={projected.monthExpenses} /></div>
-                  <div className="flex flex-col min-h-[280px] sm:min-h-[350px]"><SubcategoryTreemap expenses={projected.monthExpenses} categories={dbCategories} /></div>
+                  <div className="flex flex-col min-h-[280px] sm:min-h-[350px]"><Suspense fallback={<ChartFallback />}><TopExpensesList expenses={projected.monthExpenses} /></Suspense></div>
+                  <div className="flex flex-col min-h-[280px] sm:min-h-[350px]"><Suspense fallback={<ChartFallback />}><SubcategoryTreemap expenses={projected.monthExpenses} categories={dbCategories} /></Suspense></div>
 
-                  <div className="flex flex-col min-h-[280px] sm:min-h-[350px]"><IncomeVsExpenseChart totalIncome={projected.totalIncome} totalExpense={projected.totalExpense} /></div>
-                  <div className="flex flex-col min-h-[280px] sm:min-h-[350px]"><WaterfallChart expenses={projected.monthExpenses} startingBalance={projected.startingBalance} /></div>
+                  <div className="flex flex-col min-h-[280px] sm:min-h-[350px]"><Suspense fallback={<ChartFallback />}><IncomeVsExpenseChart totalIncome={projected.totalIncome} totalExpense={projected.totalExpense} /></Suspense></div>
+                  <div className="flex flex-col min-h-[280px] sm:min-h-[350px]"><Suspense fallback={<ChartFallback />}><WaterfallChart expenses={projected.monthExpenses} startingBalance={projected.startingBalance} /></Suspense></div>
 
-                  <div className="flex flex-col min-h-[280px] sm:min-h-[350px]"><IncomeSourcesPie expenses={projected.monthExpenses} categories={dbCategories} /></div>
-                  <div className="flex flex-col min-h-[280px] sm:min-h-[350px]"><DailySpendingChart expenses={projected.monthExpenses} /></div>
+                  <div className="flex flex-col min-h-[280px] sm:min-h-[350px]"><Suspense fallback={<ChartFallback />}><IncomeSourcesPie expenses={projected.monthExpenses} categories={dbCategories} /></Suspense></div>
+                  <div className="flex flex-col min-h-[280px] sm:min-h-[350px]"><Suspense fallback={<ChartFallback />}><DailySpendingChart expenses={projected.monthExpenses} /></Suspense></div>
 
-                  <div className="flex flex-col min-h-[280px] sm:min-h-[350px]"><WeekComparisonChart expenses={projected.monthExpenses} /></div>
-                  <div className="flex flex-col min-h-[280px] sm:min-h-[350px]"><BurndownChart expenses={projected.monthExpenses} totalBudget={budgetTotals.totalBudget} /></div>
+                  <div className="flex flex-col min-h-[280px] sm:min-h-[350px]"><Suspense fallback={<ChartFallback />}><WeekComparisonChart expenses={projected.monthExpenses} /></Suspense></div>
+                  <div className="flex flex-col min-h-[280px] sm:min-h-[350px]"><Suspense fallback={<ChartFallback />}><BurndownChart expenses={projected.monthExpenses} totalBudget={budgetTotals.totalBudget} /></Suspense></div>
 
-                  <div className="flex flex-col min-h-[280px] sm:min-h-[350px]"><EndOfMonthForecast creditCards={projected.creditCards} wallets={projected.wallets} /></div>
-                  <div className="flex flex-col min-h-[280px] sm:min-h-[350px]"><CalendarView expenses={projected.monthExpenses} wallets={projected.wallets} /></div>
+                  <div className="flex flex-col min-h-[280px] sm:min-h-[350px]"><Suspense fallback={<ChartFallback />}><EndOfMonthForecast creditCards={projected.creditCards} wallets={projected.wallets} /></Suspense></div>
+                  <div className="flex flex-col min-h-[280px] sm:min-h-[350px]"><Suspense fallback={<ChartFallback />}><CalendarView expenses={projected.monthExpenses} wallets={projected.wallets} /></Suspense></div>
 
-                  <div className="flex flex-col min-h-[280px] sm:min-h-[350px]"><FixedVsVariableChart expenses={projected.monthExpenses} /></div>
-                  <div className="flex flex-col min-h-[280px] sm:min-h-[350px]"><SpendingHeatmap expenses={projected.monthExpenses} /></div>
+                  <div className="flex flex-col min-h-[280px] sm:min-h-[350px]"><Suspense fallback={<ChartFallback />}><FixedVsVariableChart expenses={projected.monthExpenses} /></Suspense></div>
+                  <div className="flex flex-col min-h-[280px] sm:min-h-[350px]"><Suspense fallback={<ChartFallback />}><SpendingHeatmap expenses={projected.monthExpenses} /></Suspense></div>
 
-                  <div className="flex flex-col min-h-[280px] sm:min-h-[350px]"><CreditUsageChart cards={cardsForUsage} unpaidExpenses={unpaidCCExpenses} /></div>
-                  <div className="flex flex-col min-h-[280px] sm:min-h-[350px]"><SavingsRateGauge totalIncome={projected.totalIncome} totalExpense={projected.totalExpense} /></div>
+                  <div className="flex flex-col min-h-[280px] sm:min-h-[350px]"><Suspense fallback={<ChartFallback />}><CreditUsageChart cards={cardsForUsage} unpaidExpenses={unpaidCCExpenses} /></Suspense></div>
+                  <div className="flex flex-col min-h-[280px] sm:min-h-[350px]"><Suspense fallback={<ChartFallback />}><SavingsRateGauge totalIncome={projected.totalIncome} totalExpense={projected.totalExpense} /></Suspense></div>
 
-                  <div className="lg:col-span-2 flex flex-col min-h-[280px] sm:min-h-[350px]"><NetWorthChart /></div>
+                  <div className="lg:col-span-2 flex flex-col min-h-[280px] sm:min-h-[350px]"><Suspense fallback={<ChartFallback />}><NetWorthChart /></Suspense></div>
                 </div>
+                </Suspense>
               </>
             )}
           </main>
