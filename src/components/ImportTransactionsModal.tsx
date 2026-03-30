@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from '@/components/ui/drawer';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -10,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { CategoryPicker } from '@/components/CategoryPicker';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface ParsedTransaction {
   date: string;
@@ -159,6 +161,7 @@ export function ImportTransactionsModal({ open, onOpenChange, onImported }: Impo
   const { user } = useAuth();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isMobile = useIsMobile();
 
   const [wallets, setWallets] = useState<WalletOption[]>([]);
   const [creditCards, setCreditCards] = useState<CreditCardOption[]>([]);
@@ -170,7 +173,6 @@ export function ImportTransactionsModal({ open, onOpenChange, onImported }: Impo
   const [rules, setRules] = useState<AutomationRule[]>([]);
   const [dbCategories, setDbCategories] = useState<{ id: string; name: string; parent_id: string | null; icon: string; color: string }[]>([]);
 
-  // "Apply to all" state
   const [bulkOrigin, setBulkOrigin] = useState<'wallet' | 'credit_card'>('wallet');
   const [bulkDestId, setBulkDestId] = useState('');
 
@@ -236,7 +238,6 @@ export function ImportTransactionsModal({ open, onOpenChange, onImported }: Impo
       }
       parsed = applyRules(parsed, rules);
 
-      // Add per-row origin defaults (empty = user must choose)
       const full: ParsedTransaction[] = parsed.map(t => ({
         ...t,
         originType: 'wallet' as const,
@@ -343,6 +344,298 @@ export function ImportTransactionsModal({ open, onOpenChange, onImported }: Impo
 
   const bulkDestOptions = bulkOrigin === 'wallet' ? wallets : creditCards;
 
+  // ── Shared upload step ──
+  const uploadContent = (
+    <div className="space-y-4 p-1">
+      <div
+        onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+        onDragLeave={() => setIsDragging(false)}
+        onDrop={handleDrop}
+        onClick={() => fileInputRef.current?.click()}
+        className={`border-2 border-dashed rounded-xl p-8 sm:p-12 text-center cursor-pointer transition-colors min-h-[180px] flex flex-col items-center justify-center ${
+          isDragging ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
+        }`}
+      >
+        <Upload className="h-10 w-10 mx-auto mb-4 text-muted-foreground" />
+        <p className="text-foreground font-medium mb-1">Arraste o arquivo CSV ou OFX aqui</p>
+        <p className="text-sm text-muted-foreground">ou toque para selecionar</p>
+        <p className="text-xs text-muted-foreground mt-3">CSV (colunas detectadas automaticamente) ou OFX (padrão bancário)</p>
+        <p className="text-xs text-muted-foreground mt-1">A conta/cartão de destino será escolhida na próxima etapa</p>
+        <input ref={fileInputRef} type="file" accept=".csv,.ofx" onChange={handleFileChange} className="hidden" />
+      </div>
+    </div>
+  );
+
+  // ── Shared "Apply to all" bar ──
+  const applyAllBar = (
+    <div className="flex items-center justify-between flex-wrap gap-3 sticky top-0 z-10 bg-background py-2">
+      <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap">
+        <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
+        <span className="font-medium text-foreground truncate max-w-[120px] sm:max-w-none">{fileName}</span>
+        <span>— {transactions.length} transações</span>
+        {rulesAppliedCount > 0 && (
+          <span className="flex items-center gap-1 text-xs text-accent-foreground bg-accent/20 px-2 py-0.5 rounded-full">
+            <Zap className="h-3 w-3" />{rulesAppliedCount} categorizadas
+          </span>
+        )}
+      </div>
+
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button variant="outline" size="sm" className="gap-2 rounded-xl">
+            <Copy className="h-3.5 w-3.5" />
+            Aplicar a todos
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-72 p-3 space-y-3" align="end">
+          <p className="text-xs font-semibold text-muted-foreground">Definir destino para todas as linhas</p>
+          <Select value={bulkOrigin} onValueChange={(v) => { setBulkOrigin(v as any); setBulkDestId(''); }}>
+            <SelectTrigger className="rounded-xl text-xs h-8">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="wallet">Débito em conta</SelectItem>
+              <SelectItem value="credit_card">Cartão de crédito</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={bulkDestId} onValueChange={setBulkDestId}>
+            <SelectTrigger className="rounded-xl text-xs h-8">
+              <SelectValue placeholder="Selecione..." />
+            </SelectTrigger>
+            <SelectContent>
+              {bulkDestOptions.map(o => (
+                <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button size="sm" className="w-full rounded-xl" disabled={!bulkDestId} onClick={applyToAll}>
+            Aplicar
+          </Button>
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+
+  // ── Mobile card list ──
+  const mobileCardList = (
+    <div className="flex flex-col gap-3 overflow-y-auto flex-1 min-h-0 px-1 pb-4">
+      <div className="flex items-center gap-2 py-1">
+        <Checkbox checked={selectedCount === transactions.length} onCheckedChange={(c) => toggleAll(!!c)} />
+        <span className="text-xs text-muted-foreground">Selecionar todas</span>
+      </div>
+      {transactions.map((t, i) => {
+        const destOptions = t.originType === 'wallet' ? wallets : creditCards;
+        const cardForRow = t.originType === 'credit_card' ? creditCards.find(c => c.id === t.destId) : null;
+
+        return (
+          <div
+            key={i}
+            className={`rounded-xl border bg-card p-3 space-y-2.5 ${!t.selected ? 'opacity-50' : ''}`}
+          >
+            {/* Top row: checkbox, date, type badge, value */}
+            <div className="flex items-center gap-2">
+              <Checkbox checked={t.selected} onCheckedChange={() => toggleOne(i)} />
+              <span className="text-xs text-muted-foreground">{t.date}</span>
+              <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
+                t.type === 'income'
+                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                  : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+              }`}>
+                {t.type === 'income' ? 'Receita' : 'Despesa'}
+              </span>
+              <span className={`ml-auto font-mono text-sm font-semibold ${t.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
+                {t.type === 'income' ? '+' : '-'}{fmtCurrency(t.value)}
+              </span>
+            </div>
+
+            {/* Description */}
+            <p className="text-sm font-medium truncate">{t.description}</p>
+
+            {/* Category */}
+            <CategoryPicker
+              categories={dbCategories}
+              value={t.category}
+              onValueChange={(v) => updateCategory(i, v)}
+              placeholder="Categoria"
+            />
+
+            {/* Origin + Destination */}
+            <div className="grid grid-cols-2 gap-2">
+              <Select value={t.originType} onValueChange={(v) => updateOriginType(i, v as any)}>
+                <SelectTrigger className="rounded-xl text-xs h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="wallet">
+                    <span className="flex items-center gap-1"><Wallet className="h-3 w-3" /> Débito</span>
+                  </SelectItem>
+                  <SelectItem value="credit_card">
+                    <span className="flex items-center gap-1"><CreditCard className="h-3 w-3" /> Crédito</span>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+
+              <div>
+                <Select value={t.destId} onValueChange={(v) => updateDestId(i, v)}>
+                  <SelectTrigger className={`rounded-xl text-xs h-9 ${!t.destId ? 'border-destructive/50' : ''}`}>
+                    <SelectValue placeholder="Destino..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {destOptions.map(o => (
+                      <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {cardForRow && t.invoiceMonth && (
+                  <span className="text-[9px] text-muted-foreground block mt-0.5">Fatura: {t.invoiceMonth}</span>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  // ── Desktop table ──
+  const desktopTable = (
+    <div className="border rounded-lg overflow-auto flex-1 min-h-0">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-10">
+              <Checkbox checked={selectedCount === transactions.length} onCheckedChange={(c) => toggleAll(!!c)} />
+            </TableHead>
+            <TableHead>Data</TableHead>
+            <TableHead>Descrição</TableHead>
+            <TableHead>Tipo</TableHead>
+            <TableHead>Categoria</TableHead>
+            <TableHead>Origem</TableHead>
+            <TableHead>Destino</TableHead>
+            <TableHead className="text-right">Valor</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {transactions.map((t, i) => {
+            const destOptions = t.originType === 'wallet' ? wallets : creditCards;
+            const cardForRow = t.originType === 'credit_card' ? creditCards.find(c => c.id === t.destId) : null;
+
+            return (
+              <TableRow key={i} className={!t.selected ? 'opacity-50' : ''}>
+                <TableCell>
+                  <Checkbox checked={t.selected} onCheckedChange={() => toggleOne(i)} />
+                </TableCell>
+                <TableCell className="whitespace-nowrap text-xs">{t.date}</TableCell>
+                <TableCell className="max-w-[160px] truncate text-xs">{t.description}</TableCell>
+                <TableCell>
+                  <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
+                    t.type === 'income'
+                      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                      : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                  }`}>
+                    {t.type === 'income' ? 'Receita' : 'Despesa'}
+                  </span>
+                </TableCell>
+                <TableCell className="min-w-[140px]">
+                  <CategoryPicker
+                    categories={dbCategories}
+                    value={t.category}
+                    onValueChange={(v) => updateCategory(i, v)}
+                    placeholder="Categoria"
+                  />
+                </TableCell>
+                <TableCell>
+                  <Select value={t.originType} onValueChange={(v) => updateOriginType(i, v as any)}>
+                    <SelectTrigger className="rounded-lg text-[10px] h-7 w-[100px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="wallet" className="text-xs">
+                        <span className="flex items-center gap-1"><Wallet className="h-3 w-3" /> Débito</span>
+                      </SelectItem>
+                      <SelectItem value="credit_card" className="text-xs">
+                        <span className="flex items-center gap-1"><CreditCard className="h-3 w-3" /> Crédito</span>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </TableCell>
+                <TableCell>
+                  <Select value={t.destId} onValueChange={(v) => updateDestId(i, v)}>
+                    <SelectTrigger className={`rounded-lg text-[10px] h-7 w-[120px] ${!t.destId ? 'border-destructive/50' : ''}`}>
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {destOptions.map(o => (
+                        <SelectItem key={o.id} value={o.id} className="text-xs">{o.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {cardForRow && t.invoiceMonth && (
+                    <span className="text-[9px] text-muted-foreground block mt-0.5">Fatura: {t.invoiceMonth}</span>
+                  )}
+                </TableCell>
+                <TableCell className={`text-right font-mono text-xs ${t.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
+                  {t.type === 'income' ? '+' : '-'}{fmtCurrency(t.value)}
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </div>
+  );
+
+  // ── Footer buttons ──
+  const footerButtons = (
+    <div className="flex gap-2 w-full sm:w-auto sm:justify-end">
+      {step === 'preview' && (
+        <Button variant="outline" onClick={reset} className="flex-1 sm:flex-none">Voltar</Button>
+      )}
+      {step === 'preview' && (
+        <Button onClick={handleImport} disabled={importing || selectedCount === 0 || !allHaveDest} className="gap-2 flex-1 sm:flex-none">
+          {importing && <Loader2 className="h-4 w-4 animate-spin" />}
+          Importar ({selectedCount})
+        </Button>
+      )}
+    </div>
+  );
+
+  // ── Shared inner content ──
+  const innerContent = (
+    <>
+      {step === 'upload' && uploadContent}
+      {step === 'preview' && (
+        <div className="flex flex-col gap-2 flex-1 min-h-0">
+          {applyAllBar}
+          {isMobile ? mobileCardList : desktopTable}
+        </div>
+      )}
+    </>
+  );
+
+  // ── MOBILE: Drawer ──
+  if (isMobile) {
+    return (
+      <Drawer open={open} onOpenChange={onOpenChange}>
+        <DrawerContent className="max-h-[90vh] flex flex-col">
+          <DrawerHeader className="pb-2">
+            <DrawerTitle className="flex items-center gap-2">
+              <FileSpreadsheet className="h-5 w-5 text-primary" />
+              Importar Transações
+            </DrawerTitle>
+          </DrawerHeader>
+          <div className="flex-1 overflow-y-auto px-4 min-h-0">
+            {innerContent}
+          </div>
+          <DrawerFooter>
+            {footerButtons}
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
+  // ── DESKTOP: Dialog ──
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl max-h-[85vh] flex flex-col">
@@ -352,176 +645,9 @@ export function ImportTransactionsModal({ open, onOpenChange, onImported }: Impo
             Importar Transações
           </DialogTitle>
         </DialogHeader>
-
-        {step === 'upload' && (
-          <div className="space-y-4">
-            {/* Simple drop zone — no destination selection here */}
-            <div
-              onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-              onDragLeave={() => setIsDragging(false)}
-              onDrop={handleDrop}
-              onClick={() => fileInputRef.current?.click()}
-              className={`border-2 border-dashed rounded-xl p-12 text-center cursor-pointer transition-colors ${
-                isDragging ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
-              }`}
-            >
-              <Upload className="h-10 w-10 mx-auto mb-4 text-muted-foreground" />
-              <p className="text-foreground font-medium mb-1">Arraste o arquivo CSV ou OFX aqui</p>
-              <p className="text-sm text-muted-foreground">ou clique para selecionar</p>
-              <p className="text-xs text-muted-foreground mt-3">CSV (colunas detectadas automaticamente) ou OFX (padrão bancário)</p>
-              <p className="text-xs text-muted-foreground mt-1">A conta/cartão de destino será escolhida na próxima etapa</p>
-              <input ref={fileInputRef} type="file" accept=".csv,.ofx" onChange={handleFileChange} className="hidden" />
-            </div>
-          </div>
-        )}
-
-        {step === 'preview' && (
-          <div className="flex flex-col gap-4 flex-1 min-h-0">
-            <div className="flex items-center justify-between flex-wrap gap-3">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <CheckCircle2 className="h-4 w-4 text-green-500" />
-                <span className="font-medium text-foreground">{fileName}</span>
-                <span>— {transactions.length} transações</span>
-                {rulesAppliedCount > 0 && (
-                  <span className="flex items-center gap-1 text-xs text-accent-foreground bg-accent/20 px-2 py-0.5 rounded-full">
-                    <Zap className="h-3 w-3" />{rulesAppliedCount} categorizadas
-                  </span>
-                )}
-              </div>
-
-              {/* Apply to all */}
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-2 rounded-xl">
-                    <Copy className="h-3.5 w-3.5" />
-                    Aplicar a todos
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-72 p-3 space-y-3" align="end">
-                  <p className="text-xs font-semibold text-muted-foreground">Definir destino para todas as linhas</p>
-                  <Select value={bulkOrigin} onValueChange={(v) => { setBulkOrigin(v as any); setBulkDestId(''); }}>
-                    <SelectTrigger className="rounded-xl text-xs h-8">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="wallet">Débito em conta</SelectItem>
-                      <SelectItem value="credit_card">Cartão de crédito</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Select value={bulkDestId} onValueChange={setBulkDestId}>
-                    <SelectTrigger className="rounded-xl text-xs h-8">
-                      <SelectValue placeholder="Selecione..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {bulkDestOptions.map(o => (
-                        <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Button size="sm" className="w-full rounded-xl" disabled={!bulkDestId} onClick={applyToAll}>
-                    Aplicar
-                  </Button>
-                </PopoverContent>
-              </Popover>
-            </div>
-
-            <div className="border rounded-lg overflow-auto flex-1 min-h-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-10">
-                      <Checkbox checked={selectedCount === transactions.length} onCheckedChange={(c) => toggleAll(!!c)} />
-                    </TableHead>
-                    <TableHead>Data</TableHead>
-                    <TableHead>Descrição</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Categoria</TableHead>
-                    <TableHead>Origem</TableHead>
-                    <TableHead>Destino</TableHead>
-                    <TableHead className="text-right">Valor</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {transactions.map((t, i) => {
-                    const destOptions = t.originType === 'wallet' ? wallets : creditCards;
-                    const cardForRow = t.originType === 'credit_card' ? creditCards.find(c => c.id === t.destId) : null;
-
-                    return (
-                      <TableRow key={i} className={!t.selected ? 'opacity-50' : ''}>
-                        <TableCell>
-                          <Checkbox checked={t.selected} onCheckedChange={() => toggleOne(i)} />
-                        </TableCell>
-                        <TableCell className="whitespace-nowrap text-xs">{t.date}</TableCell>
-                        <TableCell className="max-w-[160px] truncate text-xs">{t.description}</TableCell>
-                        <TableCell>
-                          <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
-                            t.type === 'income'
-                              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                              : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                          }`}>
-                            {t.type === 'income' ? 'Receita' : 'Despesa'}
-                          </span>
-                        </TableCell>
-                        <TableCell className="min-w-[140px]">
-                          <CategoryPicker
-                            categories={dbCategories}
-                            value={t.category}
-                            onValueChange={(v) => updateCategory(i, v)}
-                            placeholder="Categoria"
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Select value={t.originType} onValueChange={(v) => updateOriginType(i, v as any)}>
-                            <SelectTrigger className="rounded-lg text-[10px] h-7 w-[100px]">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="wallet" className="text-xs">
-                                <span className="flex items-center gap-1"><Wallet className="h-3 w-3" /> Débito</span>
-                              </SelectItem>
-                              <SelectItem value="credit_card" className="text-xs">
-                                <span className="flex items-center gap-1"><CreditCard className="h-3 w-3" /> Crédito</span>
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-                        <TableCell>
-                          <Select value={t.destId} onValueChange={(v) => updateDestId(i, v)}>
-                            <SelectTrigger className={`rounded-lg text-[10px] h-7 w-[120px] ${!t.destId ? 'border-destructive/50' : ''}`}>
-                              <SelectValue placeholder="Selecione..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {destOptions.map(o => (
-                                <SelectItem key={o.id} value={o.id} className="text-xs">{o.name}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          {cardForRow && t.invoiceMonth && (
-                            <span className="text-[9px] text-muted-foreground block mt-0.5">Fatura: {t.invoiceMonth}</span>
-                          )}
-                        </TableCell>
-                        <TableCell className={`text-right font-mono text-xs ${t.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
-                          {t.type === 'income' ? '+' : '-'}{fmtCurrency(t.value)}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
-        )}
-
+        {innerContent}
         <DialogFooter className="gap-2 sm:gap-0">
-          {step === 'preview' && (
-            <Button variant="outline" onClick={reset}>Voltar</Button>
-          )}
-          {step === 'preview' && (
-            <Button onClick={handleImport} disabled={importing || selectedCount === 0 || !allHaveDest} className="gap-2">
-              {importing && <Loader2 className="h-4 w-4 animate-spin" />}
-              Confirmar Importação ({selectedCount})
-            </Button>
-          )}
+          {footerButtons}
         </DialogFooter>
       </DialogContent>
     </Dialog>
