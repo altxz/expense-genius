@@ -85,12 +85,19 @@ export function useProjectedTotals(): ProjectedTotals {
 
   // Virtual recurring: inject recurring transactions into monthExpenses if not already present
   const effectiveMonthExpenses = useMemo(() => {
+    // Build a set of signatures to detect if a recurring tx already has a real entry this month
+    const realSignatures = new Set(
+      monthExpenses.map(e => `${e.type}|${e.description.trim().toLowerCase()}|${Number(e.value).toFixed(2)}`)
+    );
     const realIds = new Set(monthExpenses.map(e => e.id));
     const virtualEntries: Expense[] = [];
 
     recurringExpenses.forEach(r => {
       // Skip if already in this month's real data
       if (realIds.has(r.id)) return;
+      // Skip if a matching real entry already exists (edge function copy or manual entry)
+      const sig = `${r.type}|${r.description.trim().toLowerCase()}|${Number(r.value).toFixed(2)}`;
+      if (realSignatures.has(sig)) return;
       // Skip transfers and credit card recurring (handled by invoice logic)
       if (r.type === 'transfer' || r.credit_card_id) return;
       // The recurring tx started on or before this month — project it
