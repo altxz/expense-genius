@@ -137,10 +137,14 @@ export function CashFlowChart({ creditCards: propCards, wallets: propWallets }: 
     const projByDate: Record<string, { income: number; expense: number }> = {};
     const todayStr = format(today, 'yyyy-MM-dd');
 
-    // Recurring projections
+    // Recurring projections — project into ALL days in range (not just future)
+    // To avoid double-counting, check if a real transaction already exists for this
+    // recurring item in the same month
     recurringExpenses.forEach(r => {
       if (r.type === 'transfer') return;
+      if (r.credit_card_id) return; // CC recurring handled by invoice logic
       const origDay = parseISO(r.date).getDate();
+      const recurringStartStr = r.date; // original start date
       // Project into each month in range
       const days = eachDayOfInterval({ start: rangeStart, end: rangeEnd });
       const monthsSeen = new Set<string>();
@@ -152,10 +156,19 @@ export function CashFlowChart({ creditCards: propCards, wallets: propWallets }: 
         const clampedDay = Math.min(origDay, daysInM);
         const projDate = new Date(d.getFullYear(), d.getMonth(), clampedDay);
         const projStr = format(projDate, 'yyyy-MM-dd');
-        if (projStr <= todayStr || projStr < rangeStartStr || projStr > rangeEndStr) return;
+        if (projStr < rangeStartStr || projStr > rangeEndStr) return;
+        // Only project if the recurring tx started on or before this projected date
+        if (recurringStartStr > projStr) return;
+        // Check if a real transaction already exists on this date (avoid double-count)
+        const realOnDate = txByDate[projStr];
+        // We check allExpenses for a matching recurring entry on this exact date
+        const alreadyHasReal = allExpenses.some(e =>
+          e.is_recurring && e.type === r.type && e.date === projStr && Math.abs(Number(e.value) - Number(r.value)) < 0.01
+        );
+        if (alreadyHasReal) return;
         if (!projByDate[projStr]) projByDate[projStr] = { income: 0, expense: 0 };
         if (r.type === 'income') projByDate[projStr].income += Number(r.value);
-        else if (!r.credit_card_id) projByDate[projStr].expense += Number(r.value);
+        else projByDate[projStr].expense += Number(r.value);
       });
     });
 
@@ -194,7 +207,7 @@ export function CashFlowChart({ creditCards: propCards, wallets: propWallets }: 
       const dStr = format(d, 'yyyy-MM-dd');
       const isFuture = isAfter(d, today);
       const real = txByDate[dStr] || { income: 0, expense: 0 };
-      const proj = isFuture ? (projByDate[dStr] || { income: 0, expense: 0 }) : { income: 0, expense: 0 };
+      const proj = projByDate[dStr] || { income: 0, expense: 0 };
 
       const dayIncome = real.income + proj.income;
       const dayExpense = real.expense + proj.expense;
