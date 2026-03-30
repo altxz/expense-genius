@@ -10,7 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Sparkles, Loader2, ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, X } from 'lucide-react';
+import { Sparkles, Loader2, ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, X, Repeat, Hash } from 'lucide-react';
 import { CATEGORIES, getCategoryInfo } from '@/lib/constants';
 import { getPaymentDate } from '@/lib/invoiceHelpers';
 import { supabase } from '@/lib/supabase';
@@ -46,6 +46,18 @@ function calcInvoiceMonth(card: CreditCardOption, expenseDate: string): string {
     closing_days_before_due: card.closing_days_before_due,
   });
   return `${payDate.getFullYear()}-${String(payDate.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function advanceDateByMonths(dateStr: string, months: number): string {
+  const d = new Date(dateStr + 'T12:00:00');
+  d.setMonth(d.getMonth() + months);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function advanceInvoiceMonth(ym: string, months: number): string {
+  const [y, m] = ym.split('-').map(Number);
+  const d = new Date(y, m - 1 + months, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
 function formatInvoiceLabel(ym: string): string {
@@ -97,10 +109,11 @@ export function AddExpenseModal({ open, onOpenChange, onExpenseAdded }: AddExpen
   const [paymentMethod, setPaymentMethod] = useState<'debit' | 'credit'>('debit');
   const [destinationWalletId, setDestinationWalletId] = useState<string>('');
   const [isRecurring, setIsRecurring] = useState(false);
+  const [recurringMode, setRecurringMode] = useState<'fixed' | 'limited'>('fixed');
+  const [repeatCount, setRepeatCount] = useState('2');
+  const [installmentValueType, setInstallmentValueType] = useState<'total' | 'per_installment'>('total');
   const [frequency, setFrequency] = useState<string>('monthly');
   const [creditCardId, setCreditCardId] = useState<string>('');
-  const [installments, setInstallments] = useState('1');
-  const [installmentValueType, setInstallmentValueType] = useState<'total' | 'per_installment'>('total');
   const [walletId, setWalletId] = useState<string>('');
   const [invoiceMonth, setInvoiceMonth] = useState<string>('');
   const [wallets, setWallets] = useState<WalletOption[]>([]);
