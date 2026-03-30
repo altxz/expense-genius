@@ -79,6 +79,7 @@ export function EditExpenseModal({ open, expense, onOpenChange, onExpenseUpdated
   const [saving, setSaving] = useState(false);
   const [wallets, setWallets] = useState<{ id: string; name: string }[]>([]);
   const [dbCategories, setDbCategories] = useState<{ id: string; name: string; parent_id: string | null; icon: string; color: string }[]>([]);
+  const [showRecurringConfirm, setShowRecurringConfirm] = useState(false);
 
   // Installment conversion state — initialize from existing expense
   const [wantInstallment, setWantInstallment] = useState(expense.is_recurring || false);
@@ -94,6 +95,9 @@ export function EditExpenseModal({ open, expense, onOpenChange, onExpenseUpdated
   const isExistingInstallment = !!expense.installment_group_id;
   const canConvertToInstallment = !isExistingInstallment && type !== 'transfer';
   const invoiceOptions = useMemo(() => generateInvoiceOptions(), []);
+
+  // Determine if this is an existing recurring transaction (template-based siblings)
+  const isExistingRecurring = expense.is_recurring && !isExistingInstallment;
 
   useEffect(() => {
     if (!user || !open) return;
@@ -118,7 +122,21 @@ export function EditExpenseModal({ open, expense, onOpenChange, onExpenseUpdated
     setTagInput('');
   };
 
-  const handleSave = async () => {
+  const handleSaveClick = () => {
+    // If editing an existing recurring transaction (not converting), ask scope
+    if (isExistingRecurring && !isExistingInstallment) {
+      setShowRecurringConfirm(true);
+      return;
+    }
+    // If it's an installment group, also ask
+    if (isExistingInstallment) {
+      setShowRecurringConfirm(true);
+      return;
+    }
+    doSave('single');
+  };
+
+  const doSave = async (scope: 'single' | 'all') => {
     if (!description.trim() || !value || !finalCategory) {
       toast({ title: 'Erro', description: 'Preencha todos os campos obrigatórios.', variant: 'destructive' });
       return;
@@ -129,6 +147,7 @@ export function EditExpenseModal({ open, expense, onOpenChange, onExpenseUpdated
     }
 
     setSaving(true);
+    setShowRecurringConfirm(false);
 
     try {
       const parsedValue = parseFloat(value);
@@ -215,6 +234,48 @@ export function EditExpenseModal({ open, expense, onOpenChange, onExpenseUpdated
 
         if (error) throw error;
         toast({ title: 'Recorrência ativada!', description: 'Esta transação será replicada automaticamente todo mês.' });
+      } else if (scope === 'all') {
+        // Update ALL siblings with the same signature
+        if (isExistingInstallment && expense.installment_group_id) {
+          // Update all in the same installment group
+          const sharedFields = {
+            description: description.trim(),
+            value: parsedValue,
+            final_category: finalCategory,
+            wallet_id: walletId || null,
+            notes: notes.trim() || null,
+            tags: tags.length > 0 ? tags : null,
+          };
+          const { error } = await supabase.from('expenses')
+            .update(sharedFields)
+            .eq('installment_group_id', expense.installment_group_id)
+            .eq('user_id', user!.id);
+
+          if (error) throw error;
+          toast({ title: 'Todas as parcelas atualizadas!' });
+        } else if (expense.is_recurring) {
+          // Update all recurring siblings with same signature (type + description + value)
+          const sharedFields = {
+            description: description.trim(),
+            value: parsedValue,
+            final_category: finalCategory,
+            wallet_id: walletId || null,
+            notes: notes.trim() || null,
+            tags: tags.length > 0 ? tags : null,
+            is_recurring: wantInstallment ? true : false,
+            frequency: wantInstallment ? frequency : null,
+          };
+          const { error } = await supabase.from('expenses')
+            .update(sharedFields)
+            .eq('user_id', user!.id)
+            .eq('type', expense.type)
+            .eq('description', expense.description)
+            .eq('value', expense.value)
+            .eq('is_recurring', true);
+
+          if (error) throw error;
+          toast({ title: 'Todas as recorrências atualizadas!' });
+        }
       } else {
         // Normal single update — also clear recurring if it was turned off
         const recurringFields = !wantInstallment && expense.is_recurring
@@ -503,13 +564,36 @@ export function EditExpenseModal({ open, expense, onOpenChange, onExpenseUpdated
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)} className="rounded-xl">Cancelar</Button>
-            <Button onClick={handleSave} disabled={saving} className={`rounded-xl font-semibold transition-colors ${style.accent}`}>
-              {saving ? 'Salvando...' : wantInstallment ? (installmentMode === 'fixed' ? 'Ativar Recorrência' : `Parcelar em ${numInstallments}x`) : 'Salvar'}
-            </Button>
-          </div>
-        </ResponsiveModalFooter>
-    </ResponsiveModal>
-  );
+           <div className="flex gap-2">
+             <Button variant="outline" onClick={() => onOpenChange(false)} className="rounded-xl">Cancelar</Button>
+             <Button onClick={handleSaveClick} disabled={saving} className={`rounded-xl font-semibold transition-colors ${style.accent}`}>
+               {saving ? 'Salvando...' : wantInstallment ? (installmentMode === 'fixed' ? 'Ativar Recorrência' : `Parcelar em ${numInstallments}x`) : 'Salvar'}
+             </Button>
+           </div>
+         </ResponsiveModalFooter>
+
+         {/* Recurring edit scope confirmation dialog */}
+         <AlertDialog open={showRecurringConfirm} onOpenChange={setShowRecurringConfirm}>
+           <AlertDialogContent className="rounded-2xl max-w-[calc(100vw-2rem)]">
+             <AlertDialogHeader>
+               <AlertDialogTitle>Alterar transação recorrente</AlertDialogTitle>
+               <AlertDialogDescription>
+                 {isExistingInstallment
+                   ? 'Esta transação faz parte de um parcelamento. Deseja alterar apenas esta parcela ou todas as parcelas?'
+                   : 'Esta transação é recorrente. Deseja alterar apenas esta ocorrência ou todas as recorrências?'}
+               </AlertDialogDescription>
+             </AlertDialogHeader>
+             <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+               <AlertDialogCancel className="rounded-xl" onClick={() => setShowRecurringConfirm(false)}>Cancelar</AlertDialogCancel>
+               <Button variant="outline" className="rounded-xl" onClick={() => doSave('single')}>
+                 {isExistingInstallment ? 'Apenas esta parcela' : 'Apenas esta'}
+               </Button>
+               <Button className={`rounded-xl font-semibold ${style.accent}`} onClick={() => doSave('all')}>
+                 {isExistingInstallment ? 'Todas as parcelas' : 'Todas as recorrências'}
+               </Button>
+             </AlertDialogFooter>
+           </AlertDialogContent>
+         </AlertDialog>
+     </ResponsiveModal>
+   );
 }
