@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, LabelList } from 'recharts';
 import { formatCurrency } from '@/lib/constants';
 import { InfoPopover } from '@/components/ui/info-popover';
 
@@ -11,7 +11,10 @@ export function TopExpensesList({ expenses }: { expenses: any[] }) {
     const validExpenses = expenses.filter(e => e.type === 'expense');
     const sorted = [...validExpenses].sort((a, b) => b.value - a.value).slice(0, 5);
     return sorted.map(e => ({
-      name: e.description || 'Sem descrição',
+      name: (e.description || 'Sem descrição').length > 18
+        ? (e.description || 'Sem descrição').slice(0, 16) + '…'
+        : (e.description || 'Sem descrição'),
+      fullName: e.description || 'Sem descrição',
       value: e.value,
     }));
   }, [expenses]);
@@ -35,24 +38,51 @@ export function TopExpensesList({ expenses }: { expenses: any[] }) {
       </CardHeader>
       <CardContent className="flex-1 min-h-0 pb-4">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} layout="vertical" margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-             <XAxis type="number" tickFormatter={(v: number) => { if (v >= 1000) return `R$${(v/1000).toFixed(0)}k`; return `R$${v.toFixed(0)}`; }} tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground))' }} />
-             <YAxis type="category" dataKey="name" width={60} tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground))' }} />
+          <BarChart data={data} layout="vertical" margin={{ top: 5, right: 50, left: 20, bottom: 5 }}>
+            <defs>
+              {COLORS.map((color, i) => (
+                <linearGradient key={i} id={`topExpGrad${i}`} x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stopColor={color} stopOpacity={0.8} />
+                  <stop offset="100%" stopColor={color} stopOpacity={1} />
+                </linearGradient>
+              ))}
+            </defs>
+            <XAxis
+              type="number"
+              tickFormatter={(v: number) => { if (v >= 1000) return `R$${(v/1000).toFixed(0)}k`; return `R$${v.toFixed(0)}`; }}
+              tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground))' }}
+              axisLine={false}
+              tickLine={false}
+            />
+            <YAxis
+              type="category"
+              dataKey="name"
+              width={120}
+              tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground))' }}
+              axisLine={false}
+              tickLine={false}
+            />
             <Tooltip
               content={({ active, payload }) => {
                 if (!active || !payload?.length) return null;
                 return (
-                  <div className="rounded-lg border bg-background p-2 shadow-sm">
-                    <p className="text-xs font-medium">{payload[0].payload.name}</p>
-                    <p className="text-sm font-bold text-primary">{formatCurrency(payload[0].value as number)}</p>
+                  <div className="rounded-xl border-0 p-2.5 shadow-lg" style={{ backgroundColor: 'rgba(0,0,0,0.8)', color: '#fff' }}>
+                    <p className="text-xs font-medium">{payload[0].payload.fullName}</p>
+                    <p className="text-sm font-bold" style={{ color: 'hsl(var(--primary))' }}>{formatCurrency(payload[0].value as number)}</p>
                   </div>
                 );
               }}
             />
             <Bar dataKey="value" radius={[0, 6, 6, 0]} barSize={20}>
               {data.map((_entry, index) => (
-                <Cell key={index} fill={COLORS[index % COLORS.length]} />
+                <Cell key={index} fill={`url(#topExpGrad${index % COLORS.length})`} />
               ))}
+              <LabelList
+                dataKey="value"
+                position="right"
+                formatter={(v: number) => formatCurrency(v)}
+                style={{ fontSize: 9, fill: 'hsl(var(--muted-foreground))' }}
+              />
             </Bar>
           </BarChart>
         </ResponsiveContainer>
