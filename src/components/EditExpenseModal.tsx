@@ -79,6 +79,7 @@ export function EditExpenseModal({ open, expense, onOpenChange, onExpenseUpdated
   const [saving, setSaving] = useState(false);
   const [wallets, setWallets] = useState<{ id: string; name: string }[]>([]);
   const [dbCategories, setDbCategories] = useState<{ id: string; name: string; parent_id: string | null; icon: string; color: string }[]>([]);
+  const [showRecurringConfirm, setShowRecurringConfirm] = useState(false);
 
   // Installment conversion state — initialize from existing expense
   const [wantInstallment, setWantInstallment] = useState(expense.is_recurring || false);
