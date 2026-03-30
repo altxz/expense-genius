@@ -91,7 +91,7 @@ export function EditExpenseModal({ open, expense, onOpenChange, onExpenseUpdated
   const style = TYPE_STYLES[type];
   const isCredit = !!expense.credit_card_id;
   const isExistingInstallment = !!expense.installment_group_id;
-  const canConvertToInstallment = isCredit && !isExistingInstallment;
+  const canConvertToInstallment = !isExistingInstallment && type !== 'transfer';
   const invoiceOptions = useMemo(() => generateInvoiceOptions(), []);
 
   useEffect(() => {
@@ -302,15 +302,15 @@ export function EditExpenseModal({ open, expense, onOpenChange, onExpenseUpdated
                 </div>
               )}
 
-              {/* Installment conversion section */}
+              {/* Installment / Recurring conversion section */}
               {canConvertToInstallment && (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between rounded-xl border p-3">
                     <div className="flex items-center gap-2 min-w-0">
-                      <CreditCard className="h-4 w-4 text-primary shrink-0" />
+                      <Repeat className="h-4 w-4 text-primary shrink-0" />
                       <div className="min-w-0">
-                        <span className="text-sm font-medium">Transformar em parcelamento</span>
-                        <p className="text-xs text-muted-foreground">Dividir esta compra em parcelas</p>
+                        <span className="text-sm font-medium">Recorrente / Repetir</span>
+                        <p className="text-xs text-muted-foreground">Conta fixa ou parcelamento</p>
                       </div>
                     </div>
                     <Switch checked={wantInstallment} onCheckedChange={setWantInstallment} />
@@ -318,51 +318,91 @@ export function EditExpenseModal({ open, expense, onOpenChange, onExpenseUpdated
 
                   {wantInstallment && (
                     <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 space-y-3">
-                      <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Número de Parcelas</Label>
-                        <Input
-                          type="number"
-                          min={2}
-                          max={72}
-                          value={numInstallments}
-                          onChange={e => setNumInstallments(Math.max(2, Math.min(72, parseInt(e.target.value) || 2)))}
-                          className="rounded-xl h-11"
-                        />
+                      {/* Mode selector: Fixed vs Repeat */}
+                      <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-secondary">
+                        <button
+                          type="button"
+                          onClick={() => setInstallmentMode('fixed')}
+                          className={`flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs sm:text-sm font-semibold transition-all ${
+                            installmentMode === 'fixed' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                          }`}
+                        >
+                          <Repeat className="h-3.5 w-3.5" />
+                          Fixa
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setInstallmentMode('limited')}
+                          className={`flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs sm:text-sm font-semibold transition-all ${
+                            installmentMode === 'limited' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                          }`}
+                        >
+                          <Hash className="h-3.5 w-3.5" />
+                          Repetir vezes
+                        </button>
                       </div>
 
-                      <div className="space-y-2">
-                        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">O valor informado é</Label>
-                        <RadioGroup value={valueMode} onValueChange={v => setValueMode(v as 'total' | 'per_installment')} className="space-y-2">
-                          <div className="flex items-center gap-2">
-                            <RadioGroupItem value="total" id="val-total" />
-                            <Label htmlFor="val-total" className="text-sm cursor-pointer">
-                              Valor Total da Compra
-                              <span className="text-xs text-muted-foreground ml-1">(divide pelas parcelas)</span>
-                            </Label>
+                      {installmentMode === 'fixed' ? (
+                        <p className="text-[11px] text-muted-foreground">
+                          Este lançamento será replicado automaticamente todo mês.
+                        </p>
+                      ) : (
+                        <div className="space-y-3">
+                          <div className="space-y-1.5">
+                            <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Número de Repetições</Label>
+                            <Input
+                              type="number"
+                              min={2}
+                              max={72}
+                              value={numInstallments}
+                              onChange={e => setNumInstallments(Math.max(2, Math.min(72, parseInt(e.target.value) || 2)))}
+                              className="rounded-xl h-11"
+                            />
                           </div>
-                          <div className="flex items-center gap-2">
-                            <RadioGroupItem value="per_installment" id="val-per" />
-                            <Label htmlFor="val-per" className="text-sm cursor-pointer">
-                              Valor da Parcela
-                              <span className="text-xs text-muted-foreground ml-1">(cada parcela terá este valor)</span>
-                            </Label>
-                          </div>
-                        </RadioGroup>
-                      </div>
 
-                      {value && parseFloat(value) > 0 && (
-                        <div className="rounded-lg bg-background/80 border p-2.5 text-center">
-                          <p className="text-xs text-muted-foreground">Valor de cada parcela</p>
-                          <p className="text-lg font-bold text-primary">
-                            {numInstallments}x de R$ {valueMode === 'total'
-                              ? (parseFloat(value) / numInstallments).toFixed(2)
-                              : parseFloat(value).toFixed(2)}
-                          </p>
-                          {valueMode === 'total' && (
-                            <p className="text-xs text-muted-foreground">Total: R$ {parseFloat(value).toFixed(2)}</p>
-                          )}
-                          {valueMode === 'per_installment' && (
-                            <p className="text-xs text-muted-foreground">Total: R$ {(parseFloat(value) * numInstallments).toFixed(2)}</p>
+                          <div className="space-y-1.5">
+                            <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Tipo de Valor</Label>
+                            <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-secondary">
+                              <button
+                                type="button"
+                                onClick={() => setValueMode('total')}
+                                className={`rounded-lg py-2 text-xs sm:text-sm font-semibold transition-all ${
+                                  valueMode === 'total' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                                }`}
+                              >
+                                Valor Total
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setValueMode('per_installment')}
+                                className={`rounded-lg py-2 text-xs sm:text-sm font-semibold transition-all ${
+                                  valueMode === 'per_installment' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                                }`}
+                              >
+                                Valor da Parcela
+                              </button>
+                            </div>
+                          </div>
+
+                          {value && parseFloat(value) > 0 && (
+                            <div className="rounded-lg bg-background/80 border p-2.5 text-center">
+                              <p className="text-xs text-muted-foreground">Resumo</p>
+                              <p className="text-lg font-bold text-primary">
+                                {numInstallments}x de R$ {valueMode === 'total'
+                                  ? (parseFloat(value) / numInstallments).toFixed(2)
+                                  : parseFloat(value).toFixed(2)}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                Total: R$ {valueMode === 'total'
+                                  ? parseFloat(value).toFixed(2)
+                                  : (parseFloat(value) * numInstallments).toFixed(2)}
+                              </p>
+                              <p className="text-[11px] text-muted-foreground mt-1">
+                                Isso criará {numInstallments} lançamentos de R$ {valueMode === 'total'
+                                  ? (parseFloat(value) / numInstallments).toFixed(2)
+                                  : parseFloat(value).toFixed(2)} nos próximos {numInstallments} meses.
+                              </p>
+                            </div>
                           )}
                         </div>
                       )}
