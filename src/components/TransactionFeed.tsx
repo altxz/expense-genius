@@ -222,7 +222,7 @@ export function TransactionFeed({
 
     const nonCcFlowByDay: Record<string, number> = {};
     allTxns.forEach(exp => {
-      if (exp.type === 'transfer' || !exp.is_paid) return;
+      if (exp.type === 'transfer') return;
       if (exp.credit_card_id) return;
       const key = exp.date;
       if (key < monthStart || key > monthEnd) return;
