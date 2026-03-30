@@ -509,52 +509,15 @@ export function AddExpenseModal({ open, onOpenChange, onExpenseAdded }: AddExpen
               {/* Credit card fields */}
               {type === 'expense' && paymentMethod === 'credit' && (
                 <>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div className="sm:col-span-2 space-y-1.5 min-w-0">
-                      <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Cartão <span className="text-destructive">*</span></Label>
-                      <Select value={creditCardId} onValueChange={setCreditCardId}>
-                        <SelectTrigger className="rounded-xl h-11"><SelectValue placeholder="Selecione" /></SelectTrigger>
-                        <SelectContent>
-                          {creditCards.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-1.5 min-w-0">
-                      <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Parcelas</Label>
-                      <Input type="number" min="1" max="72" value={installments} onChange={e => setInstallments(e.target.value)} className="rounded-xl h-11" />
-                    </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Cartão <span className="text-destructive">*</span></Label>
+                    <Select value={creditCardId} onValueChange={setCreditCardId}>
+                      <SelectTrigger className="rounded-xl h-11"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                      <SelectContent>
+                        {creditCards.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
                   </div>
-                  {parseInt(installments) > 1 && (
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Tipo de Valor</Label>
-                      <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-secondary">
-                        <button
-                          type="button"
-                          onClick={() => setInstallmentValueType('total')}
-                          className={`rounded-lg py-2 text-xs sm:text-sm font-semibold transition-all ${
-                            installmentValueType === 'total' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-                          }`}
-                        >
-                          Valor Total
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setInstallmentValueType('per_installment')}
-                          className={`rounded-lg py-2 text-xs sm:text-sm font-semibold transition-all ${
-                            installmentValueType === 'per_installment' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-                          }`}
-                        >
-                          Valor da Parcela
-                        </button>
-                      </div>
-                      <p className="text-[11px] text-muted-foreground">
-                        {installmentValueType === 'total'
-                          ? `O valor será dividido em ${installments}x de R$ ${value ? (parseFloat(value) / parseInt(installments)).toFixed(2) : '0,00'}`
-                          : `Total: R$ ${value ? (parseFloat(value) * parseInt(installments)).toFixed(2) : '0,00'} em ${installments}x de R$ ${value || '0,00'}`
-                        }
-                      </p>
-                    </div>
-                  )}
                   {creditCardId && (
                     <div className="space-y-1.5">
                       <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Fatura</Label>
@@ -610,27 +573,118 @@ export function AddExpenseModal({ open, onOpenChange, onExpenseAdded }: AddExpen
                 <Switch checked={isPaid} onCheckedChange={setIsPaid} />
               </div>
 
-              {/* Recurring */}
-              <label className="flex items-center gap-3 rounded-xl border p-3 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={isRecurring}
-                  onChange={e => setIsRecurring(e.target.checked)}
-                  className="h-4 w-4 rounded border-muted-foreground accent-primary"
-                />
-                <div>
-                  <span className="text-sm font-medium">Recorrente / Assinatura</span>
-                  <p className="text-xs text-muted-foreground">Conta fixa mensal ou anual</p>
+              {/* Recurring / Repeat */}
+              <div className="flex items-center justify-between rounded-xl border p-3">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Repeat className="h-4 w-4 text-primary shrink-0" />
+                  <div className="min-w-0">
+                    <span className="text-sm font-medium">Recorrente / Repetir</span>
+                    <p className="text-xs text-muted-foreground">Conta fixa ou parcelamento</p>
+                  </div>
                 </div>
-              </label>
+                <Switch checked={isRecurring} onCheckedChange={setIsRecurring} />
+              </div>
+
               {isRecurring && (
-                <Select value={frequency} onValueChange={setFrequency}>
-                  <SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="monthly">Mensal</SelectItem>
-                    <SelectItem value="annual">Anual</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 space-y-3">
+                  {/* Mode selector */}
+                  <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-secondary">
+                    <button
+                      type="button"
+                      onClick={() => setRecurringMode('fixed')}
+                      className={`flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs sm:text-sm font-semibold transition-all ${
+                        recurringMode === 'fixed' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      <Repeat className="h-3.5 w-3.5" />
+                      Fixa
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRecurringMode('limited')}
+                      className={`flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs sm:text-sm font-semibold transition-all ${
+                        recurringMode === 'limited' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      <Hash className="h-3.5 w-3.5" />
+                      Repetir vezes
+                    </button>
+                  </div>
+
+                  {recurringMode === 'fixed' ? (
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Frequência</Label>
+                      <Select value={frequency} onValueChange={setFrequency}>
+                        <SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="monthly">Mensal</SelectItem>
+                          <SelectItem value="annual">Anual</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-[11px] text-muted-foreground">
+                        Este lançamento será replicado automaticamente todo mês/ano.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Número de Repetições</Label>
+                        <Input
+                          type="number"
+                          min="2"
+                          max="72"
+                          value={repeatCount}
+                          onChange={e => setRepeatCount(e.target.value)}
+                          className="rounded-xl h-11"
+                        />
+                      </div>
+
+                      {(parseInt(repeatCount) || 0) > 1 && (
+                        <>
+                          <div className="space-y-1.5">
+                            <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Tipo de Valor</Label>
+                            <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-secondary">
+                              <button
+                                type="button"
+                                onClick={() => setInstallmentValueType('total')}
+                                className={`rounded-lg py-2 text-xs sm:text-sm font-semibold transition-all ${
+                                  installmentValueType === 'total' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                                }`}
+                              >
+                                Valor Total
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setInstallmentValueType('per_installment')}
+                                className={`rounded-lg py-2 text-xs sm:text-sm font-semibold transition-all ${
+                                  installmentValueType === 'per_installment' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                                }`}
+                              >
+                                Valor da Parcela
+                              </button>
+                            </div>
+                          </div>
+
+                          {value && parseFloat(value) > 0 && (
+                            <div className="rounded-lg bg-background/80 border p-2.5 text-center">
+                              <p className="text-xs text-muted-foreground">Resumo</p>
+                              <p className="text-lg font-bold text-primary">
+                                {parseInt(repeatCount)}x de R$ {installmentValueType === 'total'
+                                  ? (parseFloat(value) / parseInt(repeatCount)).toFixed(2)
+                                  : parseFloat(value).toFixed(2)}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                Total: R$ {installmentValueType === 'total'
+                                  ? parseFloat(value).toFixed(2)
+                                  : (parseFloat(value) * parseInt(repeatCount)).toFixed(2)}
+                              </p>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
               )}
 
               {/* More options accordion */}
