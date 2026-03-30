@@ -65,7 +65,7 @@ export function CashFlowChart({ creditCards: propCards, wallets: propWallets }: 
     const fetchAll = async () => {
       const [expensesRes, recurringRes, unpaidRes] = await Promise.all([
         // Fetch only needed columns instead of select('*')
-        supabase.from('expenses').select('value, type, credit_card_id, date, is_paid, is_recurring')
+        supabase.from('expenses').select('value, type, credit_card_id, date, is_paid, is_recurring, invoice_month')
           .eq('user_id', user.id).order('date'),
         supabase.from('expenses').select('value, type, date, credit_card_id')
           .eq('user_id', user.id).eq('is_recurring', true),
@@ -89,6 +89,7 @@ export function CashFlowChart({ creditCards: propCards, wallets: propWallets }: 
     // 2) Compute running balance up to rangeStart from all real transactions
     // Uses projected logic: ignores is_paid, assumes everything scheduled happened
     let preRangeBalance = walletsBase;
+    const rangeYm = format(rangeStart, 'yyyy-MM');
 
     allExpenses.forEach(e => {
       if (e.type === 'transfer') return;
@@ -97,27 +98,10 @@ export function CashFlowChart({ creditCards: propCards, wallets: propWallets }: 
         // Before range: accumulate projected (ignore is_paid)
         if (e.type === 'income') preRangeBalance += Number(e.value);
         else if (e.type === 'expense' && !e.credit_card_id) preRangeBalance -= Number(e.value);
-      }
-    });
-
-    // Subtract credit card invoices from months before range
-    unpaidCreditExpenses.forEach(e => {
-      if (!e.invoice_month) return;
-      const invoiceYm = e.invoice_month;
-      const rangeYm = `${format(rangeStart, 'yyyy-MM')}`;
-      if (invoiceYm < rangeYm) {
-        preRangeBalance -= Number(e.value);
-      }
-    });
-
-    // Also subtract paid credit expenses from before range
-    allExpenses.forEach(e => {
-      if (e.type !== 'expense' || !e.credit_card_id) return;
-      const invMonth = e.invoice_month;
-      if (!invMonth) return;
-      const rangeYm = format(rangeStart, 'yyyy-MM');
-      if (invMonth < rangeYm) {
-        preRangeBalance -= Number(e.value);
+        // Credit card expenses: subtract based on invoice_month
+        else if (e.type === 'expense' && e.credit_card_id && e.invoice_month && e.invoice_month < rangeYm) {
+          preRangeBalance -= Number(e.value);
+        }
       }
     });
 
@@ -134,7 +118,6 @@ export function CashFlowChart({ creditCards: propCards, wallets: propWallets }: 
     });
 
     // Credit card expenses within range month (by invoice_month)
-    const rangeYm = format(rangeStart, 'yyyy-MM');
     allExpenses.forEach(e => {
       if (e.type !== 'expense' || !e.credit_card_id) return;
       if (e.invoice_month !== rangeYm) return;
