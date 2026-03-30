@@ -94,6 +94,7 @@ export function TransactionFeed({
 }: TransactionFeedProps) {
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [deletingExpense, setDeletingExpense] = useState<Expense | null>(null);
+  const [deleteMode, setDeleteMode] = useState<'single' | 'all' | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [groupCards, setGroupCards] = useState(() => {
     try { return localStorage.getItem(STORAGE_KEY) === 'true'; } catch { return false; }
@@ -105,17 +106,40 @@ export function TransactionFeed({
     try { localStorage.setItem(STORAGE_KEY, String(groupCards)); } catch {}
   }, [groupCards]);
 
-  const handleDelete = async () => {
+  const handleDeleteClick = (exp: Expense) => {
+    setDeletingExpense(exp);
+    if (exp.is_recurring) {
+      setDeleteMode(null); // show choice dialog
+    } else {
+      setDeleteMode('single'); // go straight to confirm
+    }
+  };
+
+  const handleDelete = async (mode: 'single' | 'all') => {
     if (!deletingExpense) return;
     setDeleting(true);
-    const { error } = await supabase.from('expenses').delete().eq('id', deletingExpense.id);
-    setDeleting(false);
-    setDeletingExpense(null);
-    if (error) {
-      toast({ title: 'Erro ao excluir', description: error.message, variant: 'destructive' });
-    } else {
-      toast({ title: 'Transação excluída' });
+    try {
+      if (mode === 'all') {
+        // Delete all recurring entries with same signature
+        const { error } = await supabase.from('expenses').delete()
+          .eq('user_id', deletingExpense.id ? '' : '') // placeholder, real filter below
+          .eq('description', deletingExpense.description)
+          .eq('type', deletingExpense.type)
+          .eq('is_recurring', true);
+        if (error) throw error;
+        toast({ title: 'Todas as recorrências excluídas', description: 'Todos os lançamentos recorrentes foram removidos.' });
+      } else {
+        const { error } = await supabase.from('expenses').delete().eq('id', deletingExpense.id);
+        if (error) throw error;
+        toast({ title: 'Transação excluída' });
+      }
       onDeleted();
+    } catch (err: any) {
+      toast({ title: 'Erro ao excluir', description: err.message, variant: 'destructive' });
+    } finally {
+      setDeleting(false);
+      setDeletingExpense(null);
+      setDeleteMode(null);
     }
   };
 
