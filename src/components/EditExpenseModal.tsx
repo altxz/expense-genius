@@ -417,6 +417,19 @@ export function EditExpenseModal({ open, expense, onOpenChange, onExpenseUpdated
                 </div>
               )}
 
+              {type === 'expense' && creditCards.length > 0 && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Cartão de Crédito</Label>
+                  <Select value={creditCardId || '_none'} onValueChange={(v) => setCreditCardId(v === '_none' ? '' : v)}>
+                    <SelectTrigger className="rounded-xl h-11"><SelectValue placeholder="Nenhum (débito)" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="_none">Nenhum (débito em conta)</SelectItem>
+                      {creditCards.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
               {isCredit && (
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Fatura de Referência</Label>
