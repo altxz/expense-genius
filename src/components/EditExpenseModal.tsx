@@ -94,7 +94,7 @@ export function EditExpenseModal({ open, expense, onOpenChange, onExpenseUpdated
   const { user } = useAuth();
 
   const style = TYPE_STYLES[type];
-  const isCredit = !!expense.credit_card_id;
+  const isCredit = !!creditCardId;
   const isExistingInstallment = !!expense.installment_group_id;
   const canConvertToInstallment = !isExistingInstallment && type !== 'transfer';
   const invoiceOptions = useMemo(() => generateInvoiceOptions(), []);
