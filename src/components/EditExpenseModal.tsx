@@ -78,6 +78,8 @@ export function EditExpenseModal({ open, expense, onOpenChange, onExpenseUpdated
   const [frequency, setFrequency] = useState(expense.frequency || 'monthly');
   const [saving, setSaving] = useState(false);
   const [wallets, setWallets] = useState<{ id: string; name: string }[]>([]);
+  const [creditCards, setCreditCards] = useState<{ id: string; name: string }[]>([]);
+  const [creditCardId, setCreditCardId] = useState(expense.credit_card_id || '');
   const [dbCategories, setDbCategories] = useState<{ id: string; name: string; parent_id: string | null; icon: string; color: string }[]>([]);
   const [showRecurringConfirm, setShowRecurringConfirm] = useState(false);
   const [isProjectedOccurrence, setIsProjectedOccurrence] = useState(false);
