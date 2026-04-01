@@ -187,7 +187,7 @@ export function EditExpenseModal({ open, expense, onOpenChange, onExpenseUpdated
           type: expense.type,
           final_category: finalCategory,
           category_ai: expense.category_ai,
-          credit_card_id: expense.credit_card_id,
+          credit_card_id: creditCardId || null,
           wallet_id: walletId || null,
           destination_wallet_id: expense.destination_wallet_id,
           debt_id: expense.debt_id,
