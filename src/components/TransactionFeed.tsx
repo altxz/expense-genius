@@ -562,7 +562,7 @@ export function TransactionFeed({
                                   variant="ghost"
                                   size="icon"
                                   className="h-7 w-7 rounded-lg hover:bg-emerald-500/10 hover:text-emerald-600"
-                                  onClick={() => setPayingExpense(exp)}
+                                  onClick={() => openPayDialog(exp)}
                                 >
                                   <Check className="h-3.5 w-3.5 text-emerald-600" />
                                 </Button>
