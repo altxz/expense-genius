@@ -97,6 +97,9 @@ export function TransactionFeed({
   const [deleteMode, setDeleteMode] = useState<'single' | 'all' | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [payingExpense, setPayingExpense] = useState<Expense | null>(null);
+  const [payValue, setPayValue] = useState('');
+  const [payValueChanged, setPayValueChanged] = useState(false);
+  const [payApplyScope, setPayApplyScope] = useState<'single' | 'all' | null>(null);
   const [groupCards, setGroupCards] = useState(() => {
     try { const v = localStorage.getItem(STORAGE_KEY); return v === null ? true : v === 'true'; } catch { return true; }
   });
