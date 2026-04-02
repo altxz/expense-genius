@@ -97,6 +97,9 @@ export function TransactionFeed({
   const [deleteMode, setDeleteMode] = useState<'single' | 'all' | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [payingExpense, setPayingExpense] = useState<Expense | null>(null);
+  const [payValue, setPayValue] = useState('');
+  const [payValueChanged, setPayValueChanged] = useState(false);
+  const [payApplyScope, setPayApplyScope] = useState<'single' | 'all' | null>(null);
   const [groupCards, setGroupCards] = useState(() => {
     try { const v = localStorage.getItem(STORAGE_KEY); return v === null ? true : v === 'true'; } catch { return true; }
   });
@@ -107,22 +110,46 @@ export function TransactionFeed({
     try { localStorage.setItem(STORAGE_KEY, String(groupCards)); } catch {}
   }, [groupCards]);
 
+  const openPayDialog = (exp: Expense) => {
+    setPayingExpense(exp);
+    setPayValue(String(exp.value));
+    setPayValueChanged(false);
+    setPayApplyScope(null);
+  };
+
   const handleMarkAsPaid = async (exp: Expense, keepOriginalDate: boolean) => {
     try {
+      const newValue = parseFloat(payValue);
+      const valueChanged = !isNaN(newValue) && newValue !== exp.value;
       const updateFields: Record<string, unknown> = { is_paid: true };
       if (!keepOriginalDate) {
         const today = new Date();
         const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
         updateFields.date = todayStr;
       }
+      if (valueChanged) {
+        updateFields.value = newValue;
+      }
       const { error } = await supabase.from('expenses').update(updateFields).eq('id', exp.id);
       if (error) throw error;
+
+      // If value changed and user chose to apply to all installments
+      if (valueChanged && payApplyScope === 'all' && exp.installment_group_id) {
+        const { error: groupErr } = await supabase
+          .from('expenses')
+          .update({ value: newValue })
+          .eq('installment_group_id', exp.installment_group_id)
+          .neq('id', exp.id);
+        if (groupErr) throw groupErr;
+      }
+
       toast({ title: exp.type === 'income' ? 'Recebimento confirmado!' : 'Pagamento confirmado!' });
       onDeleted();
     } catch (err: any) {
       toast({ title: 'Erro', description: err.message, variant: 'destructive' });
     } finally {
       setPayingExpense(null);
+      setPayApplyScope(null);
     }
   };
 
@@ -535,7 +562,7 @@ export function TransactionFeed({
                                   variant="ghost"
                                   size="icon"
                                   className="h-7 w-7 rounded-lg hover:bg-emerald-500/10 hover:text-emerald-600"
-                                  onClick={() => setPayingExpense(exp)}
+                                  onClick={() => openPayDialog(exp)}
                                 >
                                   <Check className="h-3.5 w-3.5 text-emerald-600" />
                                 </Button>
@@ -619,28 +646,81 @@ export function TransactionFeed({
         />
       )}
 
-      {/* Pay/receive date choice dialog */}
-      <AlertDialog open={!!payingExpense} onOpenChange={(open) => { if (!open) setPayingExpense(null); }}>
+      {/* Pay/receive dialog with value edit */}
+      <AlertDialog open={!!payingExpense} onOpenChange={(open) => { if (!open) { setPayingExpense(null); setPayApplyScope(null); } }}>
         <AlertDialogContent className="rounded-2xl max-w-[calc(100vw-2rem)]">
           <AlertDialogHeader>
             <AlertDialogTitle>
               {payingExpense?.type === 'income' ? 'Confirmar recebimento' : 'Confirmar pagamento'}
             </AlertDialogTitle>
-            <AlertDialogDescription>
-              Deseja manter a data original ou alterar para a data de hoje?
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                {/* Editable value */}
+                <div>
+                  <label className="text-xs font-medium text-foreground mb-1 block">Valor</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">R$</span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      className="flex h-10 w-full rounded-xl border border-input bg-background pl-10 pr-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      value={payValue}
+                      onChange={(e) => {
+                        setPayValue(e.target.value);
+                        const newVal = parseFloat(e.target.value);
+                        setPayValueChanged(!isNaN(newVal) && newVal !== payingExpense?.value);
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Scope choice if value changed and has installments */}
+                {payValueChanged && payingExpense?.installment_group_id && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-foreground">Aplicar novo valor em:</p>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={payApplyScope === 'single' ? 'default' : 'outline'}
+                        className="rounded-xl text-xs flex-1"
+                        onClick={() => setPayApplyScope('single')}
+                      >
+                        Apenas esta
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={payApplyScope === 'all' ? 'default' : 'outline'}
+                        className="rounded-xl text-xs flex-1"
+                        onClick={() => setPayApplyScope('all')}
+                      >
+                        Todas as parcelas
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                <p className="text-sm text-muted-foreground">
+                  Deseja manter a data original ou alterar para a data de hoje?
+                </p>
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-            <AlertDialogCancel className="rounded-xl" onClick={() => setPayingExpense(null)}>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel className="rounded-xl" onClick={() => { setPayingExpense(null); setPayApplyScope(null); }}>Cancelar</AlertDialogCancel>
             <Button
               variant="outline"
               className="rounded-xl"
+              disabled={payValueChanged && !!payingExpense?.installment_group_id && !payApplyScope}
               onClick={() => payingExpense && handleMarkAsPaid(payingExpense, true)}
             >
               Manter data ({payingExpense ? new Date(payingExpense.date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : ''})
             </Button>
             <Button
               className="rounded-xl bg-emerald-600 text-white hover:bg-emerald-700"
+              disabled={payValueChanged && !!payingExpense?.installment_group_id && !payApplyScope}
               onClick={() => payingExpense && handleMarkAsPaid(payingExpense, false)}
             >
               Mudar para hoje ({new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })})
