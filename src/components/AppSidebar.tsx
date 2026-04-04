@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/sidebar';
 
 export function AppSidebar() {
-  const { state } = useSidebar();
+  const { state, setOpenMobile, isMobile } = useSidebar();
   const collapsed = state === 'collapsed';
   const { settings } = useUserSettings();
 
@@ -28,6 +28,12 @@ export function AppSidebar() {
     { title: 'Minha Carteira', url: '/wallet', icon: Wallet, visible: true },
     { title: 'Configurações', url: '/configuracoes', icon: Settings, visible: true },
   ];
+
+  const handleNavClick = () => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  };
 
   return (
     <Sidebar collapsible="icon" className="border-r-0">
@@ -45,7 +51,12 @@ export function AppSidebar() {
               {items.filter(i => i.visible).map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
-                    <NavLink to={item.url} end={item.url === '/'} activeClassName="bg-sidebar-accent text-sidebar-accent-foreground">
+                    <NavLink
+                      to={item.url}
+                      end={item.url === '/'}
+                      activeClassName="bg-sidebar-accent text-sidebar-accent-foreground"
+                      onClick={handleNavClick}
+                    >
                       <item.icon className="h-4 w-4" />
                       {!collapsed && <span>{item.title}</span>}
                     </NavLink>
