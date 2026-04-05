@@ -347,6 +347,20 @@ export function TransactionFeed({
     return statusConfig[inv.status] || statusConfig.open;
   };
 
+  // Auto-scroll to today
+  const todayRef = useRef<HTMLDivElement>(null);
+  const didScrollToToday = useRef(false);
+
+  useEffect(() => {
+    if (!loading && todayRef.current && !didScrollToToday.current) {
+      didScrollToToday.current = true;
+      // Small delay to ensure layout is settled
+      requestAnimationFrame(() => {
+        todayRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    }
+  }, [loading, grouped]);
+
   // Infinite scroll state
   const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
   const sentinelRef = useRef<HTMLDivElement>(null);
