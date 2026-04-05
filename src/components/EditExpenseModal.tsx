@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -64,6 +65,7 @@ const TYPE_STYLES = {
 } as const;
 
 export function EditExpenseModal({ open, expense, onOpenChange, onExpenseUpdated }: EditExpenseModalProps) {
+  const queryClient = useQueryClient();
   const [date, setDate] = useState(expense.date);
   const [description, setDescription] = useState(expense.description);
   const [value, setValue] = useState(String(expense.value));
@@ -209,6 +211,7 @@ export function EditExpenseModal({ open, expense, onOpenChange, onExpenseUpdated
         if (insertOneOffError) throw insertOneOffError;
 
         toast({ title: 'Alteração aplicada apenas nesta ocorrência!' });
+        queryClient.invalidateQueries({ queryKey: ['projected-totals'] });
         onExpenseUpdated();
         setSaving(false);
         return;
@@ -347,6 +350,7 @@ export function EditExpenseModal({ open, expense, onOpenChange, onExpenseUpdated
         toast({ title: expense.is_recurring && !wantInstallment ? 'Recorrência desativada!' : 'Transação atualizada!' });
       }
 
+      queryClient.invalidateQueries({ queryKey: ['projected-totals'] });
       onExpenseUpdated();
     } catch (err: any) {
       toast({ title: 'Erro ao salvar', description: err.message, variant: 'destructive' });
@@ -361,6 +365,7 @@ export function EditExpenseModal({ open, expense, onOpenChange, onExpenseUpdated
       toast({ title: 'Erro', description: error.message, variant: 'destructive' });
     } else {
       toast({ title: 'Transação excluída' });
+      queryClient.invalidateQueries({ queryKey: ['projected-totals'] });
       onExpenseUpdated();
     }
   };
