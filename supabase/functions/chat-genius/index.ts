@@ -329,6 +329,21 @@ const tools = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "oportunidades_economia",
+      description: "Analisa oportunidades de economia do utilizador combinando: top categorias de gastos, comparação com mês anterior, orçamentos, transações recorrentes e média diária. Usa quando perguntarem 'onde posso economizar?', 'como reduzir gastos?', 'oportunidades de economia'.",
+      parameters: {
+        type: "object",
+        properties: {
+          month: { type: "string", description: "Mês no formato YYYY-MM. Se omitido, usa o mês atual." },
+        },
+        required: [],
+        additionalProperties: false,
+      },
+    },
+  },
 ];
 
 function getCurrentMonth(): string {
