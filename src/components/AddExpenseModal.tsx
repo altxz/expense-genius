@@ -636,10 +636,11 @@ export function AddExpenseModal({ open, onOpenChange, onExpenseAdded }: AddExpen
                         <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Número de Repetições</Label>
                         <Input
                           type="number"
+                          inputMode="numeric"
                           min="2"
                           max="72"
                           value={repeatCount}
-                          onChange={e => setRepeatCount(e.target.value)}
+                          onChange={e => setRepeatCount(e.target.value.replace(/[^0-9]/g, ''))}
                           className="rounded-xl h-11"
                         />
                       </div>
