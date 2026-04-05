@@ -300,6 +300,7 @@ export default function Dashboard() {
           <AddExpenseModal open={modalOpen} onOpenChange={setModalOpen} onExpenseAdded={projected.refetch} />
         </Suspense>
       )}
+      <GuidedTour />
     </SidebarProvider>
   );
 }
