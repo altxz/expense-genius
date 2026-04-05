@@ -82,7 +82,7 @@ export function AppSidebar() {
                       to={item.url}
                       end={item.url === '/'}
                       activeClassName="bg-sidebar-accent text-sidebar-accent-foreground"
-                      onClick={handleNavClick}
+                      onClick={(e) => handleNavClick(e, item.url)}
                     >
                       <div className="relative">
                         <item.icon className="h-4 w-4" />
