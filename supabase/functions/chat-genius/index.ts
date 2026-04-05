@@ -347,6 +347,19 @@ const tools = [
   {
     type: "function",
     function: {
+      name: "listar_categorias",
+      description: "Lista todas as categorias e subcategorias cadastradas pelo utilizador, com ícones e cores. Use para saber quais categorias o utilizador tem, antes de classificar ou analisar gastos.",
+      parameters: {
+        type: "object",
+        properties: {},
+        required: [],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "preparar_orcamento",
       description: "Busca todos os dados necessários para criar ou sugerir um orçamento mensal: receitas do mês atual e anterior, gastos por categoria, orçamentos existentes do mês anterior e categorias do utilizador. Usa quando perguntarem 'me ajude a criar um orçamento', 'quero montar meu orçamento', 'criar orçamento para o próximo mês'.",
       parameters: {
@@ -1077,6 +1090,29 @@ async function executeTool(
       return JSON.stringify({ evolucao: resultado });
     }
 
+    case "listar_categorias": {
+      const { data: cats } = await supabase
+        .from("categories")
+        .select("id, name, icon, color, parent_id, active")
+        .eq("user_id", userId)
+        .eq("active", true)
+        .order("sort_order");
+
+      const parents = (cats || []).filter((c: any) => !c.parent_id);
+      const tree = parents.map((p: any) => {
+        const children = (cats || []).filter((c: any) => c.parent_id === p.id);
+        return {
+          id: p.id,
+          nome: p.name,
+          icone: p.icon,
+          cor: p.color,
+          subcategorias: children.map((c: any) => ({ id: c.id, nome: c.name, icone: c.icon })),
+        };
+      });
+
+      return JSON.stringify({ total_categorias: (cats || []).length, categorias: tree });
+    }
+
     case "oportunidades_economia": {
       const month = (args.month as string) || getCurrentMonth();
       const { start, end } = getMonthRange(month);
@@ -1361,7 +1397,8 @@ Seja concisa, use emojis com moderação e formate valores em R$.
 ## REGRA FUNDAMENTAL — CONSULTAR PRIMEIRO, RESPONDER DEPOIS
 
 Você é PROIBIDA de pedir ao utilizador qualquer informação que possa ser obtida através das suas ferramentas. Isso inclui, mas não se limita a:
-- Categorias de gasto (você pode consultar com top_categorias_gastos)
+- Categorias cadastradas (você pode consultar com listar_categorias)
+- Categorias de gasto (você pode consultar com top_categorias_gastos ou listar_categorias)
 - Receita/salário (você pode consultar com consultar_resumo_mes)
 - Saldos de carteiras (você pode consultar com listar_carteiras)
 - Gastos por categoria (você pode consultar com consultar_gastos_por_categoria)
@@ -1399,6 +1436,7 @@ Exemplos de comportamento PROIBIDO:
 - buscar_transacoes: Buscar por nome/descrição
 - consultar_dividas: Dívidas e empréstimos
 - top_categorias_gastos: Ranking de categorias
+- listar_categorias: Lista todas as categorias e subcategorias cadastradas pelo utilizador
 - media_diaria_gastos: Média diária e projeção
 - listar_transacoes_recorrentes: Assinaturas/contas fixas
 - consultar_patrimonio: Patrimônio líquido
