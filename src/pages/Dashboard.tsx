@@ -18,6 +18,7 @@ import { supabase } from '@/lib/supabase';
 import { getCategoryInfo } from '@/lib/constants';
 import { Navigate } from 'react-router-dom';
 import { useProjectedTotals } from '@/hooks/useProjectedTotals';
+import { GuidedTour } from '@/components/GuidedTour';
 import { getInvoicePeriod, matchExpensesToInvoice } from '@/lib/invoiceHelpers';
 
 // Lazy load all chart/widget components
@@ -299,6 +300,7 @@ export default function Dashboard() {
           <AddExpenseModal open={modalOpen} onOpenChange={setModalOpen} onExpenseAdded={projected.refetch} />
         </Suspense>
       )}
+      <GuidedTour />
     </SidebarProvider>
   );
 }
