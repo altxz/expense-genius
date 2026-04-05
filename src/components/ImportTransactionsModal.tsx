@@ -627,7 +627,7 @@ export function ImportTransactionsModal({ open, onOpenChange, onImported }: Impo
   if (isMobile) {
     return (
       <Drawer open={open} onOpenChange={onOpenChange}>
-        <DrawerContent className="max-h-[90vh] flex flex-col">
+        <DrawerContent className="max-h-[85dvh] flex flex-col">
           <DrawerHeader className="pb-2">
             <DrawerTitle className="flex items-center gap-2">
               <FileSpreadsheet className="h-5 w-5 text-primary" />
