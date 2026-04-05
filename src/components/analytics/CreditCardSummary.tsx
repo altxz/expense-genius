@@ -90,6 +90,39 @@ export function CreditCardSummary({ cards, allExpenses, wallets, refetch }: Cred
     setPayDialogOpen(true);
   };
 
+  const onDeleteClick = (tx: Expense) => {
+    if (tx.installment_group_id) {
+      setDeleteTarget(tx);
+      setDeleteMode(null);
+    } else {
+      setDeleteTarget(tx);
+      setDeleteMode('single');
+    }
+  };
+
+  const handleDeleteTx = async (expense: Expense, mode: 'single' | 'all') => {
+    try {
+      if (mode === 'all' && expense.installment_group_id) {
+        const { error } = await supabase.from('expenses').delete().eq('installment_group_id', expense.installment_group_id);
+        if (error) throw error;
+        toast({ title: 'Parcelas excluídas', description: 'Todas as parcelas foram removidas.' });
+      } else {
+        const { error } = await supabase.from('expenses').delete().eq('id', expense.id);
+        if (error) throw error;
+        toast({ title: 'Transação excluída' });
+      }
+      refetch();
+    } catch (err: any) {
+      toast({ title: 'Erro', description: err.message, variant: 'destructive' });
+    } finally {
+      setDeleteTarget(null);
+      setDeleteMode(null);
+    }
+  };
+    setPayWalletId('');
+    setPayDialogOpen(true);
+  };
+
   const handlePayInvoice = async () => {
     if (!user || !payingInvoice || !payWalletId) return;
     setPaying(true);
