@@ -137,8 +137,7 @@ export default function SettingsPage() {
     signOut();
   };
 
-  if (authLoading) return <div className="min-h-screen flex items-center justify-center bg-background"><span className="text-muted-foreground font-medium">Carregando...</span></div>;
-  if (!user) return <Navigate to="/auth" replace />;
+  if (!authLoading && !user) return <Navigate to="/auth" replace />;
 
   return (
     <SidebarProvider>
