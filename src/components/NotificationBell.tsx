@@ -148,7 +148,7 @@ export function NotificationBell() {
   const handleQuickPayFromNotification = async (n: Notification) => {
     if (!user || !n.expense_id) return;
     markAsRead(n.id);
-    const { data: exp } = await supabase.from('expenses').select('id, description, value, date, type, installment_group_id').eq('id', n.expense_id).single();
+    const { data: exp } = await supabase.from('expenses').select('id, description, value, date, type, installment_group_id, is_recurring, final_category, wallet_id, credit_card_id, payment_method, notes, tags, project_id, invoice_month, user_id').eq('id', n.expense_id).single();
     if (!exp) {
       toast({ title: 'Transação não encontrada', description: 'Esta transação pode ter sido excluída.', variant: 'destructive' });
       return;
@@ -171,20 +171,44 @@ export function NotificationBell() {
     try {
       const newValue = parseFloat(quickPayValue);
       const valueChanged = !isNaN(newValue) && newValue !== quickPayExpense.value;
-      const updateFields: Record<string, unknown> = { is_paid: true };
-      if (!keepOriginalDate) {
+      const finalValue = valueChanged && !isNaN(newValue) ? newValue : quickPayExpense.value;
+
+      const payDate = (() => {
+        if (keepOriginalDate) return quickPayExpense.date;
         const today = new Date();
-        updateFields.date = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-      }
-      if (valueChanged) updateFields.value = newValue;
+        return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      })();
 
-      const { error } = await supabase.from('expenses').update(updateFields).eq('id', quickPayExpense.id);
-      if (error) throw error;
+      if ((quickPayExpense as any).is_recurring) {
+        const { error } = await supabase.from('expenses').insert({
+          user_id: (quickPayExpense as any).user_id,
+          description: quickPayExpense.description,
+          value: finalValue,
+          final_category: (quickPayExpense as any).final_category,
+          type: quickPayExpense.type,
+          date: payDate,
+          is_recurring: false,
+          is_paid: true,
+          wallet_id: (quickPayExpense as any).wallet_id || null,
+          credit_card_id: (quickPayExpense as any).credit_card_id || null,
+          payment_method: (quickPayExpense as any).payment_method || null,
+          notes: (quickPayExpense as any).notes || null,
+          tags: (quickPayExpense as any).tags || null,
+          project_id: (quickPayExpense as any).project_id || null,
+          invoice_month: (quickPayExpense as any).invoice_month || null,
+        });
+        if (error) throw error;
+      } else {
+        const updateFields: Record<string, unknown> = { is_paid: true, date: payDate };
+        if (valueChanged) updateFields.value = newValue;
+        const { error } = await supabase.from('expenses').update(updateFields).eq('id', quickPayExpense.id);
+        if (error) throw error;
 
-      if (valueChanged && quickPayApplyScope === 'all' && quickPayExpense.installment_group_id) {
-        await supabase.from('expenses').update({ value: newValue })
-          .eq('installment_group_id', quickPayExpense.installment_group_id)
-          .neq('id', quickPayExpense.id);
+        if (valueChanged && quickPayApplyScope === 'all' && quickPayExpense.installment_group_id) {
+          await supabase.from('expenses').update({ value: newValue })
+            .eq('installment_group_id', quickPayExpense.installment_group_id)
+            .neq('id', quickPayExpense.id);
+        }
       }
 
       toast({ title: quickPayExpense.type === 'income' ? 'Recebimento confirmado!' : 'Pagamento confirmado!' });
