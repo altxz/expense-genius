@@ -1090,6 +1090,29 @@ async function executeTool(
       return JSON.stringify({ evolucao: resultado });
     }
 
+    case "listar_categorias": {
+      const { data: cats } = await supabase
+        .from("categories")
+        .select("id, name, icon, color, parent_id, active")
+        .eq("user_id", userId)
+        .eq("active", true)
+        .order("sort_order");
+
+      const parents = (cats || []).filter((c: any) => !c.parent_id);
+      const tree = parents.map((p: any) => {
+        const children = (cats || []).filter((c: any) => c.parent_id === p.id);
+        return {
+          id: p.id,
+          nome: p.name,
+          icone: p.icon,
+          cor: p.color,
+          subcategorias: children.map((c: any) => ({ id: c.id, nome: c.name, icone: c.icon })),
+        };
+      });
+
+      return JSON.stringify({ total_categorias: (cats || []).length, categorias: tree });
+    }
+
     case "oportunidades_economia": {
       const month = (args.month as string) || getCurrentMonth();
       const { start, end } = getMonthRange(month);
