@@ -176,6 +176,7 @@ export function BudgetCategoryRow({ node, saveBudget, savingId }: Props) {
                     spent={childSpent[ch.id] || 0}
                     prevBudget={childPrevBudgets[ch.id] || 0}
                     categoryId={ch.id}
+                    isRecurring={childBudgets[ch.id]?.is_recurring || false}
                     saveBudget={saveBudget}
                     savingId={savingId}
                   />
@@ -191,6 +192,7 @@ export function BudgetCategoryRow({ node, saveBudget, savingId }: Props) {
             spent={spent}
             prevBudget={prevBudget}
             categoryId={category.id}
+            isRecurring={budget?.is_recurring || false}
             saveBudget={saveBudget}
             savingId={savingId}
           />
