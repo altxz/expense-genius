@@ -344,6 +344,39 @@ const tools = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "preparar_orcamento",
+      description: "Busca todos os dados necessários para criar ou sugerir um orçamento mensal: receitas do mês atual e anterior, gastos por categoria, orçamentos existentes do mês anterior e categorias do utilizador. Usa quando perguntarem 'me ajude a criar um orçamento', 'quero montar meu orçamento', 'criar orçamento para o próximo mês'.",
+      parameters: {
+        type: "object",
+        properties: {
+          month: { type: "string", description: "Mês-alvo para o orçamento no formato YYYY-MM. Se omitido, usa o próximo mês." },
+        },
+        required: [],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "salvar_orcamento",
+      description: "Salva/atualiza o orçamento de uma categoria para um mês específico. Usa após o utilizador confirmar os valores sugeridos.",
+      parameters: {
+        type: "object",
+        properties: {
+          category_id: { type: "string", description: "ID da categoria." },
+          category_name: { type: "string", description: "Nome da categoria." },
+          amount: { type: "number", description: "Valor alocado para o orçamento." },
+          month: { type: "string", description: "Mês no formato YYYY-MM." },
+        },
+        required: ["category_id", "category_name", "amount", "month"],
+        additionalProperties: false,
+      },
+    },
+  },
 ];
 
 function getCurrentMonth(): string {
@@ -1145,6 +1178,141 @@ async function executeTool(
       });
     }
 
+    case "preparar_orcamento": {
+      const now = new Date();
+      let targetMonth = args.month as string;
+      if (!targetMonth) {
+        const nextM = now.getMonth() + 2; // getMonth is 0-based, we want next month
+        const nextY = nextM > 12 ? now.getFullYear() + 1 : now.getFullYear();
+        const m = nextM > 12 ? nextM - 12 : nextM;
+        targetMonth = `${nextY}-${String(m).padStart(2, "0")}`;
+      }
+
+      // Current month for reference
+      const curMonth = getCurrentMonth();
+      const { start: curStart, end: curEnd } = getMonthRange(curMonth);
+      
+      // Previous month
+      const [ty, tm] = targetMonth.split("-").map(Number);
+      const prevM = tm === 1 ? 12 : tm - 1;
+      const prevY = tm === 1 ? ty - 1 : ty;
+      const prevMonth = `${prevY}-${String(prevM).padStart(2, "0")}`;
+      const { start: prevStart, end: prevEnd } = getMonthRange(prevMonth);
+
+      const [
+        { data: categories },
+        { data: curExpenses },
+        { data: prevExpenses },
+        { data: prevBudgets },
+        { data: curIncome },
+        { data: recurringExpenses },
+      ] = await Promise.all([
+        supabase.from("categories").select("id, name, parent_id, icon").eq("user_id", userId).eq("active", true).order("sort_order"),
+        supabase.from("expenses").select("final_category, value, type").eq("user_id", userId).gte("date", curStart).lte("date", curEnd),
+        supabase.from("expenses").select("final_category, value, type").eq("user_id", userId).gte("date", prevStart).lte("date", prevEnd),
+        supabase.from("budgets").select("category, category_id, allocated_amount").eq("user_id", userId).eq("month_year", `${prevMonth}-01`),
+        supabase.from("expenses").select("value").eq("user_id", userId).eq("type", "income").gte("date", curStart).lte("date", curEnd),
+        supabase.from("expenses").select("description, value, final_category, frequency").eq("user_id", userId).eq("is_recurring", true).neq("type", "income").neq("type", "transfer"),
+      ]);
+
+      // Income
+      const totalIncome = (curIncome || []).reduce((s, e) => s + Number(e.value), 0);
+
+      // Spending by category (current month)
+      const curByCategory: Record<string, number> = {};
+      (curExpenses || []).forEach((e: any) => {
+        if (e.type !== "income" && e.type !== "transfer") {
+          curByCategory[e.final_category] = (curByCategory[e.final_category] || 0) + Number(e.value);
+        }
+      });
+
+      // Spending by category (prev month)
+      const prevByCategory: Record<string, number> = {};
+      (prevExpenses || []).forEach((e: any) => {
+        if (e.type !== "income" && e.type !== "transfer") {
+          prevByCategory[e.final_category] = (prevByCategory[e.final_category] || 0) + Number(e.value);
+        }
+      });
+
+      // Previous budgets map
+      const prevBudgetMap: Record<string, number> = {};
+      (prevBudgets || []).forEach((b: any) => {
+        prevBudgetMap[b.category] = Number(b.allocated_amount);
+      });
+
+      // Unique recurring
+      const seen = new Set<string>();
+      const uniqueRecurring = (recurringExpenses || []).filter((e: any) => {
+        const key = `${e.description}-${e.value}`;
+        if (seen.has(key)) return false;
+        seen.add(key); return true;
+      });
+
+      // Parent categories with spending data
+      const parents = (categories || []).filter((c: any) => !c.parent_id);
+      const catSuggestions = parents.map((cat: any) => {
+        const children = (categories || []).filter((c: any) => c.parent_id === cat.id);
+        const allNames = [cat.name, ...children.map((c: any) => c.name)];
+        const curSpent = allNames.reduce((s, n) => s + (curByCategory[n] || 0), 0);
+        const prevSpent = allNames.reduce((s, n) => s + (prevByCategory[n] || 0), 0);
+        const prevBudget = prevBudgetMap[cat.name] || 0;
+        return {
+          id: cat.id,
+          nome: cat.name,
+          gasto_mes_atual: Math.round(curSpent * 100) / 100,
+          gasto_mes_anterior: Math.round(prevSpent * 100) / 100,
+          orcamento_anterior: prevBudget,
+          sugestao: prevBudget > 0 ? prevBudget : Math.round(Math.max(curSpent, prevSpent) * 1.1 * 100) / 100,
+          subcategorias: children.map((c: any) => c.name),
+        };
+      }).filter((c: any) => c.gasto_mes_atual > 0 || c.gasto_mes_anterior > 0 || c.orcamento_anterior > 0);
+
+      return JSON.stringify({
+        mes_alvo: targetMonth,
+        receita_mensal: totalIncome,
+        categorias: catSuggestions,
+        despesas_fixas_recorrentes: uniqueRecurring.slice(0, 15).map((e: any) => ({
+          descricao: e.description,
+          valor: e.value,
+          categoria: e.final_category,
+        })),
+        total_fixo: uniqueRecurring.reduce((s, e: any) => s + Number(e.value), 0),
+      });
+    }
+
+    case "salvar_orcamento": {
+      const month = args.month as string;
+      const monthDate = `${month}-01`;
+      const categoryId = args.category_id as string;
+      const categoryName = args.category_name as string;
+      const amount = args.amount as number;
+
+      // Check if budget exists
+      const { data: existing } = await supabase
+        .from("budgets")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("category_id", categoryId)
+        .eq("month_year", monthDate)
+        .maybeSingle();
+
+      if (existing) {
+        const { error } = await supabase.from("budgets").update({ allocated_amount: amount }).eq("id", existing.id);
+        if (error) return JSON.stringify({ sucesso: false, erro: error.message });
+      } else {
+        const { error } = await supabase.from("budgets").insert({
+          user_id: userId,
+          category: categoryName,
+          category_id: categoryId,
+          month_year: monthDate,
+          allocated_amount: amount,
+        });
+        if (error) return JSON.stringify({ sucesso: false, erro: error.message });
+      }
+
+      return JSON.stringify({ sucesso: true, categoria: categoryName, valor: amount, mes: month });
+    }
+
     default:
       return JSON.stringify({ error: "Função desconhecida" });
   }
@@ -1198,11 +1366,14 @@ Suas ferramentas:
 - deletar_transacao: Excluir transação
 - evolucao_gastos: Evolução nos últimos meses
 - oportunidades_economia: Análise completa de oportunidades de economia (combina top categorias, comparação com mês anterior, orçamentos e despesas fixas)
+- preparar_orcamento: Busca todos os dados para sugerir um orçamento mensal (receitas, gastos por categoria, orçamentos anteriores, despesas fixas)
+- salvar_orcamento: Salva o orçamento de uma categoria após confirmação do utilizador
 
 Diretrizes de uso de ferramentas:
 - Para "onde posso economizar?" ou "oportunidades de economia" → use oportunidades_economia
 - Para "como vou fechar o mês?" → use projetar_saldo_final_mes
 - Para "quanto gastei em X?" → use consultar_gastos_por_categoria
+- Para "me ajude a criar um orçamento" ou "montar orçamento" → use preparar_orcamento PRIMEIRO para buscar todos os dados, depois sugira valores baseados nos dados reais. Use salvar_orcamento para gravar cada categoria após confirmação.
 - Para registar despesa, extraia descrição, valor e categoria → use registrar_despesa
 - Para registar receita/salário → use registrar_receita
 - Categoria desconhecida → use "Outros"
