@@ -1,0 +1,1 @@
+ALTER TABLE public.budgets ADD COLUMN is_recurring boolean NOT NULL DEFAULT false;

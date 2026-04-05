@@ -95,6 +95,7 @@ export type Database = {
           category_id: string | null
           created_at: string
           id: string
+          is_recurring: boolean
           month_year: string
           user_id: string
         }
@@ -104,6 +105,7 @@ export type Database = {
           category_id?: string | null
           created_at?: string
           id?: string
+          is_recurring?: boolean
           month_year: string
           user_id: string
         }
@@ -113,6 +115,7 @@ export type Database = {
           category_id?: string | null
           created_at?: string
           id?: string
+          is_recurring?: boolean
           month_year?: string
           user_id?: string
         }
