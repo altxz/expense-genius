@@ -220,7 +220,7 @@ export function NotificationBell() {
               </Button>
             )}
           </div>
-          <ScrollArea className="max-h-80">
+          <ScrollArea className="max-h-80 overflow-y-auto" style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}>
             {notifications.length === 0 ? (
               <p className="p-4 text-center text-sm text-muted-foreground">Sem notificações</p>
             ) : (
