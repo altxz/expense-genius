@@ -329,6 +329,21 @@ const tools = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "oportunidades_economia",
+      description: "Analisa oportunidades de economia do utilizador combinando: top categorias de gastos, comparação com mês anterior, orçamentos, transações recorrentes e média diária. Usa quando perguntarem 'onde posso economizar?', 'como reduzir gastos?', 'oportunidades de economia'.",
+      parameters: {
+        type: "object",
+        properties: {
+          month: { type: "string", description: "Mês no formato YYYY-MM. Se omitido, usa o mês atual." },
+        },
+        required: [],
+        additionalProperties: false,
+      },
+    },
+  },
 ];
 
 function getCurrentMonth(): string {
@@ -1019,6 +1034,117 @@ async function executeTool(
       return JSON.stringify({ evolucao: resultado });
     }
 
+    case "oportunidades_economia": {
+      const month = (args.month as string) || getCurrentMonth();
+      const { start, end } = getMonthRange(month);
+      const [y, m] = month.split("-").map(Number);
+      const daysInMonth = new Date(y, m, 0).getDate();
+      const now = new Date();
+      const isCurrentMonth = now.getFullYear() === y && now.getMonth() + 1 === m;
+      const daysElapsed = isCurrentMonth ? now.getDate() : daysInMonth;
+
+      // Previous month
+      const prevM = m === 1 ? 12 : m - 1;
+      const prevY = m === 1 ? y - 1 : y;
+      const prevMonth = `${prevY}-${String(prevM).padStart(2, "0")}`;
+      const prevRange = getMonthRange(prevMonth);
+
+      // Parallel queries
+      const [
+        { data: curExpenses },
+        { data: prevExpenses },
+        { data: budgets },
+        { data: recurring },
+      ] = await Promise.all([
+        supabase.from("expenses").select("value, type, final_category, description, is_recurring, credit_card_id")
+          .eq("user_id", userId).gte("date", start).lte("date", end),
+        supabase.from("expenses").select("value, type, final_category")
+          .eq("user_id", userId).neq("type", "income").neq("type", "transfer")
+          .gte("date", prevRange.start).lte("date", prevRange.end),
+        supabase.from("budgets").select("category, allocated_amount")
+          .eq("user_id", userId).eq("month_year", `${month}-01`),
+        supabase.from("expenses").select("description, value, type, final_category, frequency")
+          .eq("user_id", userId).eq("is_recurring", true).neq("type", "income"),
+      ]);
+
+      // Current month breakdown
+      const curByCategory: Record<string, number> = {};
+      let totalExpense = 0, totalIncome = 0;
+      for (const e of curExpenses || []) {
+        if (e.type === "income") { totalIncome += Number(e.value); continue; }
+        if (e.type === "transfer") continue;
+        totalExpense += Number(e.value);
+        curByCategory[e.final_category] = (curByCategory[e.final_category] || 0) + Number(e.value);
+      }
+
+      // Previous month breakdown
+      const prevByCategory: Record<string, number> = {};
+      let prevTotal = 0;
+      for (const e of prevExpenses || []) {
+        prevTotal += Number(e.value);
+        prevByCategory[e.final_category] = (prevByCategory[e.final_category] || 0) + Number(e.value);
+      }
+
+      // Top categories with comparison
+      const topCats = Object.entries(curByCategory)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 8)
+        .map(([cat, val]) => ({
+          categoria: cat,
+          gasto_atual: val,
+          gasto_mes_anterior: prevByCategory[cat] || 0,
+          variacao_pct: prevByCategory[cat] > 0 ? Math.round(((val - prevByCategory[cat]) / prevByCategory[cat]) * 100) : null,
+          percentual_do_total: totalExpense > 0 ? Math.round((val / totalExpense) * 100) : 0,
+        }));
+
+      // Categories that increased significantly
+      const aumentaram = topCats.filter(c => c.variacao_pct !== null && c.variacao_pct > 20);
+
+      // Budget overruns
+      const orcamentosEstourados = (budgets || [])
+        .map(b => ({
+          categoria: b.category,
+          orcamento: b.allocated_amount,
+          gasto: curByCategory[b.category] || 0,
+          pct: b.allocated_amount > 0 ? Math.round(((curByCategory[b.category] || 0) / b.allocated_amount) * 100) : 0,
+        }))
+        .filter(b => b.pct >= 70);
+
+      // Recurring expenses summary
+      const seen = new Set<string>();
+      const uniqueRecurring = (recurring || []).filter(e => {
+        const key = `${e.description}-${e.value}`;
+        if (seen.has(key)) return false;
+        seen.add(key); return true;
+      });
+      const totalRecorrente = uniqueRecurring.reduce((s, e) => s + Number(e.value), 0);
+
+      // Daily average & projection
+      const mediaDiaria = daysElapsed > 0 ? totalExpense / daysElapsed : 0;
+      const projecaoMes = mediaDiaria * daysInMonth;
+      const taxaEconomia = totalIncome > 0 ? Math.round(((totalIncome - totalExpense) / totalIncome) * 100) : 0;
+
+      return JSON.stringify({
+        mes: month,
+        resumo: {
+          receitas: totalIncome,
+          despesas: totalExpense,
+          taxa_economia: taxaEconomia,
+          media_diaria: Math.round(mediaDiaria * 100) / 100,
+          projecao_fim_mes: Math.round(projecaoMes * 100) / 100,
+          despesas_mes_anterior: prevTotal,
+          variacao_total_pct: prevTotal > 0 ? Math.round(((totalExpense - prevTotal) / prevTotal) * 100) : null,
+        },
+        top_categorias: topCats,
+        categorias_que_aumentaram: aumentaram,
+        orcamentos_em_risco: orcamentosEstourados,
+        despesas_fixas: {
+          total: totalRecorrente,
+          itens: uniqueRecurring.slice(0, 10).map(e => ({ descricao: e.description, valor: e.value, categoria: e.final_category })),
+        },
+      });
+    }
+
     default:
       return JSON.stringify({ error: "Função desconhecida" });
   }
@@ -1046,36 +1172,43 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const systemPrompt = `Você é a Lumnia, uma assistente financeira pessoal inteligente e simpática. Responda sempre em português do Brasil.
-Você tem acesso a ferramentas para consultar dados financeiros reais do utilizador e registar transações.
+Você tem acesso a ferramentas para consultar dados financeiros REAIS do utilizador e registar transações.
 Seja concisa, use emojis com moderação e formate valores em R$.
 
-Suas capacidades:
-- Consultar resumo financeiro do mês (receitas, despesas, saldo)
-- Buscar os maiores gastos do mês
-- Registar despesas e receitas
-- Verificar orçamentos por categoria
-- Projetar o saldo no final do mês
-- Consultar gastos por categoria ou termo de busca
-- Ver faturas de cartão de crédito
-- Listar contas pendentes e receitas a receber
-- Listar carteiras e saldos
-- Comparar dois meses (receitas, despesas, evolução)
-- Buscar transações por nome/descrição
-- Consultar dívidas (quem me deve, quanto eu devo)
-- Ranking de categorias com mais gastos
-- Calcular média diária de gastos e projeção mensal
-- Listar transações recorrentes/fixas
-- Consultar patrimônio líquido
-- Analisar taxa de economia/poupança
-- Excluir transações
-- Ver evolução de gastos nos últimos meses
+REGRA IMPORTANTE: SEMPRE use as ferramentas disponíveis para buscar dados antes de responder. NUNCA peça ao utilizador informações que você pode consultar diretamente (categorias, saldos, gastos, etc.). Você tem acesso total aos dados financeiros dele.
 
-Quando o utilizador pedir para registar uma despesa, extraia descrição, valor e categoria da mensagem e use registrar_despesa.
-Quando pedir para registar receita/salário/entrada, use registrar_receita.
-Quando não souber a categoria, use "Outros".
-Se o utilizador pedir para comparar meses sem especificar, compare o mês atual com o anterior.
-Se pedir evolução sem especificar período, mostre os últimos 6 meses.
-Se não conseguir entender o pedido, pergunte para clarificar.`;
+Suas ferramentas:
+- consultar_resumo_mes: Resumo financeiro (receitas, despesas, saldo)
+- buscar_maior_gasto: Top maiores gastos do mês
+- registrar_despesa / registrar_receita: Registar transações
+- consultar_status_orcamento: Orçamentos por categoria
+- projetar_saldo_final_mes: Projeção de fechamento do mês
+- consultar_gastos_por_categoria: Gastos por categoria/termo
+- consultar_fatura_cartao: Faturas de cartão de crédito
+- listar_contas_pendentes / consultar_receitas_pendentes: Contas a pagar/receber
+- listar_carteiras: Carteiras e saldos
+- comparar_meses: Comparar dois meses
+- buscar_transacoes: Buscar por nome/descrição
+- consultar_dividas: Dívidas e empréstimos
+- top_categorias_gastos: Ranking de categorias
+- media_diaria_gastos: Média diária e projeção
+- listar_transacoes_recorrentes: Assinaturas/contas fixas
+- consultar_patrimonio: Patrimônio líquido
+- analise_economia: Taxa de poupança
+- deletar_transacao: Excluir transação
+- evolucao_gastos: Evolução nos últimos meses
+- oportunidades_economia: Análise completa de oportunidades de economia (combina top categorias, comparação com mês anterior, orçamentos e despesas fixas)
+
+Diretrizes de uso de ferramentas:
+- Para "onde posso economizar?" ou "oportunidades de economia" → use oportunidades_economia
+- Para "como vou fechar o mês?" → use projetar_saldo_final_mes
+- Para "quanto gastei em X?" → use consultar_gastos_por_categoria
+- Para registar despesa, extraia descrição, valor e categoria → use registrar_despesa
+- Para registar receita/salário → use registrar_receita
+- Categoria desconhecida → use "Outros"
+- Comparar meses sem especificar → compare o mês atual com o anterior
+- Evolução sem período → últimos 6 meses
+- Se não entender o pedido, pergunte para clarificar.`;
 
     const conversationMessages: Array<{ role: string; content: string }> = [
       { role: "system", content: systemPrompt },
