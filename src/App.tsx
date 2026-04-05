@@ -22,7 +22,16 @@ const BudgetPage = lazy(() => import("./pages/BudgetPage"));
 const ProjectsPage = lazy(() => import("./pages/ProjectsPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 2, // 2 min before refetch
+      gcTime: 1000 * 60 * 10,   // keep cache 10 min
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
 
 function PageFallback() {
   return (
