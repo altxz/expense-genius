@@ -13,6 +13,14 @@ interface Message {
   timestamp: Date;
 }
 
+const QUICK_SUGGESTIONS = [
+  { label: '📊 Top gastos', message: 'Quais são meus maiores gastos este mês?' },
+  { label: '💡 Oportunidades de economia', message: 'Onde posso economizar este mês?' },
+  { label: '📈 Projeção do mês', message: 'Como vou fechar o mês?' },
+  { label: '💳 Faturas dos cartões', message: 'Qual o valor das minhas faturas de cartão de crédito?' },
+  { label: '🔄 Comparar com mês anterior', message: 'Compare meus gastos com o mês anterior' },
+];
+
 export function GeniusChatbot() {
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
