@@ -1436,6 +1436,7 @@ Exemplos de comportamento PROIBIDO:
 - buscar_transacoes: Buscar por nome/descrição
 - consultar_dividas: Dívidas e empréstimos
 - top_categorias_gastos: Ranking de categorias
+- listar_categorias: Lista todas as categorias e subcategorias cadastradas pelo utilizador
 - media_diaria_gastos: Média diária e projeção
 - listar_transacoes_recorrentes: Assinaturas/contas fixas
 - consultar_patrimonio: Patrimônio líquido
