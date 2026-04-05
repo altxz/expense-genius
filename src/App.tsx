@@ -22,6 +22,7 @@ const BudgetPage = lazy(() => import("./pages/BudgetPage"));
 const ProjectsPage = lazy(() => import("./pages/ProjectsPage"));
 const DebtSimulatorPage = lazy(() => import("./pages/DebtSimulatorPage"));
 const FinancialScorePage = lazy(() => import("./pages/FinancialScorePage"));
+const ChangelogPage = lazy(() => import("./pages/ChangelogPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
