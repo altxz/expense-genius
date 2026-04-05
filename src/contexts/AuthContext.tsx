@@ -1,7 +1,6 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
-import { seedDefaultCategories } from '@/lib/seedCategories';
 
 interface AuthContextType {
   user: User | null;
@@ -18,24 +17,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const seededRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
+    const maybeSeed = async (userId: string) => {
+      if (seededRef.current.has(userId)) return;
+      seededRef.current.add(userId);
+      // Dynamic import to avoid blocking initial load
+      const { seedDefaultCategories } = await import('@/lib/seedCategories');
+      seedDefaultCategories(userId).catch(console.error);
+    };
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
-      if (session?.user) {
-        seedDefaultCategories(session.user.id).catch(console.error);
-      }
+      if (session?.user) maybeSeed(session.user.id);
     });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
-      if (session?.user) {
-        seedDefaultCategories(session.user.id).catch(console.error);
-      }
+      if (session?.user) maybeSeed(session.user.id);
     });
 
     return () => subscription.unsubscribe();
