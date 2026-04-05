@@ -327,7 +327,7 @@ export function CreditCardSummary({ cards, allExpenses, wallets, refetch }: Cred
                   <div className="space-y-2">
                     {last3.map(tx => {
                       return (
-                        <div key={tx.id} className="flex items-center gap-3 rounded-xl bg-muted/30 px-3 py-2">
+                        <div key={tx.id} className="flex items-center gap-2 rounded-xl bg-muted/30 px-3 py-2">
                           <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
                             <Wallet className="h-3.5 w-3.5 text-primary" />
                           </div>
@@ -341,6 +341,22 @@ export function CreditCardSummary({ cards, allExpenses, wallets, refetch }: Cred
                           <span className="text-xs font-bold text-destructive shrink-0">
                             -{formatCurrency(tx.value)}
                           </span>
+                          <div className="flex items-center gap-0.5 shrink-0">
+                            <button
+                              onClick={() => setEditingExpense(tx)}
+                              className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                              title="Editar"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              onClick={() => onDeleteClick(tx)}
+                              className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                              title="Excluir"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
                         </div>
                       );
                     })}
