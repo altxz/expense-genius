@@ -3,9 +3,10 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { CreditCard, Clock, Lock, AlertTriangle, Wallet, Receipt, Loader2, CalendarCheck, Eye, ShoppingBag, CheckCircle2 } from 'lucide-react';
+import { CreditCard, Clock, Lock, AlertTriangle, Wallet, Receipt, Loader2, CalendarCheck, Eye, ShoppingBag, CheckCircle2, Pencil, Trash2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSelectedDate } from '@/contexts/DateContext';
 import { supabase } from '@/lib/supabase';
@@ -14,6 +15,7 @@ import { getInvoicePeriod, matchExpensesToInvoice, formatInvoiceDate } from '@/l
 import type { CreditCard as CreditCardType, InvoicePeriod } from '@/lib/invoiceHelpers';
 import type { Expense } from '@/components/ExpenseTable';
 import { InvoiceDetailsModal } from '@/components/modals/InvoiceDetailsModal';
+import { EditExpenseModal } from '@/components/EditExpenseModal';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
