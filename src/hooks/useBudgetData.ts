@@ -20,6 +20,7 @@ export interface BudgetRow {
   category_id: string | null;
   allocated_amount: number;
   month_year: string;
+  is_recurring: boolean;
 }
 
 export interface CategoryBudgetNode {
@@ -57,15 +58,29 @@ export function useBudgetData() {
     if (!user) return;
     setLoading(true);
 
-    const [{ data: catData }, { data: budgetData }, { data: prevBudgetData }, { data: expenseData }] = await Promise.all([
+    const [{ data: catData }, { data: budgetData }, { data: recurringData }, { data: prevBudgetData }, { data: expenseData }] = await Promise.all([
       supabase.from('categories').select('*').eq('user_id', user.id).eq('active', true).order('sort_order'),
       supabase.from('budgets').select('*').eq('user_id', user.id).eq('month_year', startDate),
+      // Fetch all recurring budgets to propagate to months without explicit budgets
+      supabase.from('budgets').select('*').eq('user_id', user.id).eq('is_recurring', true).lt('month_year', startDate).order('month_year', { ascending: false }),
       supabase.from('budgets').select('*').eq('user_id', user.id).eq('month_year', prevMonthKey),
       supabase.from('expenses').select('final_category, value, type, credit_card_id, invoice_month, date').eq('user_id', user.id).gte('date', startDate).lt('date', endDate),
     ]);
 
     setCategories((catData || []) as DbCategory[]);
-    setBudgets((budgetData || []) as BudgetRow[]);
+    
+    // Merge: for categories without a budget this month, use the latest recurring budget
+    const currentBudgets = (budgetData || []) as BudgetRow[];
+    const existingCatIds = new Set(currentBudgets.map(b => b.category_id));
+    const inheritedBudgets: BudgetRow[] = [];
+    const seenCatIds = new Set<string>();
+    for (const rb of (recurringData || []) as BudgetRow[]) {
+      if (rb.category_id && !existingCatIds.has(rb.category_id) && !seenCatIds.has(rb.category_id)) {
+        seenCatIds.add(rb.category_id);
+        inheritedBudgets.push({ ...rb, month_year: startDate });
+      }
+    }
+    setBudgets([...currentBudgets, ...inheritedBudgets]);
     setPrevBudgets((prevBudgetData || []) as BudgetRow[]);
 
     // Build spent map by final_category (name-based)
@@ -136,30 +151,40 @@ export function useBudgetData() {
   const totalAllocated = useMemo(() => budgets.reduce((s, b) => s + b.allocated_amount, 0), [budgets]);
   const totalSpent = useMemo(() => Object.values(spentMap).reduce((s, v) => s + v, 0), [spentMap]);
 
-  const saveBudget = useCallback(async (categoryId: string, amount: number) => {
+  const saveBudget = useCallback(async (categoryId: string, amount: number, isRecurring?: boolean) => {
     if (!user) return;
     setSavingId(categoryId);
 
     const existing = budgets.find(b => b.category_id === categoryId);
-    if (existing) {
-      const { error } = await supabase.from('budgets').update({ allocated_amount: amount }).eq('id', existing.id);
+    // If this is an inherited recurring budget (from a past month), we need to insert a new one
+    const isInherited = existing && existing.month_year !== monthKey;
+    
+    if (existing && !isInherited) {
+      const updateFields: any = { allocated_amount: amount };
+      if (isRecurring !== undefined) updateFields.is_recurring = isRecurring;
+      const { error } = await supabase.from('budgets').update(updateFields).eq('id', existing.id);
       if (error) { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); }
       else {
-        setBudgets(prev => prev.map(b => b.id === existing.id ? { ...b, allocated_amount: amount } : b));
+        setBudgets(prev => prev.map(b => b.id === existing.id ? { ...b, allocated_amount: amount, ...(isRecurring !== undefined ? { is_recurring: isRecurring } : {}) } : b));
       }
     } else {
-      // Also find the category name for backward compat
       const cat = categories.find(c => c.id === categoryId);
+      const recurring = isRecurring !== undefined ? isRecurring : (existing?.is_recurring || false);
       const { data, error } = await supabase.from('budgets').insert({
         user_id: user.id,
         category: cat?.name || '',
         category_id: categoryId,
         month_year: monthKey,
         allocated_amount: amount,
+        is_recurring: recurring,
       }).select().single();
       if (error) { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); }
       else if (data) {
-        setBudgets(prev => [...prev, data as BudgetRow]);
+        setBudgets(prev => {
+          // Remove inherited entry if present
+          const filtered = isInherited ? prev.filter(b => !(b.category_id === categoryId && b.month_year !== monthKey)) : prev;
+          return [...filtered, data as BudgetRow];
+        });
       }
     }
     setSavingId(null);
