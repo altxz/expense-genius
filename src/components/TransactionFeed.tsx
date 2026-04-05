@@ -438,7 +438,7 @@ export function TransactionFeed({
           {visibleGroups.map(({ dateKey, items, invoices, endOfDayBalance }) => {
             if (items.length === 0 && invoices.length === 0) return null;
             return (
-              <div key={dateKey}>
+              <div key={dateKey} ref={dateKey === toDateKey(new Date()) ? todayRef : undefined}>
                 {/* Day header */}
                 {(() => {
                   const todayKey = toDateKey(new Date());
