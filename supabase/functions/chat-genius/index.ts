@@ -347,6 +347,19 @@ const tools = [
   {
     type: "function",
     function: {
+      name: "listar_categorias",
+      description: "Lista todas as categorias e subcategorias cadastradas pelo utilizador, com ícones e cores. Use para saber quais categorias o utilizador tem, antes de classificar ou analisar gastos.",
+      parameters: {
+        type: "object",
+        properties: {},
+        required: [],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "preparar_orcamento",
       description: "Busca todos os dados necessários para criar ou sugerir um orçamento mensal: receitas do mês atual e anterior, gastos por categoria, orçamentos existentes do mês anterior e categorias do utilizador. Usa quando perguntarem 'me ajude a criar um orçamento', 'quero montar meu orçamento', 'criar orçamento para o próximo mês'.",
       parameters: {
