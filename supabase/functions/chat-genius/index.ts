@@ -363,16 +363,26 @@ const tools = [
     type: "function",
     function: {
       name: "salvar_orcamento",
-      description: "Salva/atualiza o orçamento de uma categoria para um mês específico. Usa após o utilizador confirmar os valores sugeridos.",
+      description: "Salva/atualiza orçamentos de múltiplas categorias de uma vez. Use para aplicar todas as sugestões quando o utilizador confirmar.",
       parameters: {
         type: "object",
         properties: {
-          category_id: { type: "string", description: "ID da categoria." },
-          category_name: { type: "string", description: "Nome da categoria." },
-          amount: { type: "number", description: "Valor alocado para o orçamento." },
           month: { type: "string", description: "Mês no formato YYYY-MM." },
+          budgets: {
+            type: "array",
+            description: "Lista de orçamentos a salvar.",
+            items: {
+              type: "object",
+              properties: {
+                category_id: { type: "string", description: "ID UUID da categoria." },
+                category_name: { type: "string", description: "Nome da categoria." },
+                amount: { type: "number", description: "Valor alocado." },
+              },
+              required: ["category_id", "category_name", "amount"],
+            },
+          },
         },
-        required: ["category_id", "category_name", "amount", "month"],
+        required: ["month", "budgets"],
         additionalProperties: false,
       },
     },
