@@ -19,6 +19,13 @@ if (isPreviewHost || isInIframe) {
   navigator.serviceWorker?.getRegistrations().then((registrations) => {
     registrations.forEach((r) => r.unregister());
   });
+} else {
+  // In production: listen for SW updates and reload automatically
+  navigator.serviceWorker?.ready.then((registration) => {
+    registration.addEventListener("controllerchange", () => {
+      window.location.reload();
+    });
+  });
 }
 
 createRoot(document.getElementById("root")!).render(<App />);
