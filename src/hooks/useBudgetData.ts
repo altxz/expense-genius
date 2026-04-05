@@ -20,6 +20,7 @@ export interface BudgetRow {
   category_id: string | null;
   allocated_amount: number;
   month_year: string;
+  is_recurring: boolean;
 }
 
 export interface CategoryBudgetNode {
@@ -57,15 +58,29 @@ export function useBudgetData() {
     if (!user) return;
     setLoading(true);
 
-    const [{ data: catData }, { data: budgetData }, { data: prevBudgetData }, { data: expenseData }] = await Promise.all([
+    const [{ data: catData }, { data: budgetData }, { data: recurringData }, { data: prevBudgetData }, { data: expenseData }] = await Promise.all([
       supabase.from('categories').select('*').eq('user_id', user.id).eq('active', true).order('sort_order'),
       supabase.from('budgets').select('*').eq('user_id', user.id).eq('month_year', startDate),
+      // Fetch all recurring budgets to propagate to months without explicit budgets
+      supabase.from('budgets').select('*').eq('user_id', user.id).eq('is_recurring', true).lt('month_year', startDate).order('month_year', { ascending: false }),
       supabase.from('budgets').select('*').eq('user_id', user.id).eq('month_year', prevMonthKey),
       supabase.from('expenses').select('final_category, value, type, credit_card_id, invoice_month, date').eq('user_id', user.id).gte('date', startDate).lt('date', endDate),
     ]);
 
     setCategories((catData || []) as DbCategory[]);
-    setBudgets((budgetData || []) as BudgetRow[]);
+    
+    // Merge: for categories without a budget this month, use the latest recurring budget
+    const currentBudgets = (budgetData || []) as BudgetRow[];
+    const existingCatIds = new Set(currentBudgets.map(b => b.category_id));
+    const inheritedBudgets: BudgetRow[] = [];
+    const seenCatIds = new Set<string>();
+    for (const rb of (recurringData || []) as BudgetRow[]) {
+      if (rb.category_id && !existingCatIds.has(rb.category_id) && !seenCatIds.has(rb.category_id)) {
+        seenCatIds.add(rb.category_id);
+        inheritedBudgets.push({ ...rb, month_year: startDate });
+      }
+    }
+    setBudgets([...currentBudgets, ...inheritedBudgets]);
     setPrevBudgets((prevBudgetData || []) as BudgetRow[]);
 
     // Build spent map by final_category (name-based)
