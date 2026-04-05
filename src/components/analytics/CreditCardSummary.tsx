@@ -3,9 +3,10 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { CreditCard, Clock, Lock, AlertTriangle, Wallet, Receipt, Loader2, CalendarCheck, Eye, ShoppingBag, CheckCircle2 } from 'lucide-react';
+import { CreditCard, Clock, Lock, AlertTriangle, Wallet, Receipt, Loader2, CalendarCheck, Eye, ShoppingBag, CheckCircle2, Pencil, Trash2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSelectedDate } from '@/contexts/DateContext';
 import { supabase } from '@/lib/supabase';
@@ -14,6 +15,7 @@ import { getInvoicePeriod, matchExpensesToInvoice, formatInvoiceDate } from '@/l
 import type { CreditCard as CreditCardType, InvoicePeriod } from '@/lib/invoiceHelpers';
 import type { Expense } from '@/components/ExpenseTable';
 import { InvoiceDetailsModal } from '@/components/modals/InvoiceDetailsModal';
+import { EditExpenseModal } from '@/components/EditExpenseModal';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
@@ -67,6 +69,9 @@ export function CreditCardSummary({ cards, allExpenses, wallets, refetch }: Cred
   const [payingInvoice, setPayingInvoice] = useState<InvoicePeriod | null>(null);
   const [payWalletId, setPayWalletId] = useState('');
   const [paying, setPaying] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Expense | null>(null);
+  const [deleteMode, setDeleteMode] = useState<'single' | 'all' | null>(null);
 
   const invoices = useMemo(() => {
     return cards.map(card => {
@@ -83,6 +88,36 @@ export function CreditCardSummary({ cards, allExpenses, wallets, refetch }: Cred
     setPayingInvoice(inv);
     setPayWalletId('');
     setPayDialogOpen(true);
+  };
+
+  const onDeleteClick = (tx: Expense) => {
+    if (tx.installment_group_id) {
+      setDeleteTarget(tx);
+      setDeleteMode(null);
+    } else {
+      setDeleteTarget(tx);
+      setDeleteMode('single');
+    }
+  };
+
+  const handleDeleteTx = async (expense: Expense, mode: 'single' | 'all') => {
+    try {
+      if (mode === 'all' && expense.installment_group_id) {
+        const { error } = await supabase.from('expenses').delete().eq('installment_group_id', expense.installment_group_id);
+        if (error) throw error;
+        toast({ title: 'Parcelas excluídas', description: 'Todas as parcelas foram removidas.' });
+      } else {
+        const { error } = await supabase.from('expenses').delete().eq('id', expense.id);
+        if (error) throw error;
+        toast({ title: 'Transação excluída' });
+      }
+      refetch();
+    } catch (err: any) {
+      toast({ title: 'Erro', description: err.message, variant: 'destructive' });
+    } finally {
+      setDeleteTarget(null);
+      setDeleteMode(null);
+    }
   };
 
   const handlePayInvoice = async () => {
@@ -292,7 +327,7 @@ export function CreditCardSummary({ cards, allExpenses, wallets, refetch }: Cred
                   <div className="space-y-2">
                     {last3.map(tx => {
                       return (
-                        <div key={tx.id} className="flex items-center gap-3 rounded-xl bg-muted/30 px-3 py-2">
+                        <div key={tx.id} className="flex items-center gap-2 rounded-xl bg-muted/30 px-3 py-2">
                           <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
                             <Wallet className="h-3.5 w-3.5 text-primary" />
                           </div>
@@ -306,6 +341,22 @@ export function CreditCardSummary({ cards, allExpenses, wallets, refetch }: Cred
                           <span className="text-xs font-bold text-destructive shrink-0">
                             -{formatCurrency(tx.value)}
                           </span>
+                          <div className="flex items-center gap-0.5 shrink-0">
+                            <button
+                              onClick={() => setEditingExpense(tx)}
+                              className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                              title="Editar"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              onClick={() => onDeleteClick(tx)}
+                              className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                              title="Excluir"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
                         </div>
                       );
                     })}
@@ -387,6 +438,60 @@ export function CreditCardSummary({ cards, allExpenses, wallets, refetch }: Cred
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Edit modal */}
+      {editingExpense && (
+        <EditExpenseModal
+          open={!!editingExpense}
+          expense={editingExpense}
+          onOpenChange={(v) => { if (!v) setEditingExpense(null); }}
+          onExpenseUpdated={() => {
+            setEditingExpense(null);
+            refetch();
+          }}
+        />
+      )}
+
+      {/* Delete confirmation */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(v) => { if (!v) { setDeleteTarget(null); setDeleteMode(null); } }}>
+        <AlertDialogContent className="rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {deleteTarget?.installment_group_id && deleteMode === null
+                ? 'Excluir parcela'
+                : 'Excluir transação?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteTarget?.installment_group_id && deleteMode === null
+                ? `Esta é a parcela ${deleteTarget.installment_info}. O que deseja excluir?`
+                : 'Esta ação não pode ser desfeita.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className={deleteTarget?.installment_group_id && deleteMode === null ? 'flex-col gap-2 sm:flex-col' : ''}>
+            {deleteTarget?.installment_group_id && deleteMode === null ? (
+              <>
+                <Button variant="outline" className="rounded-xl" onClick={() => { if (deleteTarget) handleDeleteTx(deleteTarget, 'single'); }}>
+                  Apenas esta parcela
+                </Button>
+                <Button variant="destructive" className="rounded-xl" onClick={() => { if (deleteTarget) handleDeleteTx(deleteTarget, 'all'); }}>
+                  Todas as parcelas do grupo
+                </Button>
+                <AlertDialogCancel className="rounded-xl">Cancelar</AlertDialogCancel>
+              </>
+            ) : (
+              <>
+                <AlertDialogCancel className="rounded-xl">Cancelar</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => { if (deleteTarget) handleDeleteTx(deleteTarget, 'single'); }}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl"
+                >
+                  Excluir
+                </AlertDialogAction>
+              </>
+            )}
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
