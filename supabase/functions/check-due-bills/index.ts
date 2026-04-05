@@ -160,6 +160,30 @@ Deno.serve(async (req) => {
         .from("notifications")
         .insert(notifications);
       if (error) throw error;
+
+      // Send push notifications to each user
+      const userIds = [...new Set(notifications.map(n => n.user_id))];
+      for (const uid of userIds) {
+        const userNotifs = notifications.filter(n => n.user_id === uid);
+        for (const notif of userNotifs) {
+          try {
+            await fetch(`${supabaseUrl}/functions/v1/send-push`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${serviceRoleKey}`,
+              },
+              body: JSON.stringify({
+                user_id: notif.user_id,
+                title: notif.title,
+                message: notif.message,
+              }),
+            });
+          } catch (pushErr) {
+            console.error("Push send error:", pushErr);
+          }
+        }
+      }
     }
 
     return new Response(
