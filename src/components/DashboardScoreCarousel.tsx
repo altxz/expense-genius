@@ -27,11 +27,6 @@ function getScoreColor(score: number): string {
   return 'hsl(0, 72%, 51%)';
 }
 
-function getHealthMessage(score: number) {
-  if (score < 40) return 'Cuidado! Reveja seus gastos.';
-  if (score < 70) return 'Você está no caminho certo!';
-  return 'Excelente! Finanças saudáveis!';
-}
 
 function getScoreLabel(score: number): string {
   if (score >= 90) return 'Excelente';
@@ -195,15 +190,6 @@ export function DashboardScoreCarousel({
     [totalIncome, totalExpense, totalBudget, totalSpentInBudget, hasOverdueCards, debtCount, prevExpense, ccUsageRatio]
   );
 
-  // Simple health score (same as old HealthScore)
-  const healthScore = useMemo(() => {
-    let s = 50;
-    if (totalIncome > totalExpense) s += 20;
-    if (totalBudget > 0 && totalSpentInBudget <= totalBudget) s += 20;
-    if (!hasOverdueCards) s += 10;
-    return Math.min(100, Math.max(0, s));
-  }, [totalIncome, totalExpense, totalBudget, totalSpentInBudget, hasOverdueCards]);
-
   const radarData = useMemo(() =>
     sub.map(s => ({ subject: s.label, score: s.score, fullMark: 100 })),
     [sub]
@@ -232,11 +218,10 @@ export function DashboardScoreCarousel({
     }
   }, [user, overall, sub, totalIncome, totalExpense]);
 
-  const totalSlides = 3; // health, score detail, radar
+  const totalSlides = 2;
   const prev = () => setSlide(s => (s - 1 + totalSlides) % totalSlides);
   const next = () => setSlide(s => (s + 1) % totalSlides);
 
-  const healthColor = getScoreColor(healthScore >= 80 ? 80 : healthScore >= 60 ? 60 : healthScore >= 40 ? 40 : 0);
   const scoreColor = getScoreColor(overall);
 
   return (
@@ -245,7 +230,7 @@ export function DashboardScoreCarousel({
         <div className="flex items-center justify-between">
           <CardTitle className="text-base font-semibold flex items-center gap-2">
             <Activity className="h-4 w-4 text-muted-foreground" />
-            {slide === 0 ? 'Saúde Financeira' : slide === 1 ? 'Score Detalhado' : 'Perfil Financeiro'}
+            {slide === 0 ? 'Score Financeiro' : 'Perfil Financeiro'}
           </CardTitle>
           <div className="flex items-center gap-1">
             <button onClick={prev} className="p-1 rounded-full hover:bg-muted transition-colors">
@@ -267,43 +252,13 @@ export function DashboardScoreCarousel({
       </CardHeader>
       <CardContent className="flex-1 flex flex-col items-center justify-center px-4 pb-4 pt-0 overflow-hidden">
         <div className="w-full relative" style={{ minHeight: 200 }}>
-          {/* Slide 0: Health Score (simple) */}
+          {/* Slide 0: Detailed Score + Sub-scores */}
           <div
             className="absolute inset-0 flex flex-col items-center justify-center gap-2 transition-all duration-400 ease-in-out"
             style={{
               opacity: slide === 0 ? 1 : 0,
-              transform: `translateX(${slide === 0 ? 0 : slide > 0 ? -100 : 100}%)`,
+              transform: `translateX(${slide === 0 ? 0 : 100}%)`,
               pointerEvents: slide === 0 ? 'auto' : 'none',
-            }}
-          >
-            <div className="relative w-28 h-28">
-              <svg viewBox="0 0 120 120" className="w-full h-full -rotate-90">
-                <circle cx="60" cy="60" r={54} fill="none" stroke="hsl(var(--muted))" strokeWidth="10" />
-                <circle
-                  cx="60" cy="60" r={54} fill="none"
-                  stroke={healthColor}
-                  strokeWidth="10"
-                  strokeLinecap="round"
-                  strokeDasharray={2 * Math.PI * 54}
-                  strokeDashoffset={2 * Math.PI * 54 - (healthScore / 100) * 2 * Math.PI * 54}
-                  className="transition-all duration-700 ease-out"
-                />
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-3xl font-bold" style={{ color: healthColor }}>{healthScore}</span>
-                <span className="text-[10px] text-muted-foreground font-medium">/ 100</span>
-              </div>
-            </div>
-            <p className="text-sm font-medium text-center" style={{ color: healthColor }}>{getHealthMessage(healthScore)}</p>
-          </div>
-
-          {/* Slide 1: Detailed Score + Sub-scores */}
-          <div
-            className="absolute inset-0 flex flex-col items-center justify-center gap-2 transition-all duration-400 ease-in-out"
-            style={{
-              opacity: slide === 1 ? 1 : 0,
-              transform: `translateX(${slide === 1 ? 0 : slide > 1 ? -100 : 100}%)`,
-              pointerEvents: slide === 1 ? 'auto' : 'none',
             }}
           >
             <div className="flex items-center gap-3 w-full">
@@ -346,13 +301,13 @@ export function DashboardScoreCarousel({
             </Button>
           </div>
 
-          {/* Slide 2: Radar Chart */}
+          {/* Slide 1: Radar Chart */}
           <div
             className="absolute inset-0 flex flex-col items-center justify-center transition-all duration-400 ease-in-out"
             style={{
-              opacity: slide === 2 ? 1 : 0,
-              transform: `translateX(${slide === 2 ? 0 : -100}%)`,
-              pointerEvents: slide === 2 ? 'auto' : 'none',
+              opacity: slide === 1 ? 1 : 0,
+              transform: `translateX(${slide === 1 ? 0 : -100}%)`,
+              pointerEvents: slide === 1 ? 'auto' : 'none',
             }}
           >
             <ResponsiveContainer width="100%" height={190}>
