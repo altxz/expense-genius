@@ -257,43 +257,13 @@ export function DashboardScoreCarousel({
       </CardHeader>
       <CardContent className="flex-1 flex flex-col items-center justify-center px-4 pb-4 pt-0 overflow-hidden">
         <div className="w-full relative" style={{ minHeight: 200 }}>
-          {/* Slide 0: Health Score (simple) */}
+          {/* Slide 0: Detailed Score + Sub-scores */}
           <div
             className="absolute inset-0 flex flex-col items-center justify-center gap-2 transition-all duration-400 ease-in-out"
             style={{
               opacity: slide === 0 ? 1 : 0,
-              transform: `translateX(${slide === 0 ? 0 : slide > 0 ? -100 : 100}%)`,
+              transform: `translateX(${slide === 0 ? 0 : 100}%)`,
               pointerEvents: slide === 0 ? 'auto' : 'none',
-            }}
-          >
-            <div className="relative w-28 h-28">
-              <svg viewBox="0 0 120 120" className="w-full h-full -rotate-90">
-                <circle cx="60" cy="60" r={54} fill="none" stroke="hsl(var(--muted))" strokeWidth="10" />
-                <circle
-                  cx="60" cy="60" r={54} fill="none"
-                  stroke={healthColor}
-                  strokeWidth="10"
-                  strokeLinecap="round"
-                  strokeDasharray={2 * Math.PI * 54}
-                  strokeDashoffset={2 * Math.PI * 54 - (healthScore / 100) * 2 * Math.PI * 54}
-                  className="transition-all duration-700 ease-out"
-                />
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-3xl font-bold" style={{ color: healthColor }}>{healthScore}</span>
-                <span className="text-[10px] text-muted-foreground font-medium">/ 100</span>
-              </div>
-            </div>
-            <p className="text-sm font-medium text-center" style={{ color: healthColor }}>{getHealthMessage(healthScore)}</p>
-          </div>
-
-          {/* Slide 1: Detailed Score + Sub-scores */}
-          <div
-            className="absolute inset-0 flex flex-col items-center justify-center gap-2 transition-all duration-400 ease-in-out"
-            style={{
-              opacity: slide === 1 ? 1 : 0,
-              transform: `translateX(${slide === 1 ? 0 : slide > 1 ? -100 : 100}%)`,
-              pointerEvents: slide === 1 ? 'auto' : 'none',
             }}
           >
             <div className="flex items-center gap-3 w-full">
