@@ -195,15 +195,6 @@ export function DashboardScoreCarousel({
     [totalIncome, totalExpense, totalBudget, totalSpentInBudget, hasOverdueCards, debtCount, prevExpense, ccUsageRatio]
   );
 
-  // Simple health score (same as old HealthScore)
-  const healthScore = useMemo(() => {
-    let s = 50;
-    if (totalIncome > totalExpense) s += 20;
-    if (totalBudget > 0 && totalSpentInBudget <= totalBudget) s += 20;
-    if (!hasOverdueCards) s += 10;
-    return Math.min(100, Math.max(0, s));
-  }, [totalIncome, totalExpense, totalBudget, totalSpentInBudget, hasOverdueCards]);
-
   const radarData = useMemo(() =>
     sub.map(s => ({ subject: s.label, score: s.score, fullMark: 100 })),
     [sub]
@@ -232,11 +223,10 @@ export function DashboardScoreCarousel({
     }
   }, [user, overall, sub, totalIncome, totalExpense]);
 
-  const totalSlides = 3; // health, score detail, radar
+  const totalSlides = 2;
   const prev = () => setSlide(s => (s - 1 + totalSlides) % totalSlides);
   const next = () => setSlide(s => (s + 1) % totalSlides);
 
-  const healthColor = getScoreColor(healthScore >= 80 ? 80 : healthScore >= 60 ? 60 : healthScore >= 40 ? 40 : 0);
   const scoreColor = getScoreColor(overall);
 
   return (
