@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
-import { Clock, Utensils, Car, Gamepad2, Heart, Home, GraduationCap, Tag, ArrowLeftRight, Wallet, Pencil, Trash2, CreditCard, Layers, LayoutList, Receipt, Pin, Check } from 'lucide-react';
+import { Clock, Utensils, Car, Gamepad2, Heart, Home, GraduationCap, Tag, ArrowLeftRight, Wallet, Pencil, Trash2, CreditCard, Layers, LayoutList, Receipt, Pin, Check, Undo2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -116,6 +116,18 @@ export function TransactionFeed({
     setPayValue(String(exp.value));
     setPayValueChanged(false);
     setPayApplyScope(null);
+  };
+
+  const handleMarkAsUnpaid = async (exp: Expense) => {
+    try {
+      const { error } = await supabase.from('expenses').update({ is_paid: false }).eq('id', exp.id);
+      if (error) throw error;
+      toast({ title: exp.type === 'income' ? 'Recebimento desmarcado' : 'Pagamento desmarcado' });
+      queryClient.invalidateQueries({ queryKey: ['projected-totals'] });
+      onDeleted();
+    } catch (err: any) {
+      toast({ title: 'Erro', description: err.message, variant: 'destructive' });
+    }
   };
 
   const handleMarkAsPaid = async (exp: Expense, keepOriginalDate: boolean) => {
@@ -616,7 +628,7 @@ export function TransactionFeed({
 
                         {/* Quick actions - fixed width to keep values aligned */}
                         <div className="shrink-0 flex items-center justify-end gap-0.5 w-auto sm:w-[88px] opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                          {isPending && (
+                          {isPending && !isTransfer && (
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <Button
@@ -629,6 +641,21 @@ export function TransactionFeed({
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent>{isIncome ? 'Confirmar recebimento' : 'Confirmar pagamento'}</TooltipContent>
+                            </Tooltip>
+                          )}
+                          {!isPending && !isTransfer && !exp.is_recurring && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 rounded-lg hover:bg-amber-500/10 hover:text-amber-600"
+                                  onClick={() => handleMarkAsUnpaid(exp)}
+                                >
+                                  <Undo2 className="h-3.5 w-3.5 text-amber-600" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Desfazer pagamento</TooltipContent>
                             </Tooltip>
                           )}
                           <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg" onClick={() => setEditingExpense(exp)}>
