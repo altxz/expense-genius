@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Expense } from '@/components/ExpenseTable';
 import { isInvoicePayment } from '@/lib/utils';
 // Only fetch columns needed for analytics
-const ANALYTICS_COLS = 'id, value, date, type, final_category, credit_card_id, is_recurring, is_paid, frequency, installment_group_id';
+const ANALYTICS_COLS = 'id, value, date, type, final_category, credit_card_id, is_recurring, is_paid, frequency, installment_group_id, description';
 
 export interface AnalyticsFilters {
   period: string; // '3', '6', '12', 'all'
