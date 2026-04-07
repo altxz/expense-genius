@@ -178,7 +178,7 @@ export function InvoiceDetailsModal({ open, onOpenChange, invoice, allExpenses, 
 
   const content = (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <ScrollArea className="min-h-0 flex-1 px-3 sm:px-4">
+      <ScrollArea className="min-h-0 flex-1 px-3 sm:px-4" style={{ overflow: 'hidden' }}>
         <div className="space-y-4 pb-4">
           <div className="bg-primary rounded-2xl p-4 sm:p-5 mt-2 text-primary-foreground overflow-hidden shrink-0">
             <div className="flex items-center justify-between mb-3 gap-2">
@@ -392,8 +392,8 @@ export function InvoiceDetailsModal({ open, onOpenChange, invoice, allExpenses, 
   if (isMobile) {
     return (
       <Drawer open={open} onOpenChange={onOpenChange}>
-        <DrawerContent className="max-h-[85dvh] px-0">
-          <DrawerHeader className="pb-2">
+        <DrawerContent className="max-h-[85dvh] px-0 flex flex-col overflow-hidden">
+          <DrawerHeader className="pb-2 shrink-0">
             <DrawerTitle className="text-base">Detalhes da Fatura</DrawerTitle>
             <DrawerDescription className="sr-only">
               Visualize as transações da fatura, valores por categoria e ações de pagamento.
@@ -408,7 +408,7 @@ export function InvoiceDetailsModal({ open, onOpenChange, invoice, allExpenses, 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[85dvh] flex flex-col p-0 rounded-2xl overflow-hidden">
-        <DialogHeader className="p-4 pb-2">
+        <DialogHeader className="p-4 pb-2 shrink-0">
           <DialogTitle className="text-base">Detalhes da Fatura</DialogTitle>
           <DialogDescription className="sr-only">
             Visualize as transações da fatura, valores por categoria e ações de pagamento.
