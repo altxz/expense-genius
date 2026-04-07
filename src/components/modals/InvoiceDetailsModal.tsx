@@ -4,9 +4,12 @@ import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } f
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { CreditCard, Calendar, Lock, Clock, AlertTriangle, Receipt, CheckCircle2, Pencil, Trash2, Undo2 } from 'lucide-react';
+import { CreditCard, Calendar as CalendarIcon, Lock, Clock, AlertTriangle, Receipt, CheckCircle2, Pencil, Trash2, Undo2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { formatCurrency, getCategoryLabel } from '@/lib/constants';
 import { getInvoicePeriod, matchExpensesToInvoice, formatInvoiceDate } from '@/lib/invoiceHelpers';
@@ -58,6 +61,8 @@ export function InvoiceDetailsModal({ open, onOpenChange, invoice, allExpenses, 
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Expense | null>(null);
   const [deleteMode, setDeleteMode] = useState<'single' | 'all' | null>(null);
+  const [payDateMode, setPayDateMode] = useState<'due' | 'today' | 'custom'>('due');
+  const [payCustomDate, setPayCustomDate] = useState<Date | undefined>(undefined);
 
   const currentCard = cards.find(c => c.id === invoice.cardId);
 
@@ -148,8 +153,17 @@ export function InvoiceDetailsModal({ open, onOpenChange, invoice, allExpenses, 
     setPaying(true);
 
     try {
-      const dueDate = activeInvoice.dueDate;
-      const dateStr = `${dueDate.getFullYear()}-${String(dueDate.getMonth() + 1).padStart(2, '0')}-${String(dueDate.getDate()).padStart(2, '0')}`;
+      const dateStr = (() => {
+        if (payDateMode === 'today') {
+          const today = new Date();
+          return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+        }
+        if (payDateMode === 'custom' && payCustomDate) {
+          return `${payCustomDate.getFullYear()}-${String(payCustomDate.getMonth() + 1).padStart(2, '0')}-${String(payCustomDate.getDate()).padStart(2, '0')}`;
+        }
+        const dueDate = activeInvoice.dueDate;
+        return `${dueDate.getFullYear()}-${String(dueDate.getMonth() + 1).padStart(2, '0')}-${String(dueDate.getDate()).padStart(2, '0')}`;
+      })();
 
       const { error: insertError } = await supabase.from('expenses').insert({
         user_id: user.id,
@@ -308,9 +322,57 @@ export function InvoiceDetailsModal({ open, onOpenChange, invoice, allExpenses, 
                 </SelectContent>
               </Select>
             )}
+
+            {/* Date selection */}
+            <div className="space-y-1.5">
+              <p className="text-xs font-medium text-muted-foreground">Data do pagamento:</p>
+              <div className="flex flex-col gap-1.5">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={payDateMode === 'due' ? 'default' : 'outline'}
+                  className="rounded-xl text-xs justify-start"
+                  onClick={() => setPayDateMode('due')}
+                >
+                  Data de vencimento ({activeInvoice.dueDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })})
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={payDateMode === 'today' ? 'default' : 'outline'}
+                  className="rounded-xl text-xs justify-start"
+                  onClick={() => setPayDateMode('today')}
+                >
+                  Data de hoje ({new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })})
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={payDateMode === 'custom' ? 'default' : 'outline'}
+                  className="rounded-xl text-xs justify-start"
+                  onClick={() => setPayDateMode('custom')}
+                >
+                  <CalendarIcon className="h-3.5 w-3.5 mr-1" />
+                  {payDateMode === 'custom' && payCustomDate
+                    ? payCustomDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                    : 'Escolher data'}
+                </Button>
+                {payDateMode === 'custom' && (
+                  <div className="flex justify-center">
+                    <Calendar
+                      mode="single"
+                      selected={payCustomDate}
+                      onSelect={setPayCustomDate}
+                      className={cn("p-3 pointer-events-auto rounded-xl border")}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+
             <Button
               className="w-full min-h-11 rounded-xl gap-2"
-              disabled={paying || !selectedWalletId}
+              disabled={paying || !selectedWalletId || (payDateMode === 'custom' && !payCustomDate)}
               onClick={handlePayInvoice}
             >
               <Receipt className="h-4 w-4" />

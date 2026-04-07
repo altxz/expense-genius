@@ -1,8 +1,11 @@
 import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
-import { Clock, Utensils, Car, Gamepad2, Heart, Home, GraduationCap, Tag, ArrowLeftRight, Wallet, Pencil, Trash2, CreditCard, Layers, LayoutList, Receipt, Pin, Check, Undo2 } from 'lucide-react';
+import { Clock, Utensils, Car, Gamepad2, Heart, Home, GraduationCap, Tag, ArrowLeftRight, Wallet, Pencil, Trash2, CreditCard, Layers, LayoutList, Receipt, Pin, Check, Undo2, CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useQueryClient } from '@tanstack/react-query';
 import { formatCurrency } from '@/lib/constants';
@@ -101,6 +104,8 @@ export function TransactionFeed({
   const [payValue, setPayValue] = useState('');
   const [payValueChanged, setPayValueChanged] = useState(false);
   const [payApplyScope, setPayApplyScope] = useState<'single' | 'all' | null>(null);
+  const [payDateMode, setPayDateMode] = useState<'original' | 'today' | 'custom'>('original');
+  const [payCustomDate, setPayCustomDate] = useState<Date | undefined>(undefined);
   const [groupCards, setGroupCards] = useState(() => {
     try { const v = localStorage.getItem(STORAGE_KEY); return v === null ? true : v === 'true'; } catch { return true; }
   });
@@ -116,6 +121,8 @@ export function TransactionFeed({
     setPayValue(String(exp.value));
     setPayValueChanged(false);
     setPayApplyScope(null);
+    setPayDateMode('original');
+    setPayCustomDate(undefined);
   };
 
   const handleMarkAsUnpaid = async (exp: Expense) => {
@@ -130,14 +137,17 @@ export function TransactionFeed({
     }
   };
 
-  const handleMarkAsPaid = async (exp: Expense, keepOriginalDate: boolean) => {
+  const handleMarkAsPaid = async (exp: Expense) => {
     try {
       const newValue = parseFloat(payValue);
       const valueChanged = !isNaN(newValue) && newValue !== exp.value;
       const finalValue = valueChanged && !isNaN(newValue) ? newValue : exp.value;
 
       const payDate = (() => {
-        if (keepOriginalDate) return exp.date;
+        if (payDateMode === 'original') return exp.date;
+        if (payDateMode === 'custom' && payCustomDate) {
+          return `${payCustomDate.getFullYear()}-${String(payCustomDate.getMonth() + 1).padStart(2, '0')}-${String(payCustomDate.getDate()).padStart(2, '0')}`;
+        }
         const today = new Date();
         return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
       })();
@@ -792,28 +802,67 @@ export function TransactionFeed({
                   </div>
                 )}
 
-                <p className="text-sm text-muted-foreground">
-                  Deseja manter a data original ou alterar para a data de hoje?
-                </p>
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-foreground">Data do pagamento:</p>
+                  <div className="flex flex-col gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={payDateMode === 'original' ? 'default' : 'outline'}
+                      className="rounded-xl text-xs justify-start"
+                      onClick={() => setPayDateMode('original')}
+                    >
+                      Manter data original ({payingExpense ? new Date(payingExpense.date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : ''})
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={payDateMode === 'today' ? 'default' : 'outline'}
+                      className="rounded-xl text-xs justify-start"
+                      onClick={() => setPayDateMode('today')}
+                    >
+                      Data de hoje ({new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })})
+                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={payDateMode === 'custom' ? 'default' : 'outline'}
+                        className="rounded-xl text-xs justify-start flex-1"
+                        onClick={() => setPayDateMode('custom')}
+                      >
+                        <CalendarIcon className="h-3.5 w-3.5 mr-1" />
+                        {payDateMode === 'custom' && payCustomDate
+                          ? payCustomDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                          : 'Escolher data'}
+                      </Button>
+                    </div>
+                    {payDateMode === 'custom' && (
+                      <div className="flex justify-center">
+                        <Calendar
+                          mode="single"
+                          selected={payCustomDate}
+                          onSelect={setPayCustomDate}
+                          className={cn("p-3 pointer-events-auto rounded-xl border")}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+          <AlertDialogFooter className="gap-2">
             <AlertDialogCancel className="rounded-xl" onClick={() => { setPayingExpense(null); setPayApplyScope(null); }}>Cancelar</AlertDialogCancel>
             <Button
-              variant="outline"
-              className="rounded-xl"
-              disabled={payValueChanged && !!payingExpense?.installment_group_id && !payApplyScope}
-              onClick={() => payingExpense && handleMarkAsPaid(payingExpense, true)}
-            >
-              Manter data ({payingExpense ? new Date(payingExpense.date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : ''})
-            </Button>
-            <Button
               className="rounded-xl bg-emerald-600 text-white hover:bg-emerald-700"
-              disabled={payValueChanged && !!payingExpense?.installment_group_id && !payApplyScope}
-              onClick={() => payingExpense && handleMarkAsPaid(payingExpense, false)}
+              disabled={
+                (payValueChanged && !!payingExpense?.installment_group_id && !payApplyScope) ||
+                (payDateMode === 'custom' && !payCustomDate)
+              }
+              onClick={() => payingExpense && handleMarkAsPaid(payingExpense)}
             >
-              Mudar para hoje ({new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })})
+              Confirmar
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
