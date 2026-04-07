@@ -178,7 +178,7 @@ export function InvoiceDetailsModal({ open, onOpenChange, invoice, allExpenses, 
 
   const content = (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <ScrollArea className="min-h-0 flex-1 px-3 sm:px-4" style={{ overflow: 'hidden' }}>
+      <div className="min-h-0 flex-1 overflow-y-auto px-3 sm:px-4">
         <div className="space-y-4 pb-4">
           <div className="bg-primary rounded-2xl p-4 sm:p-5 mt-2 text-primary-foreground overflow-hidden shrink-0">
             <div className="flex items-center justify-between mb-3 gap-2">
@@ -276,7 +276,7 @@ export function InvoiceDetailsModal({ open, onOpenChange, invoice, allExpenses, 
             </div>
           )}
         </div>
-      </ScrollArea>
+      </div>
 
       <div className="border-t border-border shrink-0 bg-background px-4 py-4 pb-6 sm:pb-4">
         {isPaid ? (
