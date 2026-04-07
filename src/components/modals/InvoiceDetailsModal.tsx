@@ -178,7 +178,7 @@ export function InvoiceDetailsModal({ open, onOpenChange, invoice, allExpenses, 
 
   const content = (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <ScrollArea className="min-h-0 flex-1 px-3 sm:px-4">
+      <ScrollArea className="min-h-0 flex-1 px-3 sm:px-4" style={{ overflow: 'hidden' }}>
         <div className="space-y-4 pb-4">
           <div className="bg-primary rounded-2xl p-4 sm:p-5 mt-2 text-primary-foreground overflow-hidden shrink-0">
             <div className="flex items-center justify-between mb-3 gap-2">
