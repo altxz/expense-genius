@@ -153,8 +153,17 @@ export function InvoiceDetailsModal({ open, onOpenChange, invoice, allExpenses, 
     setPaying(true);
 
     try {
-      const dueDate = activeInvoice.dueDate;
-      const dateStr = `${dueDate.getFullYear()}-${String(dueDate.getMonth() + 1).padStart(2, '0')}-${String(dueDate.getDate()).padStart(2, '0')}`;
+      const dateStr = (() => {
+        if (payDateMode === 'today') {
+          const today = new Date();
+          return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+        }
+        if (payDateMode === 'custom' && payCustomDate) {
+          return `${payCustomDate.getFullYear()}-${String(payCustomDate.getMonth() + 1).padStart(2, '0')}-${String(payCustomDate.getDate()).padStart(2, '0')}`;
+        }
+        const dueDate = activeInvoice.dueDate;
+        return `${dueDate.getFullYear()}-${String(dueDate.getMonth() + 1).padStart(2, '0')}-${String(dueDate.getDate()).padStart(2, '0')}`;
+      })();
 
       const { error: insertError } = await supabase.from('expenses').insert({
         user_id: user.id,
