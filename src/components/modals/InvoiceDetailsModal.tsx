@@ -124,6 +124,25 @@ export function InvoiceDetailsModal({ open, onOpenChange, invoice, allExpenses, 
     }
   };
 
+  const handleUnpayInvoice = async () => {
+    if (!user) return;
+    try {
+      // Delete the "Pagamento fatura X" record that marks this invoice as paid
+      const { error } = await supabase
+        .from('expenses')
+        .delete()
+        .eq('user_id', user.id)
+        .ilike('description', `Pagamento fatura ${activeInvoice.cardName}`)
+        .eq('invoice_month', activeInvoice.monthLabel);
+      if (error) throw error;
+      toast({ title: 'Pagamento desfeito', description: 'A fatura voltou ao status anterior.' });
+      refetch?.();
+      onPaid?.();
+    } catch (err: any) {
+      toast({ title: 'Erro', description: err.message, variant: 'destructive' });
+    }
+  };
+
   const handlePayInvoice = async () => {
     if (!user || !selectedWalletId || activeInvoice.total <= 0) return;
     setPaying(true);
