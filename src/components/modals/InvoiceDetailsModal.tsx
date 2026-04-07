@@ -61,6 +61,8 @@ export function InvoiceDetailsModal({ open, onOpenChange, invoice, allExpenses, 
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Expense | null>(null);
   const [deleteMode, setDeleteMode] = useState<'single' | 'all' | null>(null);
+  const [payDateMode, setPayDateMode] = useState<'due' | 'today' | 'custom'>('due');
+  const [payCustomDate, setPayCustomDate] = useState<Date | undefined>(undefined);
 
   const currentCard = cards.find(c => c.id === invoice.cardId);
 
