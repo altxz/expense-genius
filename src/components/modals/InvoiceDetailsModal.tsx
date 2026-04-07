@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { CreditCard, Calendar, Lock, Clock, AlertTriangle, Receipt, CheckCircle2, Pencil, Trash2 } from 'lucide-react';
+import { CreditCard, Calendar, Lock, Clock, AlertTriangle, Receipt, CheckCircle2, Pencil, Trash2, Undo2 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { formatCurrency, getCategoryLabel } from '@/lib/constants';
 import { getInvoicePeriod, matchExpensesToInvoice, formatInvoiceDate } from '@/lib/invoiceHelpers';
@@ -265,9 +265,19 @@ export function InvoiceDetailsModal({ open, onOpenChange, invoice, allExpenses, 
       {/* Footer actions */}
       <div className="p-4 border-t border-border">
         {isPaid ? (
-          <div className="flex items-center justify-center gap-2 py-2 text-primary">
-            <CheckCircle2 className="h-5 w-5" />
-            <span className="font-semibold">Fatura paga</span>
+          <div className="space-y-3">
+            <div className="flex items-center justify-center gap-2 py-2 text-primary">
+              <CheckCircle2 className="h-5 w-5" />
+              <span className="font-semibold">Fatura paga</span>
+            </div>
+            <Button
+              variant="outline"
+              className="w-full rounded-xl gap-2 text-amber-600 border-amber-300 hover:bg-amber-50 dark:hover:bg-amber-500/10"
+              onClick={handleUnpayInvoice}
+            >
+              <Undo2 className="h-4 w-4" />
+              Desfazer pagamento da fatura
+            </Button>
           </div>
         ) : activeInvoice.total > 0.01 && chronological.length > 0 ? (
           <div className="space-y-3">
