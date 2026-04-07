@@ -174,14 +174,24 @@ export function matchExpensesToInvoice(
 
   const total = matched.reduce((s, e) => s + e.value, 0);
 
-  // Check if there's a payment record for this invoice
-  const isPaid = expenses.some(e =>
-    e.type === 'expense' &&
-    !e.credit_card_id &&
-    e.invoice_month === dueLabel &&
-    e.description.startsWith('Pagamento fatura') &&
-    e.wallet_id
-  );
+  // Check if there's a payment record for this specific card + invoice
+  const normalizedCardName = period.cardName.trim().toLowerCase();
+  const isPaid = expenses.some(e => {
+    if (e.type !== 'expense' || !e.invoice_month || e.invoice_month !== dueLabel || !e.wallet_id) return false;
+    if (!e.description?.startsWith('Pagamento fatura')) return false;
+
+    // Preferred: explicit card linkage on payment record
+    if (e.credit_card_id) return e.credit_card_id === period.cardId;
+
+    // Legacy fallback: infer card from description prefix
+    const legacyCardName = e.description
+      .replace(/^Pagamento fatura\s*/i, '')
+      .split(' - ')[0]
+      .trim()
+      .toLowerCase();
+
+    return legacyCardName === normalizedCardName;
+  });
 
   let status: 'open' | 'closed' | 'overdue' | 'paid' = isPaid ? 'paid' : period.status;
 

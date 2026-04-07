@@ -405,6 +405,7 @@ export default function WalletPage() {
       final_category: 'Cartão de Crédito',
       date: payDate.toISOString().split('T')[0],
       wallet_id: payWalletId,
+      credit_card_id: selectedCard.id,
       payment_method: 'debit',
       is_paid: true,
       notes: `Pagamento automático da fatura do cartão ${selectedCard.name}`,
