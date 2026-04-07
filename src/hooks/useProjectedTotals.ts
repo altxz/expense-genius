@@ -215,9 +215,11 @@ export function useProjectedTotals(): ProjectedTotals {
     const totalExpense = debitExpense + invoiceTotals.total;
 
     const byCategory: Record<string, number> = { ...invoiceTotals.byCategory };
-    nonTransfers.filter(e => e.type !== 'income' && !e.credit_card_id).forEach(e => {
-      byCategory[e.final_category] = (byCategory[e.final_category] || 0) + e.value;
-    });
+    nonTransfers
+      .filter(e => e.type !== 'income' && !e.credit_card_id && !e.description.startsWith('Pagamento fatura'))
+      .forEach(e => {
+        byCategory[e.final_category] = (byCategory[e.final_category] || 0) + e.value;
+      });
     const largest = Object.entries(byCategory).sort((a, b) => b[1] - a[1])[0];
 
     return {
