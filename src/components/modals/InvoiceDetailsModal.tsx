@@ -322,9 +322,57 @@ export function InvoiceDetailsModal({ open, onOpenChange, invoice, allExpenses, 
                 </SelectContent>
               </Select>
             )}
+
+            {/* Date selection */}
+            <div className="space-y-1.5">
+              <p className="text-xs font-medium text-muted-foreground">Data do pagamento:</p>
+              <div className="flex flex-col gap-1.5">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={payDateMode === 'due' ? 'default' : 'outline'}
+                  className="rounded-xl text-xs justify-start"
+                  onClick={() => setPayDateMode('due')}
+                >
+                  Data de vencimento ({activeInvoice.dueDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })})
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={payDateMode === 'today' ? 'default' : 'outline'}
+                  className="rounded-xl text-xs justify-start"
+                  onClick={() => setPayDateMode('today')}
+                >
+                  Data de hoje ({new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })})
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={payDateMode === 'custom' ? 'default' : 'outline'}
+                  className="rounded-xl text-xs justify-start"
+                  onClick={() => setPayDateMode('custom')}
+                >
+                  <CalendarIcon className="h-3.5 w-3.5 mr-1" />
+                  {payDateMode === 'custom' && payCustomDate
+                    ? payCustomDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                    : 'Escolher data'}
+                </Button>
+                {payDateMode === 'custom' && (
+                  <div className="flex justify-center">
+                    <Calendar
+                      mode="single"
+                      selected={payCustomDate}
+                      onSelect={setPayCustomDate}
+                      className={cn("p-3 pointer-events-auto rounded-xl border")}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+
             <Button
               className="w-full min-h-11 rounded-xl gap-2"
-              disabled={paying || !selectedWalletId}
+              disabled={paying || !selectedWalletId || (payDateMode === 'custom' && !payCustomDate)}
               onClick={handlePayInvoice}
             >
               <Receipt className="h-4 w-4" />
