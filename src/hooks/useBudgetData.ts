@@ -89,6 +89,7 @@ export function useBudgetData() {
     (expenseData || []).forEach((e: any) => {
       if (e.type === 'income') { income += e.value; return; }
       if (e.type === 'transfer') return;
+      if (e.description?.startsWith('Pagamento fatura')) return;
       spent[e.final_category] = (spent[e.final_category] || 0) + e.value;
     });
     setSpentMap(spent);
