@@ -508,7 +508,7 @@ export function TransactionFeed({
                             {inv.transactions.length} transação{inv.transactions.length !== 1 ? 'ões' : ''} • Vence {inv.dueDate.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
                           </p>
                         </div>
-                        <div className="shrink-0 flex items-center gap-2">
+                        <div className="shrink-0 flex items-center justify-end gap-2 min-w-[120px] text-right">
                           {inv.status !== 'open' && (
                             <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${displayStatus.className}`}>
                               {displayStatus.label}
