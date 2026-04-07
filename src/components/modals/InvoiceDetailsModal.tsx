@@ -132,14 +132,20 @@ export function InvoiceDetailsModal({ open, onOpenChange, invoice, allExpenses, 
   const handleUnpayInvoice = async () => {
     if (!user) return;
     try {
-      // Delete the "Pagamento fatura X" record that marks this invoice as paid
-      const { error } = await supabase
+      const legacyDescriptionPrefix = `Pagamento fatura ${activeInvoice.cardName}`;
+      const { data, error } = await supabase
         .from('expenses')
         .delete()
         .eq('user_id', user.id)
-        .ilike('description', `Pagamento fatura ${activeInvoice.cardName}%`)
-        .eq('invoice_month', activeInvoice.monthLabel);
+        .eq('invoice_month', activeInvoice.monthLabel)
+        .or(`credit_card_id.eq.${activeInvoice.cardId},description.ilike.${legacyDescriptionPrefix}%`)
+        .select('id');
+
       if (error) throw error;
+      if (!data || data.length === 0) {
+        throw new Error('Não encontrei um pagamento registrado para esta fatura.');
+      }
+
       toast({ title: 'Pagamento desfeito', description: 'A fatura voltou ao status anterior.' });
       refetch?.();
       onPaid?.();
@@ -167,12 +173,13 @@ export function InvoiceDetailsModal({ open, onOpenChange, invoice, allExpenses, 
 
       const { error: insertError } = await supabase.from('expenses').insert({
         user_id: user.id,
-        description: `Pagamento fatura ${activeInvoice.cardName}`,
+        description: `Pagamento fatura ${activeInvoice.cardName} - ${activeInvoice.monthLabel}`,
         value: activeInvoice.total,
         final_category: 'cartao',
         type: 'expense',
         date: dateStr,
         wallet_id: selectedWalletId,
+        credit_card_id: activeInvoice.cardId,
         is_paid: true,
         invoice_month: activeInvoice.monthLabel,
       });

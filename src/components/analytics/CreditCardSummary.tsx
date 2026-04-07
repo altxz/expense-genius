@@ -131,6 +131,7 @@ export function CreditCardSummary({ cards, allExpenses, wallets, refetch }: Cred
       final_category: 'Cartão de Crédito',
       date: new Date().toISOString().split('T')[0],
       wallet_id: payWalletId,
+      credit_card_id: payingInvoice.cardId,
       payment_method: 'debit',
       is_paid: true,
       notes: `Pagamento da fatura do cartão ${payingInvoice.cardName}`,
