@@ -251,12 +251,25 @@ export function TransactionFeed({
     const ensureDay = (key: string) => { if (!dayMap[key]) dayMap[key] = []; };
     const isInSelectedMonth = (dateKey: string) => dateKey >= monthStart && dateKey <= monthEnd;
 
+    // Build a set of paid invoice card names to hide their "Pagamento fatura" records
+    const paidInvoiceCardNames = new Set<string>();
+    if (groupCards) {
+      invoicePeriods.forEach(inv => {
+        if (inv.status === 'paid') paidInvoiceCardNames.add(inv.cardName.toLowerCase());
+      });
+    }
+
     // Track IDs already added to avoid duplicates
     const addedIds = new Set<string>();
 
     // 1. Add non-CC expenses from the calendar month (already filtered by HistoryPage)
     expenses.forEach(exp => {
       if (exp.credit_card_id) return; // CC expenses handled below
+      // Hide "Pagamento fatura X" when the invoice for card X is already shown as paid
+      if (groupCards && exp.description.toLowerCase().startsWith('pagamento fatura')) {
+        const cardName = exp.description.substring('pagamento fatura'.length).trim().toLowerCase();
+        if (paidInvoiceCardNames.has(cardName)) return;
+      }
       ensureDay(exp.date);
       dayMap[exp.date].push({ expense: exp, isInvoiceItem: false });
       addedIds.add(exp.id);
