@@ -17,6 +17,7 @@ import { CATEGORIES, getCategoryInfo } from '@/lib/constants';
 import { getPaymentDate } from '@/lib/invoiceHelpers';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
+import { showFriendlyError } from '@/lib/errorHandler';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserSettings } from '@/contexts/UserSettingsContext';
 
