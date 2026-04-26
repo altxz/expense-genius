@@ -11,6 +11,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { formatCurrency } from '@/lib/constants';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 import { EditExpenseModal } from '@/components/EditExpenseModal';
 import { InvoiceDetailsModal } from '@/components/modals/InvoiceDetailsModal';
 import { getInvoicePeriod, matchExpensesToInvoice } from '@/lib/invoiceHelpers';
