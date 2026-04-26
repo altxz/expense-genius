@@ -115,7 +115,7 @@ export function QuickAddModal({ open, onOpenChange, onCreated }: QuickAddModalPr
       const { error } = await supabase.from('expenses').insert(rows);
       setSaving(false);
       if (error) {
-        toast({ title: 'Erro', description: error.message, variant: 'destructive' });
+        showFriendlyError(error);
       } else {
         toast({ title: 'Parcelas criadas!', description: `${numInstallments} parcelas salvas.` });
         reset();
