@@ -224,3 +224,97 @@ describe('Projection-month dedup signatures (used in useProjectedTotals)', () =>
     expect(sigStrict).not.toBe(sigStrictDifferent);
   });
 });
+
+/**
+ * Regression suite: when the user manually changes the category after AI auto-categorized
+ * an expense (especially a recurring one), neither the history view nor the monthly
+ * projection should ever duplicate the entry.
+ *
+ * The materialized signature includes `final_category`, so a category override breaks the
+ * strict-signature path. The system MUST still dedup via the loose signature
+ * (type|description) used inside useProjectedTotals.
+ */
+describe('AI categorization override — no duplication on save/update', () => {
+  // Simulates the scenario: AI categorized as "outros", user manually changed to "salario"
+  const aiCategorizedTemplate: Item = {
+    ...baseTemplate,
+    final_category: 'outros',          // what AI guessed
+  };
+  const userOverriddenPaidCopy = basePaidCopy({
+    final_category: 'salario',         // what user picked manually
+    date: '2026-04-03',
+  });
+
+  it('strict materialized signature INTENTIONALLY diverges when category was overridden', () => {
+    // Locks the contract: signatures cannot collide just because the description matches.
+    expect(buildMaterializedRecurringSignature(aiCategorizedTemplate))
+      .not.toBe(buildMaterializedRecurringSignature(userOverriddenPaidCopy));
+  });
+
+  it('loose signature stays equal — guarantees the fallback path can dedup recurring entries', () => {
+    expect(buildRecurringLooseSignature(aiCategorizedTemplate.type, aiCategorizedTemplate.description))
+      .toBe(buildRecurringLooseSignature(userOverriddenPaidCopy.type, userOverriddenPaidCopy.description));
+  });
+
+  it('hideMaterializedRecurringTemplates does NOT hide a template whose category was overridden', () => {
+    // Important: the materialized dedup is identity-based. The loose dedup happens inside
+    // useProjectedTotals (month-level), so hideMaterializedRecurringTemplates keeps both
+    // and the projection layer is responsible for not double-counting.
+    const visible = hideMaterializedRecurringTemplates([aiCategorizedTemplate, userOverriddenPaidCopy]);
+    // Both rows survive here — but useProjectedTotals must still dedup them by month/loose key.
+    expect(visible).toHaveLength(2);
+  });
+
+  it('monthly loose dedup key matches even when category was overridden (no duplication in month totals)', () => {
+    // Reproduces the exact key comparison done inside useProjectedTotals.startingBalance
+    // and effectiveMonthExpenses: the loose key wins regardless of category mismatch.
+    const ym = '2026-04';
+    const templateLooseKey = `${ym}|${buildRecurringLooseSignature(
+      aiCategorizedTemplate.type,
+      aiCategorizedTemplate.description,
+    )}`;
+    const paidLooseKey = `${ym}|${buildRecurringLooseSignature(
+      userOverriddenPaidCopy.type,
+      userOverriddenPaidCopy.description,
+    )}`;
+    expect(templateLooseKey).toBe(paidLooseKey);
+  });
+
+  it('overriding category + value + date simultaneously still produces the same loose key', () => {
+    // Edge case: user changed value, moved the date AND fixed the AI category in one go.
+    const stressed = basePaidCopy({
+      final_category: 'salario',
+      value: 2999.99,
+      date: '2026-04-12',
+    });
+    const ym = stressed.date!.substring(0, 7);
+    const templateLooseKey = `${ym}|${buildRecurringLooseSignature(
+      aiCategorizedTemplate.type,
+      aiCategorizedTemplate.description,
+    )}`;
+    const paidLooseKey = `${ym}|${buildRecurringLooseSignature(stressed.type, stressed.description)}`;
+    expect(templateLooseKey).toBe(paidLooseKey);
+  });
+
+  it('AI category change does not cross-collapse different descriptions', () => {
+    // Safety net: even if two unrelated transactions both get re-categorized to "salario",
+    // their loose keys must remain distinct because descriptions differ.
+    const otherTx = basePaidCopy({
+      id: 'freela',
+      description: 'Freela XPTO',
+      final_category: 'salario',
+    });
+    expect(buildRecurringLooseSignature(aiCategorizedTemplate.type, aiCategorizedTemplate.description))
+      .not.toBe(buildRecurringLooseSignature(otherTx.type, otherTx.description));
+  });
+
+  it('whitespace/casing differences from AI normalization do NOT create duplicates', () => {
+    // AI sometimes returns descriptions with trailing spaces or casing changes.
+    // The normalization layer must collapse them so dedup still works.
+    const aiVariant: Item = { ...aiCategorizedTemplate, description: '  SALÁRIO ' };
+    const userVariant: Item = { ...userOverriddenPaidCopy, description: 'salário' };
+    expect(buildRecurringLooseSignature(aiVariant.type, aiVariant.description))
+      .toBe(buildRecurringLooseSignature(userVariant.type, userVariant.description));
+  });
+});
+
