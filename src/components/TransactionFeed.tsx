@@ -136,7 +136,7 @@ export function TransactionFeed({
       queryClient.invalidateQueries({ queryKey: ['projected-totals'] });
       onDeleted();
     } catch (err: any) {
-      toast({ title: 'Erro', description: err.message, variant: 'destructive' });
+      showFriendlyError(err);
     }
   };
 
