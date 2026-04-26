@@ -825,7 +825,7 @@ export function TransactionFeed({
                 </div>
 
                 {/* Scope choice if value changed and has installments */}
-                {payValueChanged && payingExpense?.installment_group_id && (
+                {payValueChanged && payingExpense?.installment_group_id && !payingExpense?.is_recurring && (
                   <div className="space-y-2">
                     <p className="text-xs font-medium text-foreground">Aplicar novo valor em:</p>
                     <div className="flex gap-2">
@@ -846,6 +846,35 @@ export function TransactionFeed({
                         onClick={() => setPayApplyScope('all')}
                       >
                         Todas as parcelas
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Scope choice for recurring transactions when value or date changed */}
+                {payingExpense?.is_recurring && (payValueChanged || payDateMode !== 'original') && (
+                  <div className="space-y-2 rounded-xl border border-primary/20 bg-primary/5 p-3">
+                    <p className="text-xs font-medium text-foreground">
+                      Esta é uma transação recorrente. Aplicar a alteração em:
+                    </p>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={payApplyScope === 'single' ? 'default' : 'outline'}
+                        className="rounded-xl text-xs flex-1"
+                        onClick={() => setPayApplyScope('single')}
+                      >
+                        Apenas esta
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={payApplyScope === 'all' ? 'default' : 'outline'}
+                        className="rounded-xl text-xs flex-1"
+                        onClick={() => setPayApplyScope('all')}
+                      >
+                        Todas as próximas
                       </Button>
                     </div>
                   </div>
