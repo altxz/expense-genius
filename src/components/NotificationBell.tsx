@@ -410,7 +410,7 @@ export function NotificationBell() {
             </Button>
             <Button
               className="rounded-xl bg-emerald-600 text-white hover:bg-emerald-700"
-              disabled={quickPaying || (quickPayValueChanged && !!quickPayExpense?.installment_group_id && !quickPayApplyScope)}
+              disabled={quickPaying || (quickPayValueChanged && !!quickPayExpense?.installment_group_id && !quickPayExpense?.is_recurring && !quickPayApplyScope) || (!!quickPayExpense?.is_recurring && quickPayValueChanged && !quickPayApplyScope)}
               onClick={() => handleConfirmQuickPay(false)}
             >
               {quickPaying ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Processando...</> : `Mudar para hoje (${todayFormatted})`}
