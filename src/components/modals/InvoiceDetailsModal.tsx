@@ -81,7 +81,7 @@ export function InvoiceDetailsModal({ open, onOpenChange, invoice, allExpenses, 
       refetch?.();
       onPaid?.();
     } catch (err: any) {
-      toast({ title: 'Erro', description: err.message, variant: 'destructive' });
+      showFriendlyError(err);
     } finally {
       setDeleteTarget(null);
       setDeleteMode(null);
