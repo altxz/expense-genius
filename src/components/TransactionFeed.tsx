@@ -159,8 +159,8 @@ export function TransactionFeed({
 
       // If this is a recurring template, INSERT a new paid copy instead of updating the template
       if (exp.is_recurring) {
-        // Find the actual recurring template id (the virtual projected expense uses a synthetic id)
-        const templateId = (exp as any).recurring_template_id || exp.id;
+        // The virtual projected occurrence keeps the template id intact
+        const templateId = exp.id;
 
         const { error } = await supabase.from('expenses').insert({
           user_id: (exp as any).user_id || user?.id,
