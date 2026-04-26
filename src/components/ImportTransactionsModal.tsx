@@ -648,14 +648,16 @@ export function ImportTransactionsModal({ open, onOpenChange, onImported }: Impo
   // ── DESKTOP: Dialog ──
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[85vh] flex flex-col">
+      <DialogContent className="max-w-5xl max-h-[85dvh] flex flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileSpreadsheet className="h-5 w-5 text-primary" />
             Importar Transações
           </DialogTitle>
         </DialogHeader>
-        {innerContent}
+        <div className="flex-1 overflow-y-auto min-h-0 -mx-6 px-6">
+          {innerContent}
+        </div>
         <DialogFooter className="gap-2 sm:gap-0">
           {footerButtons}
         </DialogFooter>
