@@ -19,7 +19,6 @@ import { useToast } from '@/hooks/use-toast';
 import { TransactionFeed } from '@/components/TransactionFeed';
 import { TransactionSummaryHeader } from '@/components/TransactionSummaryHeader';
 import { useProjectedTotals } from '@/hooks/useProjectedTotals';
-import { hideMaterializedRecurringTemplates } from '@/lib/recurringProjection';
 import type { Expense } from '@/components/ExpenseTable';
 
 
@@ -60,7 +59,7 @@ export default function HistoryPage() {
 
   // Apply filters
   const filteredExpenses = useMemo(() => {
-    let result = hideMaterializedRecurringTemplates(projected.monthExpenses);
+    let result = projected.monthExpenses;
     if (filters.type !== 'all') result = result.filter(e => e.type === filters.type);
     if (filters.category !== 'all') result = result.filter(e => e.final_category === filters.category);
     if (search.trim()) result = result.filter(e => e.description.toLowerCase().includes(search.toLowerCase()));
