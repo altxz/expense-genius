@@ -365,7 +365,7 @@ export function NotificationBell() {
             </div>
 
             {/* Scope choice if value changed and has installments */}
-            {quickPayValueChanged && quickPayExpense?.installment_group_id && (
+            {quickPayValueChanged && quickPayExpense?.installment_group_id && !quickPayExpense?.is_recurring && (
               <div className="space-y-2">
                 <p className="text-xs font-medium text-foreground">Aplicar novo valor em:</p>
                 <div className="flex gap-2">
@@ -374,6 +374,23 @@ export function NotificationBell() {
                   </Button>
                   <Button type="button" size="sm" variant={quickPayApplyScope === 'all' ? 'default' : 'outline'} className="rounded-xl text-xs flex-1" onClick={() => setQuickPayApplyScope('all')}>
                     Todas as parcelas
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Scope choice for recurring transactions when value changed */}
+            {quickPayExpense?.is_recurring && quickPayValueChanged && (
+              <div className="space-y-2 rounded-xl border border-primary/20 bg-primary/5 p-3">
+                <p className="text-xs font-medium text-foreground">
+                  Esta é uma transação recorrente. Aplicar a alteração em:
+                </p>
+                <div className="flex gap-2">
+                  <Button type="button" size="sm" variant={quickPayApplyScope === 'single' ? 'default' : 'outline'} className="rounded-xl text-xs flex-1" onClick={() => setQuickPayApplyScope('single')}>
+                    Apenas esta
+                  </Button>
+                  <Button type="button" size="sm" variant={quickPayApplyScope === 'all' ? 'default' : 'outline'} className="rounded-xl text-xs flex-1" onClick={() => setQuickPayApplyScope('all')}>
+                    Todas as próximas
                   </Button>
                 </div>
               </div>
