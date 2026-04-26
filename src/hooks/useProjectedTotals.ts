@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSelectedDate } from '@/contexts/DateContext';
 import { getInvoicePeriod, matchExpensesToInvoice } from '@/lib/invoiceHelpers';
-import { buildMaterializedRecurringSignature, buildMonthRecurringSignature, buildRecurringLooseSignature, buildRecurringSignature } from '@/lib/recurringProjection';
+import { buildMaterializedRecurringSignature, buildMonthRecurringSignature, buildRecurringLooseSignature, buildRecurringSignature, hideMaterializedRecurringTemplates } from '@/lib/recurringProjection';
 import type { CreditCard as CreditCardType } from '@/lib/invoiceHelpers';
 import type { Expense } from '@/components/ExpenseTable';
 
@@ -83,6 +83,7 @@ export function useProjectedTotals(): ProjectedTotals {
   });
 
   const monthExpenses = data?.monthExpenses ?? [];
+  const visibleMonthExpenses = useMemo(() => hideMaterializedRecurringTemplates(monthExpenses), [monthExpenses]);
   const recurringExpenses = data?.recurringExpenses ?? [];
   const invoiceExpenses = data?.invoiceExpenses ?? [];
   const historicalExpenses = data?.historicalExpenses ?? [];
@@ -95,15 +96,15 @@ export function useProjectedTotals(): ProjectedTotals {
     // A real entry suppresses a recurring template if EITHER matches.
     // This prevents duplication when user changes value during "mark as paid".
     const realSignatures = new Set(
-      monthExpenses.map(e => buildRecurringSignature(e.type, e.value, e.description))
+      visibleMonthExpenses.map(e => buildRecurringSignature(e.type, e.value, e.description))
     );
-    const realLooseSignatures = new Set(monthExpenses.map(e => buildRecurringLooseSignature(e.type, e.description)));
+    const realLooseSignatures = new Set(visibleMonthExpenses.map(e => buildRecurringLooseSignature(e.type, e.description)));
     const materializedRecurringSignatures = new Set(
-      monthExpenses
+      visibleMonthExpenses
         .filter(e => !e.is_recurring)
         .map(e => buildMaterializedRecurringSignature(e))
     );
-    const realIds = new Set(monthExpenses.map(e => e.id));
+    const realIds = new Set(visibleMonthExpenses.map(e => e.id));
     const virtualEntries: Expense[] = [];
 
     recurringExpenses.forEach(r => {
@@ -128,8 +129,8 @@ export function useProjectedTotals(): ProjectedTotals {
       });
     });
 
-    return [...monthExpenses, ...virtualEntries];
-  }, [monthExpenses, recurringExpenses, selectedMonth, selectedYear]);
+    return [...visibleMonthExpenses, ...virtualEntries];
+  }, [visibleMonthExpenses, recurringExpenses, selectedMonth, selectedYear]);
 
   // Starting balance
   const { startingBalance, pendingInStartingBalance } = useMemo(() => {
@@ -157,7 +158,7 @@ export function useProjectedTotals(): ProjectedTotals {
       }
     };
     historicalExpenses.forEach(addSigs);
-    monthExpenses.forEach(addSigs);
+    visibleMonthExpenses.forEach(addSigs);
 
     const selectedMonthStart = selectedYear * 12 + selectedMonth;
 
@@ -196,12 +197,12 @@ export function useProjectedTotals(): ProjectedTotals {
 
     const balance = walletSum + historicalIncome - historicalDebit + virtualRecurringBalance - ccInvoiceTotal;
     return { startingBalance: balance, pendingInStartingBalance: pendingAmount };
-  }, [wallets, historicalExpenses, monthExpenses, recurringExpenses, creditCards, invoiceExpenses, selectedMonth, selectedYear]);
+  }, [wallets, historicalExpenses, visibleMonthExpenses, recurringExpenses, creditCards, invoiceExpenses, selectedMonth, selectedYear]);
 
   // Invoice totals
   const invoiceTotals = useMemo(() => {
     if (creditCards.length === 0) return { total: 0, byCategory: {} as Record<string, number> };
-    const ccPool = invoiceExpenses.length > 0 ? invoiceExpenses : monthExpenses;
+    const ccPool = invoiceExpenses.length > 0 ? invoiceExpenses : visibleMonthExpenses;
     let total = 0;
     const byCategory: Record<string, number> = {};
     creditCards.forEach(card => {
@@ -213,7 +214,7 @@ export function useProjectedTotals(): ProjectedTotals {
       });
     });
     return { total, byCategory };
-  }, [creditCards, invoiceExpenses, monthExpenses, selectedMonth, selectedYear]);
+  }, [creditCards, invoiceExpenses, visibleMonthExpenses, selectedMonth, selectedYear]);
 
   // Compute totals
   const result = useMemo(() => {
