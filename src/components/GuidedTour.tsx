@@ -99,9 +99,9 @@ export function GuidedTour() {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-300 p-4">
-      <div className="w-full max-w-md bg-card border border-border rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-4 duration-300">
+      <div className="w-full max-w-md max-h-[90dvh] bg-card border border-border rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-4 duration-300 flex flex-col">
         {/* Header with skip */}
-        <div className="flex items-center justify-between px-5 pt-5 pb-2">
+        <div className="flex items-center justify-between px-5 pt-5 pb-2 shrink-0">
           <div className="flex items-center gap-2">
             <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
               {step.icon}
@@ -120,8 +120,8 @@ export function GuidedTour() {
           </Button>
         </div>
 
-        {/* Content */}
-        <div className="px-5 py-4 space-y-3">
+        {/* Content scrollable */}
+        <div className="flex-1 overflow-y-auto min-h-0 px-5 py-4 space-y-3">
           <h3 className="text-xl font-bold text-foreground">{step.title}</h3>
           <p className="text-sm text-muted-foreground leading-relaxed">{step.description}</p>
 
@@ -137,7 +137,7 @@ export function GuidedTour() {
         </div>
 
         {/* Footer with dots and next */}
-        <div className="flex items-center justify-between px-5 pb-5 pt-2">
+        <div className="flex items-center justify-between px-5 pb-5 pt-2 shrink-0 border-t border-border/50">
           {/* Step indicators */}
           <div className="flex items-center gap-1.5">
             {TOUR_STEPS.map((_, i) => (
