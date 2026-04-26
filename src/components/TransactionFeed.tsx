@@ -157,7 +157,7 @@ export function TransactionFeed({
       // If this is a recurring template, INSERT a new paid copy instead of updating the template
       if (exp.is_recurring) {
         const { error } = await supabase.from('expenses').insert({
-          user_id: (exp as any).user_id,
+          user_id: (exp as any).user_id || user?.id,
           description: exp.description,
           value: finalValue,
           final_category: exp.final_category,
