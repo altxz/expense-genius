@@ -403,7 +403,7 @@ export function NotificationBell() {
             <Button
               variant="outline"
               className="rounded-xl"
-              disabled={quickPaying || (quickPayValueChanged && !!quickPayExpense?.installment_group_id && !quickPayApplyScope)}
+              disabled={quickPaying || (quickPayValueChanged && !!quickPayExpense?.installment_group_id && !quickPayExpense?.is_recurring && !quickPayApplyScope) || (!!quickPayExpense?.is_recurring && quickPayValueChanged && !quickPayApplyScope)}
               onClick={() => handleConfirmQuickPay(true)}
             >
               Manter data ({quickPayExpense ? new Date(quickPayExpense.date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : ''})
