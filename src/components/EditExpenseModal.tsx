@@ -355,7 +355,7 @@ export function EditExpenseModal({ open, expense, onOpenChange, onExpenseUpdated
       queryClient.invalidateQueries({ queryKey: ['projected-totals'] });
       onExpenseUpdated();
     } catch (err: any) {
-      toast({ title: 'Erro ao salvar', description: err.message, variant: 'destructive' });
+      showFriendlyError(err, 'Erro ao salvar');
     }
 
     setSaving(false);
