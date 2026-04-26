@@ -112,6 +112,7 @@ export function TransactionFeed({
   });
   const [invoiceModal, setInvoiceModal] = useState<InvoicePeriod | null>(null);
   const { toast } = useToast();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   useEffect(() => {
     try { localStorage.setItem(STORAGE_KEY, String(groupCards)); } catch {}
