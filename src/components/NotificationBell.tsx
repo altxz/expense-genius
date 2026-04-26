@@ -231,6 +231,10 @@ export function NotificationBell() {
       }
 
       toast({ title: quickPayExpense.type === 'income' ? 'Recebimento confirmado!' : 'Pagamento confirmado!' });
+      await queryClient.invalidateQueries({ predicate: (q) => {
+        const k = q.queryKey?.[0];
+        return typeof k === 'string' && (k.startsWith('projected-') || k.startsWith('analytics') || k.startsWith('budget') || k === 'expenses' || k === 'history');
+      }, refetchType: 'active' });
       setQuickPayOpen(false);
     } catch (err: any) {
       toast({ title: 'Erro', description: err.message, variant: 'destructive' });
