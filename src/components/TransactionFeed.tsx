@@ -219,7 +219,10 @@ export function TransactionFeed({
       }
 
       toast({ title: exp.type === 'income' ? 'Recebimento confirmado!' : 'Pagamento confirmado!' });
-      queryClient.invalidateQueries({ queryKey: ['projected-totals'] });
+      await queryClient.invalidateQueries({ predicate: (q) => {
+        const k = q.queryKey?.[0];
+        return typeof k === 'string' && (k.startsWith('projected-') || k.startsWith('analytics') || k.startsWith('budget') || k === 'expenses' || k === 'history');
+      }, refetchType: 'active' });
       onDeleted();
     } catch (err: any) {
       showFriendlyError(err);
