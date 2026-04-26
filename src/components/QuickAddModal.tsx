@@ -8,6 +8,7 @@ import { CATEGORIES } from '@/lib/constants';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { showFriendlyError } from '@/lib/errorHandler';
 import { Loader2, TrendingUp, TrendingDown, CreditCard } from 'lucide-react';
 
 interface QuickAddModalProps {
@@ -114,7 +115,7 @@ export function QuickAddModal({ open, onOpenChange, onCreated }: QuickAddModalPr
       const { error } = await supabase.from('expenses').insert(rows);
       setSaving(false);
       if (error) {
-        toast({ title: 'Erro', description: error.message, variant: 'destructive' });
+        showFriendlyError(error);
       } else {
         toast({ title: 'Parcelas criadas!', description: `${numInstallments} parcelas salvas.` });
         reset();
@@ -138,7 +139,7 @@ export function QuickAddModal({ open, onOpenChange, onCreated }: QuickAddModalPr
 
       setSaving(false);
       if (error) {
-        toast({ title: 'Erro', description: error.message, variant: 'destructive' });
+        showFriendlyError(error);
       } else {
         toast({ title: 'Lançamento criado!', description: `${type === 'income' ? 'Receita' : 'Despesa'} de R$ ${numValue.toFixed(2)} registrada.` });
         reset();

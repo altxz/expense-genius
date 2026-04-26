@@ -17,6 +17,7 @@ import { CATEGORIES, getCategoryInfo } from '@/lib/constants';
 import { getPaymentDate } from '@/lib/invoiceHelpers';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
+import { showFriendlyError } from '@/lib/errorHandler';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserSettings } from '@/contexts/UserSettingsContext';
 
@@ -289,7 +290,7 @@ export function AddExpenseModal({ open, onOpenChange, onExpenseAdded }: AddExpen
 
       const { error } = await supabase.from('expenses').insert(rows);
       if (error) {
-        toast({ title: 'Erro ao salvar', description: error.message, variant: 'destructive' });
+        showFriendlyError(error, 'Erro ao salvar');
       } else {
         toast({ title: 'Lançamentos criados!', description: `${numRepeats} lançamentos de R$ ${perUnit.toFixed(2)} salvos.` });
         resetForm();
@@ -323,7 +324,7 @@ export function AddExpenseModal({ open, onOpenChange, onExpenseAdded }: AddExpen
         project_id: projectId || null,
       });
       if (error) {
-        toast({ title: 'Erro ao salvar', description: error.message, variant: 'destructive' });
+        showFriendlyError(error, 'Erro ao salvar');
       } else {
         const msg = isTransfer ? 'Transferência salva!' : (type === 'income' ? 'Receita salva!' : 'Despesa salva!');
         toast({ title: msg, description: 'Registro salvo com sucesso.' });

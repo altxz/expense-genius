@@ -17,6 +17,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { CategoryPicker } from '@/components/CategoryPicker';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
+import { showFriendlyError } from '@/lib/errorHandler';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Expense } from '@/components/ExpenseTable';
 
@@ -354,7 +355,7 @@ export function EditExpenseModal({ open, expense, onOpenChange, onExpenseUpdated
       queryClient.invalidateQueries({ queryKey: ['projected-totals'] });
       onExpenseUpdated();
     } catch (err: any) {
-      toast({ title: 'Erro ao salvar', description: err.message, variant: 'destructive' });
+      showFriendlyError(err, 'Erro ao salvar');
     }
 
     setSaving(false);
@@ -363,7 +364,7 @@ export function EditExpenseModal({ open, expense, onOpenChange, onExpenseUpdated
   const handleDelete = async () => {
     const { error } = await supabase.from('expenses').delete().eq('id', expense.id);
     if (error) {
-      toast({ title: 'Erro', description: error.message, variant: 'destructive' });
+      showFriendlyError(error);
     } else {
       toast({ title: 'Transação excluída' });
       queryClient.invalidateQueries({ queryKey: ['projected-totals'] });

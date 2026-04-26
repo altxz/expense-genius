@@ -12,6 +12,7 @@ import { formatCurrency } from '@/lib/constants';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { showFriendlyError } from '@/lib/errorHandler';
 import { EditExpenseModal } from '@/components/EditExpenseModal';
 import { InvoiceDetailsModal } from '@/components/modals/InvoiceDetailsModal';
 import { getInvoicePeriod, matchExpensesToInvoice } from '@/lib/invoiceHelpers';
@@ -135,7 +136,7 @@ export function TransactionFeed({
       queryClient.invalidateQueries({ queryKey: ['projected-totals'] });
       onDeleted();
     } catch (err: any) {
-      toast({ title: 'Erro', description: err.message, variant: 'destructive' });
+      showFriendlyError(err);
     }
   };
 
@@ -196,7 +197,7 @@ export function TransactionFeed({
       queryClient.invalidateQueries({ queryKey: ['projected-totals'] });
       onDeleted();
     } catch (err: any) {
-      toast({ title: 'Erro', description: err.message, variant: 'destructive' });
+      showFriendlyError(err);
     } finally {
       setPayingExpense(null);
       setPayApplyScope(null);
@@ -232,7 +233,7 @@ export function TransactionFeed({
       }
       onDeleted();
     } catch (err: any) {
-      toast({ title: 'Erro ao excluir', description: err.message, variant: 'destructive' });
+      showFriendlyError(err, 'Erro ao excluir');
     } finally {
       setDeleting(false);
       setDeletingExpense(null);
