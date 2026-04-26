@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSelectedDate } from '@/contexts/DateContext';
 import { getInvoicePeriod, matchExpensesToInvoice } from '@/lib/invoiceHelpers';
-import { buildMonthRecurringSignature, buildRecurringSignature } from '@/lib/recurringProjection';
+import { buildMaterializedRecurringSignature, buildMonthRecurringSignature, buildRecurringLooseSignature, buildRecurringSignature, hideMaterializedRecurringTemplates } from '@/lib/recurringProjection';
 import type { CreditCard as CreditCardType } from '@/lib/invoiceHelpers';
 import type { Expense } from '@/components/ExpenseTable';
 
@@ -83,6 +83,7 @@ export function useProjectedTotals(): ProjectedTotals {
   });
 
   const monthExpenses = data?.monthExpenses ?? [];
+  const visibleMonthExpenses = useMemo(() => hideMaterializedRecurringTemplates(monthExpenses), [monthExpenses]);
   const recurringExpenses = data?.recurringExpenses ?? [];
   const invoiceExpenses = data?.invoiceExpenses ?? [];
   const historicalExpenses = data?.historicalExpenses ?? [];
@@ -95,19 +96,26 @@ export function useProjectedTotals(): ProjectedTotals {
     // A real entry suppresses a recurring template if EITHER matches.
     // This prevents duplication when user changes value during "mark as paid".
     const realSignatures = new Set(
-      monthExpenses.map(e => buildRecurringSignature(e.type, e.value, e.description))
+      visibleMonthExpenses.map(e => buildRecurringSignature(e.type, e.value, e.description))
     );
-    const realLooseSignatures = new Set(
-      monthExpenses.map(e => `${e.type}|${(e.description ?? '').trim().toLowerCase()}`)
+    const realLooseSignatures = new Set(visibleMonthExpenses.map(e => buildRecurringLooseSignature(e.type, e.description)));
+    const materializedRecurringSignatures = new Set(
+      visibleMonthExpenses
+        .filter(e => !e.is_recurring)
+        .map(e => buildMaterializedRecurringSignature(e))
     );
-    const realIds = new Set(monthExpenses.map(e => e.id));
+    const realIds = new Set(visibleMonthExpenses.map(e => e.id));
     const virtualEntries: Expense[] = [];
 
     recurringExpenses.forEach(r => {
       if (realIds.has(r.id)) return;
       const sig = buildRecurringSignature(r.type, r.value, r.description);
-      const looseSig = `${r.type}|${(r.description ?? '').trim().toLowerCase()}`;
-      if (realSignatures.has(sig) || realLooseSignatures.has(looseSig)) return;
+      const looseSig = buildRecurringLooseSignature(r.type, r.description);
+      if (
+        realSignatures.has(sig) ||
+        realLooseSignatures.has(looseSig) ||
+        materializedRecurringSignatures.has(buildMaterializedRecurringSignature(r))
+      ) return;
       if (r.type === 'transfer' || r.credit_card_id) return;
       virtualEntries.push({
         ...r,
@@ -121,8 +129,8 @@ export function useProjectedTotals(): ProjectedTotals {
       });
     });
 
-    return [...monthExpenses, ...virtualEntries];
-  }, [monthExpenses, recurringExpenses, selectedMonth, selectedYear]);
+    return [...visibleMonthExpenses, ...virtualEntries];
+  }, [visibleMonthExpenses, recurringExpenses, selectedMonth, selectedYear]);
 
   // Starting balance
   const { startingBalance, pendingInStartingBalance } = useMemo(() => {
@@ -146,11 +154,11 @@ export function useProjectedTotals(): ProjectedTotals {
       const ym = e.date ? e.date.substring(0, 7) : '';
       if (ym) {
         realByMonthSig.add(buildMonthRecurringSignature(ym, e.type, e.value, e.description));
-        realByMonthLoose.add(`${ym}|${e.type}|${((e.description as string) ?? '').trim().toLowerCase()}`);
+        realByMonthLoose.add(`${ym}|${buildRecurringLooseSignature(e.type, e.description)}`);
       }
     };
     historicalExpenses.forEach(addSigs);
-    monthExpenses.forEach(addSigs);
+    visibleMonthExpenses.forEach(addSigs);
 
     const selectedMonthStart = selectedYear * 12 + selectedMonth;
 
@@ -163,7 +171,7 @@ export function useProjectedTotals(): ProjectedTotals {
         const mo = m % 12;
         const monthKey = `${yr}-${String(mo + 1).padStart(2, '0')}`;
         const sig = buildMonthRecurringSignature(monthKey, r.type, r.value, r.description);
-        const looseSig = `${monthKey}|${r.type}|${((r.description as string) ?? '').trim().toLowerCase()}`;
+        const looseSig = `${monthKey}|${buildRecurringLooseSignature(r.type, r.description)}`;
         if (realByMonthSig.has(sig) || realByMonthLoose.has(looseSig)) continue;
         if (r.type === 'income') virtualRecurringBalance += Number(r.value);
         else virtualRecurringBalance -= Number(r.value);
@@ -189,12 +197,12 @@ export function useProjectedTotals(): ProjectedTotals {
 
     const balance = walletSum + historicalIncome - historicalDebit + virtualRecurringBalance - ccInvoiceTotal;
     return { startingBalance: balance, pendingInStartingBalance: pendingAmount };
-  }, [wallets, historicalExpenses, monthExpenses, recurringExpenses, creditCards, invoiceExpenses, selectedMonth, selectedYear]);
+  }, [wallets, historicalExpenses, visibleMonthExpenses, recurringExpenses, creditCards, invoiceExpenses, selectedMonth, selectedYear]);
 
   // Invoice totals
   const invoiceTotals = useMemo(() => {
     if (creditCards.length === 0) return { total: 0, byCategory: {} as Record<string, number> };
-    const ccPool = invoiceExpenses.length > 0 ? invoiceExpenses : monthExpenses;
+    const ccPool = invoiceExpenses.length > 0 ? invoiceExpenses : visibleMonthExpenses;
     let total = 0;
     const byCategory: Record<string, number> = {};
     creditCards.forEach(card => {
@@ -206,7 +214,7 @@ export function useProjectedTotals(): ProjectedTotals {
       });
     });
     return { total, byCategory };
-  }, [creditCards, invoiceExpenses, monthExpenses, selectedMonth, selectedYear]);
+  }, [creditCards, invoiceExpenses, visibleMonthExpenses, selectedMonth, selectedYear]);
 
   // Compute totals
   const result = useMemo(() => {
