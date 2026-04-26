@@ -182,8 +182,9 @@ export function NotificationBell() {
       })();
 
       if ((quickPayExpense as any).is_recurring) {
+        const templateId = quickPayExpense.id;
         const { error } = await supabase.from('expenses').insert({
-          user_id: (quickPayExpense as any).user_id,
+          user_id: (quickPayExpense as any).user_id || user?.id,
           description: quickPayExpense.description,
           value: finalValue,
           final_category: (quickPayExpense as any).final_category,
@@ -200,6 +201,20 @@ export function NotificationBell() {
           invoice_month: (quickPayExpense as any).invoice_month || null,
         });
         if (error) throw error;
+
+        const dateChanged = payDate !== quickPayExpense.date;
+        if ((valueChanged || dateChanged) && quickPayApplyScope === 'all') {
+          const tplUpdate: Record<string, unknown> = {};
+          if (valueChanged) tplUpdate.value = newValue;
+          if (dateChanged) {
+            const newDay = String(new Date(payDate + 'T12:00:00').getDate()).padStart(2, '0');
+            const orig = new Date(quickPayExpense.date + 'T12:00:00');
+            tplUpdate.date = `${orig.getFullYear()}-${String(orig.getMonth() + 1).padStart(2, '0')}-${newDay}`;
+          }
+          if (Object.keys(tplUpdate).length > 0) {
+            await supabase.from('expenses').update(tplUpdate).eq('id', templateId);
+          }
+        }
       } else {
         const updateFields: Record<string, unknown> = { is_paid: true, date: payDate };
         if (valueChanged) updateFields.value = newValue;
