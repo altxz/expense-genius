@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Bell, CreditCard, Loader2, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -26,6 +27,7 @@ interface WalletOption { id: string; name: string }
 export function NotificationBell() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [open, setOpen] = useState(false);
   const [wallets, setWallets] = useState<WalletOption[]>([]);
@@ -229,6 +231,10 @@ export function NotificationBell() {
       }
 
       toast({ title: quickPayExpense.type === 'income' ? 'Recebimento confirmado!' : 'Pagamento confirmado!' });
+      await queryClient.invalidateQueries({ predicate: (q) => {
+        const k = q.queryKey?.[0];
+        return typeof k === 'string' && (k.startsWith('projected-') || k.startsWith('analytics') || k.startsWith('budget') || k === 'expenses' || k === 'history');
+      }, refetchType: 'active' });
       setQuickPayOpen(false);
     } catch (err: any) {
       toast({ title: 'Erro', description: err.message, variant: 'destructive' });
