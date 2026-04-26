@@ -39,7 +39,7 @@ export function NotificationBell() {
 
   // Quick pay/receive for individual transactions
   const [quickPayOpen, setQuickPayOpen] = useState(false);
-  const [quickPayExpense, setQuickPayExpense] = useState<{ id: string; description: string; value: number; date: string; type: string; installment_group_id?: string | null } | null>(null);
+  const [quickPayExpense, setQuickPayExpense] = useState<{ id: string; description: string; value: number; date: string; type: string; installment_group_id?: string | null; is_recurring?: boolean } | null>(null);
   const [quickPayValue, setQuickPayValue] = useState('');
   const [quickPayValueChanged, setQuickPayValueChanged] = useState(false);
   const [quickPayApplyScope, setQuickPayApplyScope] = useState<'single' | 'all' | null>(null);
