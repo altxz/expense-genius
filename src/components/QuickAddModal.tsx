@@ -139,7 +139,7 @@ export function QuickAddModal({ open, onOpenChange, onCreated }: QuickAddModalPr
 
       setSaving(false);
       if (error) {
-        toast({ title: 'Erro', description: error.message, variant: 'destructive' });
+        showFriendlyError(error);
       } else {
         toast({ title: 'Lançamento criado!', description: `${type === 'income' ? 'Receita' : 'Despesa'} de R$ ${numValue.toFixed(2)} registrada.` });
         reset();
