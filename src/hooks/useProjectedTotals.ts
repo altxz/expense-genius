@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSelectedDate } from '@/contexts/DateContext';
 import { getInvoicePeriod, matchExpensesToInvoice } from '@/lib/invoiceHelpers';
-import { buildMonthRecurringSignature, buildRecurringSignature } from '@/lib/recurringProjection';
+import { buildMaterializedRecurringSignature, buildMonthRecurringSignature, buildRecurringLooseSignature, buildRecurringSignature } from '@/lib/recurringProjection';
 import type { CreditCard as CreditCardType } from '@/lib/invoiceHelpers';
 import type { Expense } from '@/components/ExpenseTable';
 
@@ -97,8 +97,11 @@ export function useProjectedTotals(): ProjectedTotals {
     const realSignatures = new Set(
       monthExpenses.map(e => buildRecurringSignature(e.type, e.value, e.description))
     );
-    const realLooseSignatures = new Set(
-      monthExpenses.map(e => `${e.type}|${(e.description ?? '').trim().toLowerCase()}`)
+    const realLooseSignatures = new Set(monthExpenses.map(e => buildRecurringLooseSignature(e.type, e.description)));
+    const materializedRecurringSignatures = new Set(
+      monthExpenses
+        .filter(e => !e.is_recurring)
+        .map(e => buildMaterializedRecurringSignature(e))
     );
     const realIds = new Set(monthExpenses.map(e => e.id));
     const virtualEntries: Expense[] = [];
@@ -106,8 +109,12 @@ export function useProjectedTotals(): ProjectedTotals {
     recurringExpenses.forEach(r => {
       if (realIds.has(r.id)) return;
       const sig = buildRecurringSignature(r.type, r.value, r.description);
-      const looseSig = `${r.type}|${(r.description ?? '').trim().toLowerCase()}`;
-      if (realSignatures.has(sig) || realLooseSignatures.has(looseSig)) return;
+      const looseSig = buildRecurringLooseSignature(r.type, r.description);
+      if (
+        realSignatures.has(sig) ||
+        realLooseSignatures.has(looseSig) ||
+        materializedRecurringSignatures.has(buildMaterializedRecurringSignature(r))
+      ) return;
       if (r.type === 'transfer' || r.credit_card_id) return;
       virtualEntries.push({
         ...r,
@@ -146,7 +153,7 @@ export function useProjectedTotals(): ProjectedTotals {
       const ym = e.date ? e.date.substring(0, 7) : '';
       if (ym) {
         realByMonthSig.add(buildMonthRecurringSignature(ym, e.type, e.value, e.description));
-        realByMonthLoose.add(`${ym}|${e.type}|${((e.description as string) ?? '').trim().toLowerCase()}`);
+        realByMonthLoose.add(`${ym}|${buildRecurringLooseSignature(e.type, e.description)}`);
       }
     };
     historicalExpenses.forEach(addSigs);
@@ -163,7 +170,7 @@ export function useProjectedTotals(): ProjectedTotals {
         const mo = m % 12;
         const monthKey = `${yr}-${String(mo + 1).padStart(2, '0')}`;
         const sig = buildMonthRecurringSignature(monthKey, r.type, r.value, r.description);
-        const looseSig = `${monthKey}|${r.type}|${((r.description as string) ?? '').trim().toLowerCase()}`;
+        const looseSig = `${monthKey}|${buildRecurringLooseSignature(r.type, r.description)}`;
         if (realByMonthSig.has(sig) || realByMonthLoose.has(looseSig)) continue;
         if (r.type === 'income') virtualRecurringBalance += Number(r.value);
         else virtualRecurringBalance -= Number(r.value);
