@@ -57,11 +57,24 @@ export function GuidedTour() {
   }, [user]);
 
   const completeTour = async () => {
+    // Esconde imediatamente para feedback visual e evita reabrir
     setShow(false);
     if (!user) return;
-    await supabase
-      .from('user_settings')
-      .upsert({ user_id: user.id, onboarding_completed: true }, { onConflict: 'user_id' });
+    try {
+      const { error } = await supabase
+        .from('user_settings')
+        .upsert({ user_id: user.id, onboarding_completed: true }, { onConflict: 'user_id' });
+      if (error) {
+        // Se falhar (ex: offline), tenta de novo após pequeno delay para garantir persistência
+        setTimeout(() => {
+          supabase
+            .from('user_settings')
+            .upsert({ user_id: user.id, onboarding_completed: true }, { onConflict: 'user_id' });
+        }, 2000);
+      }
+    } catch {
+      // Silencioso — não bloqueia o usuário
+    }
   };
 
   const handleSkip = () => completeTour();
