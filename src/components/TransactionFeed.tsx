@@ -233,7 +233,7 @@ export function TransactionFeed({
       }
       onDeleted();
     } catch (err: any) {
-      toast({ title: 'Erro ao excluir', description: err.message, variant: 'destructive' });
+      showFriendlyError(err, 'Erro ao excluir');
     } finally {
       setDeleting(false);
       setDeletingExpense(null);
