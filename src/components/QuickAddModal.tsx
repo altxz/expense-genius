@@ -8,6 +8,7 @@ import { CATEGORIES } from '@/lib/constants';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { showFriendlyError } from '@/lib/errorHandler';
 import { Loader2, TrendingUp, TrendingDown, CreditCard } from 'lucide-react';
 
 interface QuickAddModalProps {
