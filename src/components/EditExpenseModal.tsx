@@ -364,7 +364,7 @@ export function EditExpenseModal({ open, expense, onOpenChange, onExpenseUpdated
   const handleDelete = async () => {
     const { error } = await supabase.from('expenses').delete().eq('id', expense.id);
     if (error) {
-      toast({ title: 'Erro', description: error.message, variant: 'destructive' });
+      showFriendlyError(error);
     } else {
       toast({ title: 'Transação excluída' });
       queryClient.invalidateQueries({ queryKey: ['projected-totals'] });
