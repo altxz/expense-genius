@@ -157,7 +157,7 @@ export function InvoiceDetailsModal({ open, onOpenChange, invoice, allExpenses, 
       onPaid?.();
       onOpenChange(false);
     } catch (err: any) {
-      toast({ title: 'Erro ao pagar fatura', description: err.message, variant: 'destructive' });
+      showFriendlyError(err, 'Erro ao pagar fatura');
     } finally {
       setPaying(false);
     }
