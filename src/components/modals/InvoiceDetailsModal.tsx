@@ -238,7 +238,7 @@ export function InvoiceDetailsModal({ open, onOpenChange, invoice, allExpenses, 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg h-[85dvh] grid-rows-[auto_1fr] gap-0 p-0 rounded-2xl overflow-hidden">
+      <DialogContent className="max-w-lg max-h-[calc(100dvh-2rem)] gap-0 p-0 rounded-2xl overflow-hidden">
         <DialogHeader className="p-5 pb-1 shrink-0">
           <DialogTitle className="text-lg font-bold">Detalhes da Fatura</DialogTitle>
           <DialogDescription className="sr-only">
