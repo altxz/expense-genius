@@ -324,7 +324,7 @@ export function AddExpenseModal({ open, onOpenChange, onExpenseAdded }: AddExpen
         project_id: projectId || null,
       });
       if (error) {
-        toast({ title: 'Erro ao salvar', description: error.message, variant: 'destructive' });
+        showFriendlyError(error, 'Erro ao salvar');
       } else {
         const msg = isTransfer ? 'Transferência salva!' : (type === 'income' ? 'Receita salva!' : 'Despesa salva!');
         toast({ title: msg, description: 'Registro salvo com sucesso.' });
