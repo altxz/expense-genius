@@ -25,7 +25,7 @@ export function ResponsiveModal({ open, onOpenChange, children }: ResponsiveModa
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-hidden p-0 gap-0 rounded-2xl flex flex-col">
+      <DialogContent className="max-w-lg max-h-[90dvh] overflow-hidden p-0 gap-0 rounded-2xl flex flex-col">
         {children}
       </DialogContent>
     </Dialog>
