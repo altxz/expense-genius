@@ -39,7 +39,7 @@ export function NotificationBell() {
 
   // Quick pay/receive for individual transactions
   const [quickPayOpen, setQuickPayOpen] = useState(false);
-  const [quickPayExpense, setQuickPayExpense] = useState<{ id: string; description: string; value: number; date: string; type: string; installment_group_id?: string | null } | null>(null);
+  const [quickPayExpense, setQuickPayExpense] = useState<{ id: string; description: string; value: number; date: string; type: string; installment_group_id?: string | null; is_recurring?: boolean } | null>(null);
   const [quickPayValue, setQuickPayValue] = useState('');
   const [quickPayValueChanged, setQuickPayValueChanged] = useState(false);
   const [quickPayApplyScope, setQuickPayApplyScope] = useState<'single' | 'all' | null>(null);
@@ -182,8 +182,9 @@ export function NotificationBell() {
       })();
 
       if ((quickPayExpense as any).is_recurring) {
+        const templateId = quickPayExpense.id;
         const { error } = await supabase.from('expenses').insert({
-          user_id: (quickPayExpense as any).user_id,
+          user_id: (quickPayExpense as any).user_id || user?.id,
           description: quickPayExpense.description,
           value: finalValue,
           final_category: (quickPayExpense as any).final_category,
@@ -200,6 +201,20 @@ export function NotificationBell() {
           invoice_month: (quickPayExpense as any).invoice_month || null,
         });
         if (error) throw error;
+
+        const dateChanged = payDate !== quickPayExpense.date;
+        if ((valueChanged || dateChanged) && quickPayApplyScope === 'all') {
+          const tplUpdate: Record<string, unknown> = {};
+          if (valueChanged) tplUpdate.value = newValue;
+          if (dateChanged) {
+            const newDay = String(new Date(payDate + 'T12:00:00').getDate()).padStart(2, '0');
+            const orig = new Date(quickPayExpense.date + 'T12:00:00');
+            tplUpdate.date = `${orig.getFullYear()}-${String(orig.getMonth() + 1).padStart(2, '0')}-${newDay}`;
+          }
+          if (Object.keys(tplUpdate).length > 0) {
+            await supabase.from('expenses').update(tplUpdate).eq('id', templateId);
+          }
+        }
       } else {
         const updateFields: Record<string, unknown> = { is_paid: true, date: payDate };
         if (valueChanged) updateFields.value = newValue;
@@ -350,7 +365,7 @@ export function NotificationBell() {
             </div>
 
             {/* Scope choice if value changed and has installments */}
-            {quickPayValueChanged && quickPayExpense?.installment_group_id && (
+            {quickPayValueChanged && quickPayExpense?.installment_group_id && !quickPayExpense?.is_recurring && (
               <div className="space-y-2">
                 <p className="text-xs font-medium text-foreground">Aplicar novo valor em:</p>
                 <div className="flex gap-2">
@@ -364,6 +379,23 @@ export function NotificationBell() {
               </div>
             )}
 
+            {/* Scope choice for recurring transactions when value changed */}
+            {quickPayExpense?.is_recurring && quickPayValueChanged && (
+              <div className="space-y-2 rounded-xl border border-primary/20 bg-primary/5 p-3">
+                <p className="text-xs font-medium text-foreground">
+                  Esta é uma transação recorrente. Aplicar a alteração em:
+                </p>
+                <div className="flex gap-2">
+                  <Button type="button" size="sm" variant={quickPayApplyScope === 'single' ? 'default' : 'outline'} className="rounded-xl text-xs flex-1" onClick={() => setQuickPayApplyScope('single')}>
+                    Apenas esta
+                  </Button>
+                  <Button type="button" size="sm" variant={quickPayApplyScope === 'all' ? 'default' : 'outline'} className="rounded-xl text-xs flex-1" onClick={() => setQuickPayApplyScope('all')}>
+                    Todas as próximas
+                  </Button>
+                </div>
+              </div>
+            )}
+
             <p className="text-sm text-muted-foreground">Deseja manter a data original ou alterar para a data de hoje?</p>
           </div>
           <DialogFooter className="flex-col sm:flex-row gap-2">
@@ -371,14 +403,14 @@ export function NotificationBell() {
             <Button
               variant="outline"
               className="rounded-xl"
-              disabled={quickPaying || (quickPayValueChanged && !!quickPayExpense?.installment_group_id && !quickPayApplyScope)}
+              disabled={quickPaying || (quickPayValueChanged && !!quickPayExpense?.installment_group_id && !quickPayExpense?.is_recurring && !quickPayApplyScope) || (!!quickPayExpense?.is_recurring && quickPayValueChanged && !quickPayApplyScope)}
               onClick={() => handleConfirmQuickPay(true)}
             >
               Manter data ({quickPayExpense ? new Date(quickPayExpense.date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : ''})
             </Button>
             <Button
               className="rounded-xl bg-emerald-600 text-white hover:bg-emerald-700"
-              disabled={quickPaying || (quickPayValueChanged && !!quickPayExpense?.installment_group_id && !quickPayApplyScope)}
+              disabled={quickPaying || (quickPayValueChanged && !!quickPayExpense?.installment_group_id && !quickPayExpense?.is_recurring && !quickPayApplyScope) || (!!quickPayExpense?.is_recurring && quickPayValueChanged && !quickPayApplyScope)}
               onClick={() => handleConfirmQuickPay(false)}
             >
               {quickPaying ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Processando...</> : `Mudar para hoje (${todayFormatted})`}

@@ -155,8 +155,13 @@ export function TransactionFeed({
         return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
       })();
 
+      const dateChanged = payDate !== exp.date;
+
       // If this is a recurring template, INSERT a new paid copy instead of updating the template
       if (exp.is_recurring) {
+        // The virtual projected occurrence keeps the template id intact
+        const templateId = exp.id;
+
         const { error } = await supabase.from('expenses').insert({
           user_id: (exp as any).user_id || user?.id,
           description: exp.description,
@@ -175,6 +180,26 @@ export function TransactionFeed({
           invoice_month: exp.invoice_month || null,
         });
         if (error) throw error;
+
+        // If user opted to apply changes to all future occurrences, update the template
+        if ((valueChanged || dateChanged) && payApplyScope === 'all') {
+          const templateUpdate: Record<string, unknown> = {};
+          if (valueChanged) templateUpdate.value = newValue;
+          if (dateChanged) {
+            // Update the template's day-of-month so future projections use the new day
+            const newDay = String(new Date(payDate + 'T12:00:00').getDate()).padStart(2, '0');
+            const origDate = new Date(exp.date + 'T12:00:00');
+            const newTemplateDate = `${origDate.getFullYear()}-${String(origDate.getMonth() + 1).padStart(2, '0')}-${newDay}`;
+            templateUpdate.date = newTemplateDate;
+          }
+          if (Object.keys(templateUpdate).length > 0) {
+            const { error: tplErr } = await supabase
+              .from('expenses')
+              .update(templateUpdate)
+              .eq('id', templateId);
+            if (tplErr) throw tplErr;
+          }
+        }
       } else {
         // Normal (non-recurring) transaction: update in place
         const updateFields: Record<string, unknown> = { is_paid: true, date: payDate };
@@ -800,7 +825,7 @@ export function TransactionFeed({
                 </div>
 
                 {/* Scope choice if value changed and has installments */}
-                {payValueChanged && payingExpense?.installment_group_id && (
+                {payValueChanged && payingExpense?.installment_group_id && !payingExpense?.is_recurring && (
                   <div className="space-y-2">
                     <p className="text-xs font-medium text-foreground">Aplicar novo valor em:</p>
                     <div className="flex gap-2">
@@ -821,6 +846,35 @@ export function TransactionFeed({
                         onClick={() => setPayApplyScope('all')}
                       >
                         Todas as parcelas
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Scope choice for recurring transactions when value or date changed */}
+                {payingExpense?.is_recurring && (payValueChanged || payDateMode !== 'original') && (
+                  <div className="space-y-2 rounded-xl border border-primary/20 bg-primary/5 p-3">
+                    <p className="text-xs font-medium text-foreground">
+                      Esta é uma transação recorrente. Aplicar a alteração em:
+                    </p>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={payApplyScope === 'single' ? 'default' : 'outline'}
+                        className="rounded-xl text-xs flex-1"
+                        onClick={() => setPayApplyScope('single')}
+                      >
+                        Apenas esta
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={payApplyScope === 'all' ? 'default' : 'outline'}
+                        className="rounded-xl text-xs flex-1"
+                        onClick={() => setPayApplyScope('all')}
+                      >
+                        Todas as próximas
                       </Button>
                     </div>
                   </div>
@@ -881,7 +935,8 @@ export function TransactionFeed({
             <Button
               className="rounded-xl bg-emerald-600 text-white hover:bg-emerald-700"
               disabled={
-                (payValueChanged && !!payingExpense?.installment_group_id && !payApplyScope) ||
+                (payValueChanged && !!payingExpense?.installment_group_id && !payingExpense?.is_recurring && !payApplyScope) ||
+                (!!payingExpense?.is_recurring && (payValueChanged || payDateMode !== 'original') && !payApplyScope) ||
                 (payDateMode === 'custom' && !payCustomDate)
               }
               onClick={() => payingExpense && handleMarkAsPaid(payingExpense)}
