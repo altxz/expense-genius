@@ -11,6 +11,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { formatCurrency } from '@/lib/constants';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 import { EditExpenseModal } from '@/components/EditExpenseModal';
 import { InvoiceDetailsModal } from '@/components/modals/InvoiceDetailsModal';
 import { getInvoicePeriod, matchExpensesToInvoice } from '@/lib/invoiceHelpers';
@@ -111,6 +112,7 @@ export function TransactionFeed({
   });
   const [invoiceModal, setInvoiceModal] = useState<InvoicePeriod | null>(null);
   const { toast } = useToast();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   useEffect(() => {
     try { localStorage.setItem(STORAGE_KEY, String(groupCards)); } catch {}
@@ -155,7 +157,7 @@ export function TransactionFeed({
       // If this is a recurring template, INSERT a new paid copy instead of updating the template
       if (exp.is_recurring) {
         const { error } = await supabase.from('expenses').insert({
-          user_id: (exp as any).user_id,
+          user_id: (exp as any).user_id || user?.id,
           description: exp.description,
           value: finalValue,
           final_category: exp.final_category,
