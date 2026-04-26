@@ -27,6 +27,7 @@ interface WalletOption { id: string; name: string }
 export function NotificationBell() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [open, setOpen] = useState(false);
   const [wallets, setWallets] = useState<WalletOption[]>([]);
