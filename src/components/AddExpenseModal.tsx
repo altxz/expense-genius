@@ -290,7 +290,7 @@ export function AddExpenseModal({ open, onOpenChange, onExpenseAdded }: AddExpen
 
       const { error } = await supabase.from('expenses').insert(rows);
       if (error) {
-        toast({ title: 'Erro ao salvar', description: error.message, variant: 'destructive' });
+        showFriendlyError(error, 'Erro ao salvar');
       } else {
         toast({ title: 'Lançamentos criados!', description: `${numRepeats} lançamentos de R$ ${perUnit.toFixed(2)} salvos.` });
         resetForm();
