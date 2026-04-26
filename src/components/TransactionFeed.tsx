@@ -935,7 +935,8 @@ export function TransactionFeed({
             <Button
               className="rounded-xl bg-emerald-600 text-white hover:bg-emerald-700"
               disabled={
-                (payValueChanged && !!payingExpense?.installment_group_id && !payApplyScope) ||
+                (payValueChanged && !!payingExpense?.installment_group_id && !payingExpense?.is_recurring && !payApplyScope) ||
+                (!!payingExpense?.is_recurring && (payValueChanged || payDateMode !== 'original') && !payApplyScope) ||
                 (payDateMode === 'custom' && !payCustomDate)
               }
               onClick={() => payingExpense && handleMarkAsPaid(payingExpense)}
