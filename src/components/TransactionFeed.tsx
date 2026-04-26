@@ -12,6 +12,7 @@ import { formatCurrency } from '@/lib/constants';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { showFriendlyError } from '@/lib/errorHandler';
 import { EditExpenseModal } from '@/components/EditExpenseModal';
 import { InvoiceDetailsModal } from '@/components/modals/InvoiceDetailsModal';
 import { getInvoicePeriod, matchExpensesToInvoice } from '@/lib/invoiceHelpers';
