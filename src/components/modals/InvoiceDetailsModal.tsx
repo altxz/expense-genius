@@ -10,6 +10,7 @@ import { EditExpenseModal } from '@/components/EditExpenseModal';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { showFriendlyError } from '@/lib/errorHandler';
 
 import { InvoiceHeader } from './invoice/InvoiceHeader';
 import { InvoiceTransactionList } from './invoice/InvoiceTransactionList';
