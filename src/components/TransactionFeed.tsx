@@ -155,8 +155,13 @@ export function TransactionFeed({
         return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
       })();
 
+      const dateChanged = payDate !== exp.date;
+
       // If this is a recurring template, INSERT a new paid copy instead of updating the template
       if (exp.is_recurring) {
+        // Find the actual recurring template id (the virtual projected expense uses a synthetic id)
+        const templateId = (exp as any).recurring_template_id || exp.id;
+
         const { error } = await supabase.from('expenses').insert({
           user_id: (exp as any).user_id || user?.id,
           description: exp.description,
@@ -175,6 +180,26 @@ export function TransactionFeed({
           invoice_month: exp.invoice_month || null,
         });
         if (error) throw error;
+
+        // If user opted to apply changes to all future occurrences, update the template
+        if ((valueChanged || dateChanged) && payApplyScope === 'all') {
+          const templateUpdate: Record<string, unknown> = {};
+          if (valueChanged) templateUpdate.value = newValue;
+          if (dateChanged) {
+            // Update the template's day-of-month so future projections use the new day
+            const newDay = String(new Date(payDate + 'T12:00:00').getDate()).padStart(2, '0');
+            const origDate = new Date(exp.date + 'T12:00:00');
+            const newTemplateDate = `${origDate.getFullYear()}-${String(origDate.getMonth() + 1).padStart(2, '0')}-${newDay}`;
+            templateUpdate.date = newTemplateDate;
+          }
+          if (Object.keys(templateUpdate).length > 0) {
+            const { error: tplErr } = await supabase
+              .from('expenses')
+              .update(templateUpdate)
+              .eq('id', templateId);
+            if (tplErr) throw tplErr;
+          }
+        }
       } else {
         // Normal (non-recurring) transaction: update in place
         const updateFields: Record<string, unknown> = { is_paid: true, date: payDate };
