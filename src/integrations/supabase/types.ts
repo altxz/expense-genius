@@ -510,6 +510,30 @@ export type Database = {
         }
         Relationships: []
       }
+      recurring_exceptions: {
+        Row: {
+          created_at: string
+          id: string
+          occurrence_date: string
+          template_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          occurrence_date: string
+          template_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          occurrence_date?: string
+          template_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_settings: {
         Row: {
           ai_auto_categorize: boolean
