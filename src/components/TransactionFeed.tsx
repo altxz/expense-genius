@@ -19,6 +19,7 @@ import { getInvoicePeriod, matchExpensesToInvoice } from '@/lib/invoiceHelpers';
 import type { CreditCard as CreditCardType, InvoicePeriod } from '@/lib/invoiceHelpers';
 import type { Expense } from '@/components/ExpenseTable';
 import { deleteSingleRecurringOccurrence } from '@/lib/recurringExceptions';
+import { getCreditCardPaymentCardId, isTrackedCreditCardPayment } from '@/lib/creditCardPayments';
 import { buildInvoiceCashEvents, groupInvoiceCashEventsByDay } from '@/lib/invoiceCashFlow';
 
 const CATEGORY_ICONS: Record<string, { icon: typeof Utensils; bg: string; text: string }> = {
@@ -326,14 +327,12 @@ export function TransactionFeed({
       const paymentDateMap = new Map<string, string>(); // cardId -> payment date
       if (groupCards) {
         allTxnPool.forEach(exp => {
-          if (!exp.description?.toLowerCase().startsWith('pagamento fatura')) return;
+          if (!isTrackedCreditCardPayment(exp, creditCards)) return;
           if (!exp.wallet_id) return;
           const dueLabel = `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}`;
           if (exp.invoice_month !== dueLabel) return;
-          // Match by credit_card_id or legacy card name
-          if (exp.credit_card_id) {
-            paymentDateMap.set(exp.credit_card_id, exp.date);
-          }
+          const cardId = getCreditCardPaymentCardId(exp, creditCards);
+          if (cardId) paymentDateMap.set(cardId, exp.date);
         });
       }
 
@@ -352,9 +351,10 @@ export function TransactionFeed({
       expenses.forEach(exp => {
         if (exp.credit_card_id) return; // CC expenses handled below
         // Hide "Pagamento fatura X" when the invoice for card X is already shown as paid
-        if (groupCards && exp.description.toLowerCase().startsWith('pagamento fatura')) {
-          const cardName = exp.description.substring('pagamento fatura'.length).trim().toLowerCase();
-          if (paidInvoiceCardNames.has(cardName)) return;
+        if (groupCards && isTrackedCreditCardPayment(exp, creditCards)) {
+          const cardId = getCreditCardPaymentCardId(exp, creditCards);
+          const cardName = creditCards.find(card => card.id === cardId)?.name.toLowerCase();
+          if (cardName && paidInvoiceCardNames.has(cardName)) return;
         }
         ensureDay(exp.date);
         dayMap[exp.date].push({ expense: exp, isInvoiceItem: false });
@@ -396,11 +396,10 @@ export function TransactionFeed({
     const allTxns = allExpenses || expenses;
 
     const nonCcFlowByDay: Record<string, number> = {};
-    allTxns.forEach(exp => {
+      allTxns.forEach(exp => {
       if (exp.type === 'transfer') return;
       if (exp.credit_card_id) return;
-      // Exclude invoice payment records — invoice impact is already captured via invoiceTotalByDay
-      if (exp.description?.toLowerCase().startsWith('pagamento fatura')) return;
+        if (isTrackedCreditCardPayment(exp, creditCards)) return;
       const key = exp.date;
       if (key < monthStart || key > monthEnd) return;
       if (!nonCcFlowByDay[key]) nonCcFlowByDay[key] = 0;
