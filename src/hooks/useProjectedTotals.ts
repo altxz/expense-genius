@@ -179,13 +179,19 @@ export function useProjectedTotals(): ProjectedTotals {
       if (r.type === 'transfer' || r.credit_card_id) return;
       const rDate = new Date(r.date + 'T12:00:00');
       const rStartMonth = rDate.getFullYear() * 12 + rDate.getMonth();
+      const origDay = rDate.getDate();
       for (let m = rStartMonth; m < selectedMonthStart; m++) {
         const yr = Math.floor(m / 12);
         const mo = m % 12;
+        // Respect frequency (yearly only matches its own month)
+        if (!shouldProjectRecurringInMonth(r.date, yr, mo, r.frequency)) continue;
         const monthKey = `${yr}-${String(mo + 1).padStart(2, '0')}`;
         const sig = buildMonthRecurringSignature(monthKey, r.type, r.value, r.description);
         const looseSig = `${monthKey}|${buildRecurringLooseSignature(r.type, r.description)}`;
         if (realByMonthSig.has(sig) || realByMonthLoose.has(looseSig)) continue;
+        const daysInMonth = new Date(yr, mo + 1, 0).getDate();
+        const occDate = `${monthKey}-${String(Math.min(origDay, daysInMonth)).padStart(2, '0')}`;
+        if (exceptionSet.has(buildRecurringExceptionSignature(r.id, occDate))) continue;
         if (r.type === 'income') virtualRecurringBalance += Number(r.value);
         else virtualRecurringBalance -= Number(r.value);
       }
