@@ -169,8 +169,7 @@ export function useProjectedTotals(): ProjectedTotals {
 
     const nonTransfers = visibleHistoricalExpenses.filter((e: any) => e.type !== 'transfer');
     const historicalIncome = nonTransfers.filter((e: any) => e.type === 'income').reduce((s: number, e: any) => s + e.value, 0);
-    // Exclude "Pagamento fatura" — invoice impact is already captured by ccInvoiceTotal
-    const historicalDebit = nonTransfers.filter((e: any) => e.type !== 'income' && !e.description?.startsWith('Pagamento fatura')).reduce((s: number, e: any) => s + e.value, 0);
+    const historicalDebit = nonTransfers.filter((e: any) => e.type !== 'income' && !isCCPayment(e)).reduce((s: number, e: any) => s + e.value, 0);
 
     const pendingExpenses = nonTransfers.filter((e: any) => e.type !== 'income' && !e.is_paid);
     const pendingIncome = nonTransfers.filter((e: any) => e.type === 'income' && !e.is_paid);
@@ -193,7 +192,7 @@ export function useProjectedTotals(): ProjectedTotals {
 
     const selectedMonthStart = selectedYear * 12 + selectedMonth;
 
-    recurringExpenses.forEach(r => {
+    recurringTemplates.forEach(r => {
       if (r.type === 'transfer' || r.credit_card_id) return;
       const rDate = new Date(r.date + 'T12:00:00');
       const rStartMonth = rDate.getFullYear() * 12 + rDate.getMonth();
@@ -220,7 +219,7 @@ export function useProjectedTotals(): ProjectedTotals {
 
     const balance = walletSum + historicalIncome - historicalDebit + virtualRecurringBalance - ccInvoiceTotal;
     return { startingBalance: balance, pendingInStartingBalance: pendingAmount };
-  }, [wallets, visibleHistoricalExpenses, visibleMonthExpenses, recurringExpenses, creditCards, invoiceExpenses, startDate, exceptionSet]);
+  }, [wallets, visibleHistoricalExpenses, visibleMonthExpenses, recurringTemplates, creditCards, invoiceExpenses, startDate, exceptionSet, isCCPayment]);
 
   // Invoice totals
   const invoiceTotals = useMemo(() => {
@@ -235,14 +234,33 @@ export function useProjectedTotals(): ProjectedTotals {
   // Compute totals
   const result = useMemo(() => {
     const nonTransfers = effectiveMonthExpenses.filter(e => e.type !== 'transfer');
-    const totalIncome = nonTransfers.filter(e => e.type === 'income').reduce((s, e) => s + e.value, 0);
-    // Exclude "Pagamento fatura" — invoice impact is already captured by invoiceTotals.total
-    const debitExpense = nonTransfers.filter(e => e.type !== 'income' && !e.credit_card_id && !e.description?.startsWith('Pagamento fatura')).reduce((s, e) => s + e.value, 0);
+    const materializedMonthSignatures = new Set(
+      nonTransfers.map((e) => buildRecurringSignature(e.type, e.value, e.description))
+    );
+    let totalIncome = nonTransfers.filter(e => e.type === 'income').reduce((s, e) => s + e.value, 0);
+    let debitExpense = nonTransfers.filter(e => e.type !== 'income' && !e.credit_card_id && !isCCPayment(e)).reduce((s, e) => s + e.value, 0);
+
+    recurringTemplates.forEach((template) => {
+      if (template.type === 'transfer' || template.credit_card_id) return;
+      if (!shouldProjectRecurringInMonth(template.date, selectedYear, selectedMonth, template.frequency)) return;
+      if (new Date(`${template.date}T12:00:00`) >= new Date(`${startDate}T12:00:00`)) return;
+      const monthDay = Math.min(
+        new Date(`${template.date}T12:00:00`).getDate(),
+        new Date(selectedYear, selectedMonth + 1, 0).getDate(),
+      );
+      const occurrenceDate = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-${String(monthDay).padStart(2, '0')}`;
+      if (exceptionSet.has(buildRecurringExceptionSignature(template.id, occurrenceDate))) return;
+      if (materializedMonthSignatures.has(buildRecurringSignature(template.type, template.value, template.description))) return;
+
+      if (template.type === 'income') totalIncome += template.value;
+      else debitExpense += template.value;
+    });
+
     const totalExpense = debitExpense + invoiceTotals.total;
 
     const byCategory: Record<string, number> = { ...invoiceTotals.byCategory };
     nonTransfers
-      .filter(e => e.type !== 'income' && !e.credit_card_id && !e.description.startsWith('Pagamento fatura'))
+      .filter(e => e.type !== 'income' && !e.credit_card_id && !isCCPayment(e))
       .forEach(e => {
         byCategory[e.final_category] = (byCategory[e.final_category] || 0) + e.value;
       });
@@ -255,7 +273,7 @@ export function useProjectedTotals(): ProjectedTotals {
       projectedBalance: startingBalance + totalIncome - totalExpense,
       largestCategory: largest ? { name: largest[0], total: largest[1], categoryKey: largest[0] } : null,
     };
-  }, [effectiveMonthExpenses, invoiceTotals, startingBalance]);
+  }, [effectiveMonthExpenses, invoiceTotals, startingBalance, recurringTemplates, selectedYear, selectedMonth, startDate, exceptionSet, isCCPayment]);
 
   const refetch = () => {
     queryClient.invalidateQueries({ queryKey });
