@@ -29,7 +29,6 @@ export default function HistoryPage() {
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
 
-  const projected = useProjectedTotals();
 
   const [search, setSearch] = useState('');
   const [filters, setFilters] = useState(() => ({
