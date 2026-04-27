@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSelectedDate } from '@/contexts/DateContext';
 import { getInvoicePeriod, matchExpensesToInvoice } from '@/lib/invoiceHelpers';
+import { buildInvoiceCashEvents, sumInvoiceCashEventsBeforeDate } from '@/lib/invoiceCashFlow';
 import { buildMaterializedRecurringSignature, buildMonthRecurringSignature, buildRecurringExceptionSignature, buildRecurringLooseSignature, buildRecurringSignature, hideMaterializedRecurringTemplates, shouldProjectRecurringInMonth } from '@/lib/recurringProjection';
 import type { CreditCard as CreditCardType } from '@/lib/invoiceHelpers';
 import type { Expense } from '@/components/ExpenseTable';
@@ -197,26 +198,12 @@ export function useProjectedTotals(): ProjectedTotals {
       }
     });
 
-    let ccInvoiceTotal = 0;
-    if (creditCards.length > 0) {
-      const ccPool = invoiceExpenses;
-      const selectedDate = new Date(selectedYear, selectedMonth, 1);
-      creditCards.forEach(card => {
-        for (let i = 1; i <= 24; i++) {
-          const dt = new Date(selectedDate);
-          dt.setMonth(dt.getMonth() - i);
-          const m = dt.getMonth();
-          const y = dt.getFullYear();
-          const period = getInvoicePeriod(card, y, m);
-          const invoice = matchExpensesToInvoice(ccPool, period);
-          if (invoice.total > 0) ccInvoiceTotal += invoice.total;
-        }
-      });
-    }
+    const invoiceCashEvents = buildInvoiceCashEvents(creditCards, invoiceExpenses);
+    const ccInvoiceTotal = sumInvoiceCashEventsBeforeDate(invoiceCashEvents, startDate);
 
     const balance = walletSum + historicalIncome - historicalDebit + virtualRecurringBalance - ccInvoiceTotal;
     return { startingBalance: balance, pendingInStartingBalance: pendingAmount };
-  }, [wallets, historicalExpenses, visibleMonthExpenses, recurringExpenses, creditCards, invoiceExpenses, selectedMonth, selectedYear, exceptionSet]);
+  }, [wallets, historicalExpenses, visibleMonthExpenses, recurringExpenses, creditCards, invoiceExpenses, startDate, exceptionSet]);
 
   // Invoice totals
   const invoiceTotals = useMemo(() => {
