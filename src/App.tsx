@@ -15,6 +15,7 @@ import { AnimatedRoutes } from "@/components/AnimatedRoute";
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const AuthPage = lazy(() => import("./pages/AuthPage"));
 const CategoriesPage = lazy(() => import("./pages/CategoriesPage"));
+const CategoryDetailsPage = lazy(() => import("./pages/CategoryDetailsPage"));
 const HistoryPage = lazy(() => import("./pages/HistoryPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 const AnalyticsPage = lazy(() => import("./pages/AnalyticsPage"));
@@ -62,6 +63,7 @@ const App = () => (
                       <Route path="/" element={<Dashboard />} />
                       <Route path="/auth" element={<AuthPage />} />
                       <Route path="/categorias" element={<CategoriesPage />} />
+                      <Route path="/categorias/:id" element={<CategoryDetailsPage />} />
                       <Route path="/historico" element={<HistoryPage />} />
                       <Route path="/configuracoes" element={<SettingsPage />} />
                       <Route path="/analytics" element={<AnalyticsPage />} />
