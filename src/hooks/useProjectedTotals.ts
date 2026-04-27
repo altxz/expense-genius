@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useSelectedDate } from '@/contexts/DateContext';
 import { getInvoicePeriod, matchExpensesToInvoice } from '@/lib/invoiceHelpers';
 import { buildInvoiceCashEvents, sumInvoiceCashEventsBeforeDate } from '@/lib/invoiceCashFlow';
+import { computeInvoiceTotalsForCashWindow } from '@/lib/projectedInvoiceTotals';
 import { buildMaterializedRecurringSignature, buildMonthRecurringSignature, buildRecurringExceptionSignature, buildRecurringLooseSignature, buildRecurringSignature, hideMaterializedRecurringTemplates, shouldProjectRecurringInMonth } from '@/lib/recurringProjection';
 import type { CreditCard as CreditCardType } from '@/lib/invoiceHelpers';
 import type { Expense } from '@/components/ExpenseTable';
@@ -207,20 +208,13 @@ export function useProjectedTotals(): ProjectedTotals {
 
   // Invoice totals
   const invoiceTotals = useMemo(() => {
-    if (creditCards.length === 0) return { total: 0, byCategory: {} as Record<string, number> };
-    const ccPool = invoiceExpenses.length > 0 ? invoiceExpenses : visibleMonthExpenses;
-    let total = 0;
-    const byCategory: Record<string, number> = {};
-    creditCards.forEach(card => {
-      const period = getInvoicePeriod(card, selectedYear, selectedMonth);
-      const invoice = matchExpensesToInvoice(ccPool, period);
-      total += invoice.total;
-      invoice.transactions.forEach(tx => {
-        byCategory[tx.final_category] = (byCategory[tx.final_category] || 0) + tx.value;
-      });
+    return computeInvoiceTotalsForCashWindow({
+      creditCards,
+      expenses: invoiceExpenses.length > 0 ? invoiceExpenses : visibleMonthExpenses,
+      startDate,
+      endDate,
     });
-    return { total, byCategory };
-  }, [creditCards, invoiceExpenses, visibleMonthExpenses, selectedMonth, selectedYear]);
+  }, [creditCards, invoiceExpenses, visibleMonthExpenses, startDate, endDate]);
 
   // Compute totals
   const result = useMemo(() => {
