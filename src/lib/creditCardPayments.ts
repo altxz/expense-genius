@@ -37,3 +37,11 @@ export function isTrackedCreditCardPayment(item: PaymentLike, creditCards: Credi
 
   return !!getCreditCardPaymentCardId(item, creditCards);
 }
+
+export function isCreditCardPaymentLabel(description?: string | null) {
+  return PAYMENT_PREFIX_RE.test(description ?? '');
+}
+
+export function getCreditCardPaymentLabelCardName(description?: string | null) {
+  return normalize(description).replace(PAYMENT_PREFIX_RE, '').split(' - ')[0];
+}
