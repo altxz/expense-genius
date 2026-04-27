@@ -4,7 +4,7 @@ import {
   groupInvoiceCashEventsByDay,
   sumInvoiceCashEventsBeforeDate,
 } from '@/lib/invoiceCashFlow';
-import { computeProjectedMonthResult } from '@/lib/projectedBalanceMath';
+import { buildDailyBalanceMap, computeProjectedMonthResult } from '@/lib/projectedBalanceMath';
 import { computeInvoiceTotalsForCashWindow } from '@/lib/projectedInvoiceTotals';
 import {
   buildMonthRecurringSignature,
@@ -703,5 +703,61 @@ describe('Balance continuity — multiple credit cards', () => {
     });
 
     expect(startMay).toBeCloseTo(-2566.52, 2);
+  });
+
+  it('uses the real payment day in the daily balance instead of the invoice due day', () => {
+    const visaCard: CreditCard = {
+      id: 'card-visa',
+      name: 'Visa',
+      limit_amount: 7000,
+      closing_day: 25,
+      due_day: 8,
+      closing_strategy: 'fixed',
+      closing_days_before_due: 7,
+    };
+
+    const purchase = makeExpense({
+      id: 'invoice-purchase',
+      description: 'Notebook',
+      value: 1800,
+      date: '2026-04-02',
+      credit_card_id: visaCard.id,
+      invoice_month: '2026-05',
+      final_category: 'trabalho',
+      is_paid: false,
+    });
+    const payment = makeExpense({
+      id: 'invoice-payment',
+      description: 'Pagamento fatura Visa',
+      value: 1800,
+      date: '2026-04-30',
+      wallet_id: 'wallet-1',
+      invoice_month: '2026-05',
+      final_category: 'Cartão de crédito',
+      is_paid: true,
+    });
+    const salary = makeExpense({
+      id: 'salary-apr',
+      description: 'Salário',
+      value: 3000,
+      date: '2026-04-05',
+      type: 'income',
+      is_paid: true,
+    });
+
+    const { balanceMap, invoiceTotalByDay } = buildDailyBalanceMap({
+      monthExpenses: [salary, payment],
+      invoiceExpenses: [purchase, payment],
+      creditCards: [visaCard],
+      startDate: '2026-04-01',
+      endDate: '2026-04-30',
+      startingBalance: 1000,
+      isCreditCardPayment: isCCPayment as (expense: Expense) => boolean,
+    });
+
+    expect(invoiceTotalByDay['2026-04-30']).toBe(1800);
+    expect(invoiceTotalByDay['2026-04-08']).toBeUndefined();
+    expect(balanceMap['2026-04-05']).toBe(4000);
+    expect(balanceMap['2026-04-30']).toBe(2200);
   });
 });
