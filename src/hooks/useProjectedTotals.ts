@@ -50,7 +50,7 @@ async function fetchProjectedData(userId: string, startDate: string, endDate: st
     // Also fetch invoice payment records (no credit_card_id but have invoice_month and start with "Pagamento fatura")
     supabase.from('expenses').select(EXPENSE_COLS).eq('user_id', userId)
       .is('credit_card_id', null).not('invoice_month', 'is', null).like('description', 'Pagamento fatura%'),
-    supabase.from('expenses').select('id, description, date, value, type, credit_card_id, is_paid, final_category')
+    supabase.from('expenses').select('id, description, date, value, type, credit_card_id, is_paid, final_category, is_recurring, wallet_id, payment_method, project_id')
       .eq('user_id', userId).lt('date', startDate).is('credit_card_id', null),
     supabase.from('credit_cards').select('*').eq('user_id', userId),
     supabase.from('wallets').select('id, name, initial_balance').eq('user_id', userId).order('name'),
