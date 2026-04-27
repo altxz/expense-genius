@@ -443,7 +443,7 @@ export function TransactionFeed({
       invoices: invoicesByDay[dateKey] || [],
       endOfDayBalance: balanceMap[dateKey] ?? startingMonthBalance,
     }));
-  }, [expenses, allExpenses, startingMonthBalance, groupCards, invoicePeriods, monthStart, monthEnd, creditCards]);
+  }, [expenses, allExpenses, invoiceExpenses, startingMonthBalance, groupCards, invoicePeriods, monthStart, monthEnd, creditCards]);
 
   const statusConfig: Record<string, { label: string; className: string }> = {
     open: { label: 'Aberta', className: 'bg-emerald-500/15 text-emerald-600 border-emerald-500/30' },
