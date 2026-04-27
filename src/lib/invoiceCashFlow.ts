@@ -6,6 +6,7 @@ import {
   type CreditCard,
   type InvoicePeriod,
 } from '@/lib/invoiceHelpers';
+import { getCreditCardPaymentLabelCardName, isCreditCardPaymentLabel } from '@/lib/creditCardPayments';
 
 type InvoiceCashExpense = Pick<
   Expense,
@@ -37,7 +38,7 @@ function normalizeCardName(name?: string | null) {
 }
 
 function getLegacyPaymentCardName(description?: string | null) {
-  return normalizeCardName(description?.replace(/^Pagamento fatura\s*/i, '').split(' - ')[0]);
+  return normalizeCardName(getCreditCardPaymentLabelCardName(description));
 }
 
 function isInvoicePaymentRecord(expense: InvoiceCashExpense) {
@@ -45,7 +46,7 @@ function isInvoicePaymentRecord(expense: InvoiceCashExpense) {
     expense.type === 'expense' &&
     !!expense.invoice_month &&
     !!expense.wallet_id &&
-    /^Pagamento fatura/i.test(expense.description ?? '')
+    isCreditCardPaymentLabel(expense.description)
   );
 }
 
