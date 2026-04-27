@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -52,6 +53,7 @@ interface ExpenseTableProps {
 export function ExpenseTable({ expenses, loading, onDeleted, filters, onFilterChange, page, totalPages, onPageChange }: ExpenseTableProps) {
   const { toast } = useToast();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [deletingExpense, setDeletingExpense] = useState<Expense | null>(null);
   const [deleteMode, setDeleteMode] = useState<'single' | 'all' | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -88,6 +90,10 @@ export function ExpenseTable({ expenses, loading, onDeleted, filters, onFilterCh
         if (error) throw error;
         toast({ title: 'Despesa excluída' });
       }
+      await queryClient.invalidateQueries({ predicate: (q) => {
+        const k = q.queryKey?.[0];
+        return typeof k === 'string' && (k.startsWith('projected-') || k.startsWith('analytics') || k.startsWith('budget') || k === 'expenses' || k === 'history');
+      }, refetchType: 'active' });
       onDeleted();
     } catch (err: any) {
       toast({ title: 'Erro', description: err.message, variant: 'destructive' });
