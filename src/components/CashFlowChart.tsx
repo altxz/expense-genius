@@ -7,6 +7,7 @@ import { formatCurrency } from '@/lib/constants';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSelectedDate } from '@/contexts/DateContext';
 import { supabase } from '@/lib/supabase';
+import { isTrackedCreditCardPayment } from '@/lib/creditCardPayments';
 import { buildMonthRecurringSignature, buildRecurringSignature } from '@/lib/recurringProjection';
 import { addDays, format, startOfDay, eachDayOfInterval, isBefore, isAfter, parseISO } from 'date-fns';
 import { pt } from 'date-fns/locale';
@@ -92,7 +93,7 @@ export function CashFlowChart({ creditCards: propCards, wallets: propWallets }: 
     let preRangeBalance = walletsBase;
     const rangeYm = format(rangeStart, 'yyyy-MM');
 
-    allExpenses.forEach(e => {
+      allExpenses.forEach(e => {
       if (e.type === 'transfer') return;
       const dStr = e.date;
 
@@ -101,10 +102,10 @@ export function CashFlowChart({ creditCards: propCards, wallets: propWallets }: 
         if (e.invoice_month && e.invoice_month < rangeYm) {
           preRangeBalance -= Number(e.value);
         }
-      } else if (dStr < rangeStartStr) {
+        } else if (dStr < rangeStartStr) {
         // Non-CC: accumulate by date (ignore is_paid)
         if (e.type === 'income') preRangeBalance += Number(e.value);
-        else if (e.type === 'expense') preRangeBalance -= Number(e.value);
+          else if (e.type === 'expense' && !isTrackedCreditCardPayment(e, propCards)) preRangeBalance -= Number(e.value);
       }
     });
 
@@ -137,13 +138,13 @@ export function CashFlowChart({ creditCards: propCards, wallets: propWallets }: 
 
     // 3) Build in-range transactions by date (all, regardless of is_paid)
     const txByDate: Record<string, { income: number; expense: number }> = {};
-    allExpenses.forEach(e => {
+      allExpenses.forEach(e => {
       if (e.type === 'transfer') return;
       const dStr = e.date;
       if (dStr >= rangeStartStr && dStr <= rangeEndStr) {
         if (!txByDate[dStr]) txByDate[dStr] = { income: 0, expense: 0 };
         if (e.type === 'income') txByDate[dStr].income += Number(e.value);
-        else if (!e.credit_card_id) txByDate[dStr].expense += Number(e.value);
+          else if (!e.credit_card_id && !isTrackedCreditCardPayment(e, propCards)) txByDate[dStr].expense += Number(e.value);
       }
     });
 
@@ -258,7 +259,7 @@ export function CashFlowChart({ creditCards: propCards, wallets: propWallets }: 
     });
 
     return result;
-  }, [propWallets, allExpenses, recurringExpenses, unpaidCreditExpenses, propCards, rangeStartStr, rangeEndStr, today]);
+  }, [propWallets, allExpenses, recurringExpenses, unpaidCreditExpenses, propCards, rangeStartStr, rangeEndStr, today, rangeStart, rangeEnd, selectedMonth, selectedYear]);
 
   const lastPoint = chartData[chartData.length - 1];
   const firstPoint = chartData[0];
