@@ -3,7 +3,6 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSelectedDate } from '@/contexts/DateContext';
-import { getInvoicePeriod, matchExpensesToInvoice } from '@/lib/invoiceHelpers';
 import { buildInvoiceCashEvents, sumInvoiceCashEventsBeforeDate } from '@/lib/invoiceCashFlow';
 import { computeInvoiceTotalsForCashWindow } from '@/lib/projectedInvoiceTotals';
 import { buildMaterializedRecurringSignature, buildMonthRecurringSignature, buildRecurringExceptionSignature, buildRecurringLooseSignature, buildRecurringSignature, hideMaterializedRecurringTemplates, shouldProjectRecurringInMonth } from '@/lib/recurringProjection';
