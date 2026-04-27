@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSelectedDate } from '@/contexts/DateContext';
 import { getInvoicePeriod, matchExpensesToInvoice } from '@/lib/invoiceHelpers';
-import { buildMaterializedRecurringSignature, buildMonthRecurringSignature, buildRecurringLooseSignature, buildRecurringSignature, hideMaterializedRecurringTemplates } from '@/lib/recurringProjection';
+import { buildMaterializedRecurringSignature, buildMonthRecurringSignature, buildRecurringExceptionSignature, buildRecurringLooseSignature, buildRecurringSignature, hideMaterializedRecurringTemplates, shouldProjectRecurringInMonth } from '@/lib/recurringProjection';
 import type { CreditCard as CreditCardType } from '@/lib/invoiceHelpers';
 import type { Expense } from '@/components/ExpenseTable';
 
@@ -35,6 +35,7 @@ async function fetchProjectedData(userId: string, startDate: string, endDate: st
     { data: historicalData },
     { data: cardsData },
     { data: walletsData },
+    { data: exceptionsData },
   ] = await Promise.all([
     supabase.from('expenses').select(EXPENSE_COLS).eq('user_id', userId)
       .gte('date', startDate).lt('date', endDate).order('date', { ascending: false }),
@@ -49,6 +50,7 @@ async function fetchProjectedData(userId: string, startDate: string, endDate: st
       .eq('user_id', userId).lt('date', startDate).is('credit_card_id', null),
     supabase.from('credit_cards').select('*').eq('user_id', userId),
     supabase.from('wallets').select('id, name, initial_balance').eq('user_id', userId).order('name'),
+    (supabase.from as any)('recurring_exceptions').select('template_id, occurrence_date').eq('user_id', userId),
   ]);
 
   // Merge CC expenses + invoice payment records (deduped)
@@ -64,6 +66,7 @@ async function fetchProjectedData(userId: string, startDate: string, endDate: st
     historicalExpenses: (historicalData || []) as any[],
     creditCards: (cardsData || []) as CreditCardType[],
     wallets: (walletsData || []).map((w: any) => ({ id: w.id, name: w.name, initial_balance: w.initial_balance ?? 0 })),
+    recurringExceptions: ((exceptionsData as any[]) || []) as { template_id: string; occurrence_date: string }[],
   };
 }
 
@@ -89,6 +92,11 @@ export function useProjectedTotals(): ProjectedTotals {
   const historicalExpenses = data?.historicalExpenses ?? [];
   const creditCards = data?.creditCards ?? [];
   const wallets = data?.wallets ?? [];
+  const recurringExceptions = data?.recurringExceptions ?? [];
+  const exceptionSet = useMemo(
+    () => new Set(recurringExceptions.map(e => buildRecurringExceptionSignature(e.template_id, e.occurrence_date))),
+    [recurringExceptions]
+  );
 
   // Virtual recurring
   const effectiveMonthExpenses = useMemo(() => {
@@ -109,6 +117,8 @@ export function useProjectedTotals(): ProjectedTotals {
 
     recurringExpenses.forEach(r => {
       if (realIds.has(r.id)) return;
+      // Respect frequency + don't backfill into months before the template start
+      if (!shouldProjectRecurringInMonth(r.date, selectedYear, selectedMonth, r.frequency)) return;
       const sig = buildRecurringSignature(r.type, r.value, r.description);
       const looseSig = buildRecurringLooseSignature(r.type, r.description);
       if (
@@ -117,20 +127,23 @@ export function useProjectedTotals(): ProjectedTotals {
         materializedRecurringSignatures.has(buildMaterializedRecurringSignature(r))
       ) return;
       if (r.type === 'transfer' || r.credit_card_id) return;
+      const occurrenceDate = (() => {
+        const origDay = new Date(r.date + 'T12:00:00').getDate();
+        const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
+        const day = Math.min(origDay, daysInMonth);
+        return `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      })();
+      // Skip if user explicitly excluded this single occurrence
+      if (exceptionSet.has(buildRecurringExceptionSignature(r.id, occurrenceDate))) return;
       virtualEntries.push({
         ...r,
-        date: (() => {
-          const origDay = new Date(r.date + 'T12:00:00').getDate();
-          const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
-          const day = Math.min(origDay, daysInMonth);
-          return `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        })(),
+        date: occurrenceDate,
         is_paid: false,
       });
     });
 
     return [...visibleMonthExpenses, ...virtualEntries];
-  }, [visibleMonthExpenses, recurringExpenses, selectedMonth, selectedYear]);
+  }, [visibleMonthExpenses, recurringExpenses, selectedMonth, selectedYear, exceptionSet]);
 
   // Starting balance
   const { startingBalance, pendingInStartingBalance } = useMemo(() => {
@@ -166,13 +179,19 @@ export function useProjectedTotals(): ProjectedTotals {
       if (r.type === 'transfer' || r.credit_card_id) return;
       const rDate = new Date(r.date + 'T12:00:00');
       const rStartMonth = rDate.getFullYear() * 12 + rDate.getMonth();
+      const origDay = rDate.getDate();
       for (let m = rStartMonth; m < selectedMonthStart; m++) {
         const yr = Math.floor(m / 12);
         const mo = m % 12;
+        // Respect frequency (yearly only matches its own month)
+        if (!shouldProjectRecurringInMonth(r.date, yr, mo, r.frequency)) continue;
         const monthKey = `${yr}-${String(mo + 1).padStart(2, '0')}`;
         const sig = buildMonthRecurringSignature(monthKey, r.type, r.value, r.description);
         const looseSig = `${monthKey}|${buildRecurringLooseSignature(r.type, r.description)}`;
         if (realByMonthSig.has(sig) || realByMonthLoose.has(looseSig)) continue;
+        const daysInMonth = new Date(yr, mo + 1, 0).getDate();
+        const occDate = `${monthKey}-${String(Math.min(origDay, daysInMonth)).padStart(2, '0')}`;
+        if (exceptionSet.has(buildRecurringExceptionSignature(r.id, occDate))) continue;
         if (r.type === 'income') virtualRecurringBalance += Number(r.value);
         else virtualRecurringBalance -= Number(r.value);
       }
@@ -197,7 +216,7 @@ export function useProjectedTotals(): ProjectedTotals {
 
     const balance = walletSum + historicalIncome - historicalDebit + virtualRecurringBalance - ccInvoiceTotal;
     return { startingBalance: balance, pendingInStartingBalance: pendingAmount };
-  }, [wallets, historicalExpenses, visibleMonthExpenses, recurringExpenses, creditCards, invoiceExpenses, selectedMonth, selectedYear]);
+  }, [wallets, historicalExpenses, visibleMonthExpenses, recurringExpenses, creditCards, invoiceExpenses, selectedMonth, selectedYear, exceptionSet]);
 
   // Invoice totals
   const invoiceTotals = useMemo(() => {

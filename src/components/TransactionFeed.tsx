@@ -18,6 +18,7 @@ import { InvoiceDetailsModal } from '@/components/modals/InvoiceDetailsModal';
 import { getInvoicePeriod, matchExpensesToInvoice } from '@/lib/invoiceHelpers';
 import type { CreditCard as CreditCardType, InvoicePeriod } from '@/lib/invoiceHelpers';
 import type { Expense } from '@/components/ExpenseTable';
+import { deleteSingleRecurringOccurrence } from '@/lib/recurringExceptions';
 
 const CATEGORY_ICONS: Record<string, { icon: typeof Utensils; bg: string; text: string }> = {
   alimentacao: { icon: Utensils, bg: 'bg-accent/30', text: 'text-accent-foreground' },
@@ -254,11 +255,26 @@ export function TransactionFeed({
           .eq('is_recurring', true);
         if (error) throw error;
         toast({ title: 'Todas as recorrências excluídas', description: 'Todos os lançamentos recorrentes foram removidos.' });
+      } else if (deletingExpense.is_recurring) {
+        // "Apenas esta": skip a single occurrence without breaking the series
+        if (!user) throw new Error('Sessão expirada');
+        await deleteSingleRecurringOccurrence({
+          userId: user.id,
+          expenseId: deletingExpense.id,
+          occurrenceDate: deletingExpense.date,
+          isRecurring: deletingExpense.is_recurring,
+          frequency: deletingExpense.frequency,
+        });
+        toast({ title: 'Ocorrência excluída', description: 'Apenas este lançamento foi removido. A recorrência continua nos próximos meses.' });
       } else {
         const { error } = await supabase.from('expenses').delete().eq('id', deletingExpense.id);
         if (error) throw error;
         toast({ title: 'Transação excluída' });
       }
+      await queryClient.invalidateQueries({ predicate: (q) => {
+        const k = q.queryKey?.[0];
+        return typeof k === 'string' && (k.startsWith('projected-') || k.startsWith('analytics') || k.startsWith('budget') || k === 'expenses' || k === 'history');
+      }, refetchType: 'active' });
       onDeleted();
     } catch (err: any) {
       showFriendlyError(err, 'Erro ao excluir');
