@@ -92,6 +92,11 @@ export function useProjectedTotals(): ProjectedTotals {
   const historicalExpenses = data?.historicalExpenses ?? [];
   const creditCards = data?.creditCards ?? [];
   const wallets = data?.wallets ?? [];
+  const recurringExceptions = data?.recurringExceptions ?? [];
+  const exceptionSet = useMemo(
+    () => new Set(recurringExceptions.map(e => buildRecurringExceptionSignature(e.template_id, e.occurrence_date))),
+    [recurringExceptions]
+  );
 
   // Virtual recurring
   const effectiveMonthExpenses = useMemo(() => {
@@ -112,6 +117,8 @@ export function useProjectedTotals(): ProjectedTotals {
 
     recurringExpenses.forEach(r => {
       if (realIds.has(r.id)) return;
+      // Respect frequency + don't backfill into months before the template start
+      if (!shouldProjectRecurringInMonth(r.date, selectedYear, selectedMonth, r.frequency)) return;
       const sig = buildRecurringSignature(r.type, r.value, r.description);
       const looseSig = buildRecurringLooseSignature(r.type, r.description);
       if (
@@ -120,20 +127,23 @@ export function useProjectedTotals(): ProjectedTotals {
         materializedRecurringSignatures.has(buildMaterializedRecurringSignature(r))
       ) return;
       if (r.type === 'transfer' || r.credit_card_id) return;
+      const occurrenceDate = (() => {
+        const origDay = new Date(r.date + 'T12:00:00').getDate();
+        const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
+        const day = Math.min(origDay, daysInMonth);
+        return `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      })();
+      // Skip if user explicitly excluded this single occurrence
+      if (exceptionSet.has(buildRecurringExceptionSignature(r.id, occurrenceDate))) return;
       virtualEntries.push({
         ...r,
-        date: (() => {
-          const origDay = new Date(r.date + 'T12:00:00').getDate();
-          const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
-          const day = Math.min(origDay, daysInMonth);
-          return `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        })(),
+        date: occurrenceDate,
         is_paid: false,
       });
     });
 
     return [...visibleMonthExpenses, ...virtualEntries];
-  }, [visibleMonthExpenses, recurringExpenses, selectedMonth, selectedYear]);
+  }, [visibleMonthExpenses, recurringExpenses, selectedMonth, selectedYear, exceptionSet]);
 
   // Starting balance
   const { startingBalance, pendingInStartingBalance } = useMemo(() => {
