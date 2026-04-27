@@ -678,18 +678,6 @@ export function TransactionFeed({
                             {exp.invoice_month && exp.credit_card_id && (
                               <Pin className="h-3 w-3 text-muted-foreground shrink-0" />
                             )}
-                            {isPending && !isTransfer && (
-                              <Badge
-                                variant="outline"
-                                className={`text-[9px] px-1 py-0 shrink-0 ${
-                                  isIncome
-                                    ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
-                                    : 'bg-destructive/10 text-destructive border-destructive/30'
-                                }`}
-                              >
-                                {isIncome ? 'A receber' : 'A pagar'}
-                              </Badge>
-                            )}
                           </div>
                           <div className="flex items-center gap-1 mt-0.5 flex-wrap">
                             {isInvoiceItem && originalDate && (
