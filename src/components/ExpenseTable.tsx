@@ -51,6 +51,7 @@ interface ExpenseTableProps {
 
 export function ExpenseTable({ expenses, loading, onDeleted, filters, onFilterChange, page, totalPages, onPageChange }: ExpenseTableProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [deletingExpense, setDeletingExpense] = useState<Expense | null>(null);
   const [deleteMode, setDeleteMode] = useState<'single' | 'all' | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -72,6 +73,16 @@ export function ExpenseTable({ expenses, loading, onDeleted, filters, onFilterCh
           .eq('is_recurring', true);
         if (error) throw error;
         toast({ title: 'Todas as recorrências excluídas' });
+      } else if (deletingExpense.is_recurring) {
+        if (!user) throw new Error('Sessão expirada');
+        await deleteSingleRecurringOccurrence({
+          userId: user.id,
+          expenseId: deletingExpense.id,
+          occurrenceDate: deletingExpense.date,
+          isRecurring: deletingExpense.is_recurring,
+          frequency: deletingExpense.frequency,
+        });
+        toast({ title: 'Ocorrência excluída', description: 'Apenas este lançamento foi removido.' });
       } else {
         const { error } = await supabase.from('expenses').delete().eq('id', deletingExpense.id);
         if (error) throw error;
