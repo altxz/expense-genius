@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { AppSidebar } from '@/components/AppSidebar';
 import { DashboardHeader } from '@/components/DashboardHeader';
 import { SidebarProvider } from '@/components/ui/sidebar';
@@ -63,6 +63,7 @@ function LucideIcon({ name, className }: { name: string; className?: string }) {
 export default function CategoriesPage() {
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -246,12 +247,18 @@ export default function CategoriesPage() {
                     return (
                       <div key={parent.id} className="space-y-3">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: parent.color + '20' }}>
-                            <LucideIcon name={parent.icon} className="h-4 w-4" />
-                          </div>
-                          <h2 className="text-lg font-bold">{parent.name}</h2>
-                          <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: parent.color }} />
-                          <span className="text-xs text-muted-foreground">{parent.expense_count || 0} despesas</span>
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/categorias/${parent.id}`)}
+                            className="flex items-center gap-3 min-w-0 flex-1 text-left rounded-xl -mx-1 px-1 py-1 hover:bg-secondary/50 transition-colors"
+                          >
+                            <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: parent.color + '20' }}>
+                              <LucideIcon name={parent.icon} className="h-4 w-4" />
+                            </div>
+                            <h2 className="text-lg font-bold truncate">{parent.name}</h2>
+                            <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: parent.color }} />
+                            <span className="text-xs text-muted-foreground shrink-0">{parent.expense_count || 0} despesas</span>
+                          </button>
                           <div className="flex gap-1 ml-auto">
                             <Tooltip>
                               <TooltipTrigger asChild>
@@ -287,7 +294,11 @@ export default function CategoriesPage() {
                             {subs.map(cat => (
                               <Card key={cat.id} className="rounded-2xl border shadow-sm hover:shadow-md transition-shadow">
                                 <CardContent className="p-4 space-y-2">
-                                  <div className="flex items-center gap-3">
+                                  <button
+                                    type="button"
+                                    onClick={() => navigate(`/categorias/${cat.id}`)}
+                                    className="flex items-center gap-3 w-full text-left rounded-xl -m-1 p-1 hover:bg-secondary/50 transition-colors"
+                                  >
                                     <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: cat.color + '20' }}>
                                       <LucideIcon name={cat.icon} className="h-4 w-4" />
                                     </div>
@@ -296,7 +307,7 @@ export default function CategoriesPage() {
                                       <p className="text-xs text-muted-foreground">{cat.expense_count || 0} despesas</p>
                                     </div>
                                     <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />
-                                  </div>
+                                  </button>
                                   {cat.keywords && cat.keywords.length > 0 && (
                                     <div className="flex flex-wrap gap-1">
                                       {cat.keywords.slice(0, 3).map(k => (
