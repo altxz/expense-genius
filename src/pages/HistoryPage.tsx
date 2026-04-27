@@ -156,7 +156,7 @@ export default function HistoryPage() {
                 {/* Transaction Feed grouped by day */}
                 <TransactionFeed
                   expenses={filteredExpenses}
-                  allExpenses={filteredExpenses}
+                  allExpenses={projected.monthExpenses}
                   invoiceExpenses={projected.invoiceExpenses}
                   loading={projected.loading}
                   onDeleted={projected.refetch}

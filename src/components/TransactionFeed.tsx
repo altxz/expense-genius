@@ -19,6 +19,7 @@ import { getInvoicePeriod, matchExpensesToInvoice } from '@/lib/invoiceHelpers';
 import type { CreditCard as CreditCardType, InvoicePeriod } from '@/lib/invoiceHelpers';
 import type { Expense } from '@/components/ExpenseTable';
 import { deleteSingleRecurringOccurrence } from '@/lib/recurringExceptions';
+import { buildInvoiceCashEvents, groupInvoiceCashEventsByDay } from '@/lib/invoiceCashFlow';
 
 const CATEGORY_ICONS: Record<string, { icon: typeof Utensils; bg: string; text: string }> = {
   alimentacao: { icon: Utensils, bg: 'bg-accent/30', text: 'text-accent-foreground' },
@@ -407,15 +408,11 @@ export function TransactionFeed({
       else nonCcFlowByDay[key] -= exp.value;
     });
 
-    // Invoice totals hit balance on due date (or payment date if paid)
-    const invoiceTotalByDay: Record<string, number> = {};
-    invoicePeriods.forEach(inv => {
-      const dueKey = toDateKey(inv.dueDate);
-      const paymentDate = paymentDateMap.get(inv.cardId);
-      const balanceKey = (inv.status === 'paid' && paymentDate) ? paymentDate : dueKey;
-      if (!isInSelectedMonth(balanceKey)) return;
-      invoiceTotalByDay[balanceKey] = (invoiceTotalByDay[balanceKey] || 0) + inv.total;
-    });
+    const invoiceTotalByDay = groupInvoiceCashEventsByDay(
+      buildInvoiceCashEvents(creditCards, allTxns),
+      monthStart,
+      monthEnd,
+    );
 
     const allDayKeys = new Set<string>([
       ...Object.keys(nonCcFlowByDay),
@@ -441,7 +438,7 @@ export function TransactionFeed({
       invoices: invoicesByDay[dateKey] || [],
       endOfDayBalance: balanceMap[dateKey] ?? startingMonthBalance,
     }));
-  }, [expenses, allExpenses, startingMonthBalance, groupCards, invoicePeriods, monthStart, monthEnd]);
+  }, [expenses, allExpenses, startingMonthBalance, groupCards, invoicePeriods, monthStart, monthEnd, creditCards]);
 
   const statusConfig: Record<string, { label: string; className: string }> = {
     open: { label: 'Aberta', className: 'bg-emerald-500/15 text-emerald-600 border-emerald-500/30' },
