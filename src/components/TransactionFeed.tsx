@@ -20,7 +20,6 @@ import type { CreditCard as CreditCardType, InvoicePeriod } from '@/lib/invoiceH
 import type { Expense } from '@/components/ExpenseTable';
 import { deleteSingleRecurringOccurrence } from '@/lib/recurringExceptions';
 import { getCreditCardPaymentCardId, isTrackedCreditCardPayment } from '@/lib/creditCardPayments';
-import { buildInvoiceCashEvents, groupInvoiceCashEventsByDay } from '@/lib/invoiceCashFlow';
 import { buildDailyBalanceMap } from '@/lib/projectedBalanceMath';
 
 const CATEGORY_ICONS: Record<string, { icon: typeof Utensils; bg: string; text: string }> = {
@@ -406,7 +405,6 @@ export function TransactionFeed({
       ...Object.keys(balanceMap),
       ...Object.keys(dayMap),
     ]);
-    const allDaysSorted = Array.from(allDayKeys).sort();
 
     const allDisplayDays = new Set<string>([...Object.keys(dayMap), ...Object.keys(invoicesByDay)]);
     const sortedDays = Array.from(allDisplayDays).sort((a, b) => b.localeCompare(a));
