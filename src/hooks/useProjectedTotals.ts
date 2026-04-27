@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -37,6 +37,7 @@ async function fetchProjectedData(userId: string, startDate: string, endDate: st
     { data: cardsData },
     { data: walletsData },
     { data: exceptionsData },
+    { data: recurringTemplatesData },
   ] = await Promise.all([
     supabase.from('expenses').select(EXPENSE_COLS).eq('user_id', userId)
       .gte('date', startDate).lt('date', endDate).order('date', { ascending: false }),
@@ -52,6 +53,7 @@ async function fetchProjectedData(userId: string, startDate: string, endDate: st
     supabase.from('credit_cards').select('*').eq('user_id', userId),
     supabase.from('wallets').select('id, name, initial_balance').eq('user_id', userId).order('name'),
     (supabase.from as any)('recurring_exceptions').select('template_id, occurrence_date').eq('user_id', userId),
+    supabase.from('expenses').select('*').eq('user_id', userId).eq('is_recurring', true),
   ]);
 
   // Merge CC expenses + invoice payment records (deduped)
@@ -68,6 +70,7 @@ async function fetchProjectedData(userId: string, startDate: string, endDate: st
     creditCards: (cardsData || []) as CreditCardType[],
     wallets: (walletsData || []).map((w: any) => ({ id: w.id, name: w.name, initial_balance: w.initial_balance ?? 0 })),
     recurringExceptions: ((exceptionsData as any[]) || []) as { template_id: string; occurrence_date: string }[],
+    recurringTemplates: (recurringTemplatesData || []) as Expense[],
   };
 }
 
@@ -89,6 +92,7 @@ export function useProjectedTotals(): ProjectedTotals {
   const monthExpenses = data?.monthExpenses ?? [];
   const visibleMonthExpenses = useMemo(() => hideMaterializedRecurringTemplates(monthExpenses), [monthExpenses]);
   const recurringExpenses = data?.recurringExpenses ?? [];
+  const recurringTemplates = data?.recurringTemplates ?? recurringExpenses;
   const invoiceExpenses = data?.invoiceExpenses ?? [];
   const historicalExpenses = data?.historicalExpenses ?? [];
   const visibleHistoricalExpenses = useMemo(
@@ -102,6 +106,15 @@ export function useProjectedTotals(): ProjectedTotals {
     () => new Set(recurringExceptions.map(e => buildRecurringExceptionSignature(e.template_id, e.occurrence_date))),
     [recurringExceptions]
   );
+  const isCCPayment = useCallback((e: any) => (
+    e.type !== 'income' &&
+    !e.credit_card_id &&
+    (
+      e.description?.toLowerCase().includes('fatura') ||
+      e.final_category?.toLowerCase().includes('cartão') ||
+      e.final_category?.toLowerCase().includes('cartao')
+    )
+  ), []);
 
   // Virtual recurring
   const effectiveMonthExpenses = useMemo(() => {
@@ -120,7 +133,7 @@ export function useProjectedTotals(): ProjectedTotals {
     const realIds = new Set(visibleMonthExpenses.map(e => e.id));
     const virtualEntries: Expense[] = [];
 
-    recurringExpenses.forEach(r => {
+    recurringTemplates.forEach(r => {
       if (realIds.has(r.id)) return;
       // Respect frequency + don't backfill into months before the template start
       if (!shouldProjectRecurringInMonth(r.date, selectedYear, selectedMonth, r.frequency)) return;
@@ -148,7 +161,7 @@ export function useProjectedTotals(): ProjectedTotals {
     });
 
     return [...visibleMonthExpenses, ...virtualEntries];
-  }, [visibleMonthExpenses, recurringExpenses, selectedMonth, selectedYear, exceptionSet]);
+  }, [visibleMonthExpenses, recurringTemplates, selectedMonth, selectedYear, exceptionSet]);
 
   // Starting balance
   const { startingBalance, pendingInStartingBalance } = useMemo(() => {
