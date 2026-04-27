@@ -712,13 +712,11 @@ export function TransactionFeed({
                         <div className="shrink-0 flex items-center justify-end gap-1.5 min-w-[90px] sm:min-w-[160px] text-right">
                           {isPending && <Clock className="h-3.5 w-3.5 text-muted-foreground" />}
                           <span className={`text-sm font-bold ${
-                            isPending
-                              ? 'text-muted-foreground'
+                            isTransfer
+                              ? 'text-foreground'
                               : isIncome
-                                ? 'text-emerald-600'
-                                : isTransfer
-                                  ? 'text-foreground'
-                                  : 'text-destructive'
+                                ? isPending ? 'text-emerald-600/70' : 'text-emerald-600'
+                                : isPending ? 'text-destructive/70' : 'text-destructive'
                           }`}>
                             {isIncome ? '+' : isTransfer ? '' : '-'}{formatCurrency(exp.value)}
                           </span>
