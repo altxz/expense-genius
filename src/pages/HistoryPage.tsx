@@ -31,6 +31,7 @@ export default function HistoryPage() {
 
   const projected = useProjectedTotals();
 
+
   const [search, setSearch] = useState('');
   const [filters, setFilters] = useState(() => ({
     category: searchParams.get('category') || 'all',
