@@ -463,3 +463,155 @@ describe('Balance continuity — April closes exactly where May opens', () => {
     expect(startMay).toBe(1000 - 500);
   });
 });
+
+describe('Balance continuity — multiple credit cards', () => {
+  const CARD_A: CreditCard = {
+    id: 'card-a',
+    name: 'Nubank',
+    limit_amount: 5000,
+    closing_day: 28,
+    due_day: 5,
+    closing_strategy: 'fixed',
+    closing_days_before_due: 7,
+  };
+  const CARD_B: CreditCard = {
+    id: 'card-b',
+    name: 'Itaú',
+    limit_amount: 8000,
+    closing_day: 20,
+    due_day: 28,
+    closing_strategy: 'fixed',
+    closing_days_before_due: 8,
+  };
+
+  it('builds one cash event per card per invoice (no cross-card contamination)', () => {
+    const purchases = [
+      makeExpense({ id: 'a1', description: 'A1', value: 300, date: '2026-03-15', credit_card_id: CARD_A.id, invoice_month: '2026-04' }),
+      makeExpense({ id: 'a2', description: 'A2', value: 200, date: '2026-03-18', credit_card_id: CARD_A.id, invoice_month: '2026-04' }),
+      makeExpense({ id: 'b1', description: 'B1', value: 700, date: '2026-03-10', credit_card_id: CARD_B.id, invoice_month: '2026-04' }),
+    ];
+    const payments = [
+      makeExpense({ id: 'pa', description: 'Pagamento fatura Nubank', value: 500, date: '2026-04-05', wallet_id: 'w', invoice_month: '2026-04', credit_card_id: CARD_A.id }),
+      makeExpense({ id: 'pb', description: 'Pagamento fatura Itaú', value: 700, date: '2026-04-28', wallet_id: 'w', invoice_month: '2026-04', credit_card_id: CARD_B.id }),
+    ];
+
+    const events = buildInvoiceCashEvents([CARD_A, CARD_B], [...purchases, ...payments]);
+    expect(events).toHaveLength(2);
+
+    const byCard = Object.fromEntries(events.map((e) => [e.cardId, e]));
+    expect(byCard[CARD_A.id]).toMatchObject({ amount: 500, date: '2026-04-05', monthLabel: '2026-04' });
+    expect(byCard[CARD_B.id]).toMatchObject({ amount: 700, date: '2026-04-28', monthLabel: '2026-04' });
+  });
+
+  it('matches legacy payment records to the right card by name (no double counting)', () => {
+    const purchases = [
+      makeExpense({ id: 'a1', description: 'A1', value: 400, date: '2026-03-15', credit_card_id: CARD_A.id, invoice_month: '2026-04' }),
+      makeExpense({ id: 'b1', description: 'B1', value: 900, date: '2026-03-12', credit_card_id: CARD_B.id, invoice_month: '2026-04' }),
+    ];
+    // Legacy payments: no credit_card_id, identified only by description
+    const payments = [
+      makeExpense({ id: 'pa', description: 'Pagamento fatura Nubank', value: 400, date: '2026-04-05', wallet_id: 'w', invoice_month: '2026-04' }),
+      makeExpense({ id: 'pb', description: 'Pagamento fatura Itaú', value: 900, date: '2026-04-28', wallet_id: 'w', invoice_month: '2026-04' }),
+    ];
+
+    const events = buildInvoiceCashEvents([CARD_A, CARD_B], [...purchases, ...payments]);
+    expect(events).toHaveLength(2);
+
+    const total = sumInvoiceCashEventsBeforeDate(events, '2026-05-01');
+    expect(total).toBe(400 + 900);
+  });
+
+  it('keeps April→May continuity with two cards paid in different days of April', () => {
+    const purchases = [
+      makeExpense({ id: 'a1', description: 'Mercado', value: 1200, date: '2026-03-15', credit_card_id: CARD_A.id, invoice_month: '2026-04' }),
+      makeExpense({ id: 'b1', description: 'Viagem', value: 2500, date: '2026-03-08', credit_card_id: CARD_B.id, invoice_month: '2026-04' }),
+    ];
+    const paymentA = makeExpense({ id: 'pa', description: 'Pagamento fatura Nubank', value: 1200, date: '2026-04-05', wallet_id: 'w', invoice_month: '2026-04', credit_card_id: CARD_A.id });
+    const paymentB = makeExpense({ id: 'pb', description: 'Pagamento fatura Itaú', value: 2500, date: '2026-04-28', wallet_id: 'w', invoice_month: '2026-04', credit_card_id: CARD_B.id });
+    const salary = makeExpense({ id: 'sal', description: 'Salário', value: 8000, date: '2026-04-05', type: 'income' });
+
+    const cards = [CARD_A, CARD_B];
+    const invoiceExpenses = [...purchases, paymentA, paymentB];
+    const aprilHistorical = [salary, paymentA, paymentB];
+
+    const startApril = computeStartingBalance({
+      walletInitial: 3000,
+      historicalNonCc: [],
+      recurringTemplates: [],
+      invoiceExpenses: [],
+      selectedYear: 2026,
+      selectedMonth: 3,
+      exceptionSet: new Set(),
+      cards,
+    });
+
+    const endApril = computeMonthClose({
+      startingBalance: startApril,
+      monthExpenses: [salary, paymentA, paymentB],
+      invoiceTotalForMonth: 1200 + 2500,
+    });
+
+    const startMay = computeStartingBalance({
+      walletInitial: 3000,
+      historicalNonCc: aprilHistorical,
+      recurringTemplates: [],
+      invoiceExpenses,
+      selectedYear: 2026,
+      selectedMonth: 4,
+      exceptionSet: new Set(),
+      cards,
+    });
+
+    expect(endApril).toBeCloseTo(startMay, 2);
+    expect(startMay).toBeCloseTo(3000 + 8000 - 1200 - 2500, 2);
+  });
+
+  it('handles two cards where only one invoice has been paid (mixed states)', () => {
+    const purchases = [
+      makeExpense({ id: 'a1', description: 'A1', value: 600, date: '2026-03-15', credit_card_id: CARD_A.id, invoice_month: '2026-04' }),
+      makeExpense({ id: 'b1', description: 'B1', value: 1100, date: '2026-03-10', credit_card_id: CARD_B.id, invoice_month: '2026-04' }),
+    ];
+    // Only card A was paid in April; card B will fall back to its due date.
+    const paymentA = makeExpense({ id: 'pa', description: 'Pagamento fatura Nubank', value: 600, date: '2026-04-05', wallet_id: 'w', invoice_month: '2026-04', credit_card_id: CARD_A.id });
+
+    const events = buildInvoiceCashEvents([CARD_A, CARD_B], [...purchases, paymentA]);
+    expect(events).toHaveLength(2);
+    const byCard = Object.fromEntries(events.map((e) => [e.cardId, e]));
+    expect(byCard[CARD_A.id].date).toBe('2026-04-05');
+    expect(byCard[CARD_B.id].date).toBe('2026-04-28'); // due_day fallback
+
+    // Both should be subtracted from May's opening balance.
+    expect(sumInvoiceCashEventsBeforeDate(events, '2026-05-01')).toBe(600 + 1100);
+  });
+
+  it('groups same-day payments from different cards into a single daily bucket', () => {
+    const events = [
+      { cardId: CARD_A.id, amount: 400, date: '2026-04-05', monthLabel: '2026-04' },
+      { cardId: CARD_B.id, amount: 900, date: '2026-04-05', monthLabel: '2026-04' },
+      { cardId: CARD_B.id, amount: 200, date: '2026-04-28', monthLabel: '2026-04' },
+    ];
+    const grouped = groupInvoiceCashEventsByDay(events, '2026-04-01', '2026-04-30');
+    expect(grouped).toEqual({ '2026-04-05': 1300, '2026-04-28': 200 });
+  });
+
+  it('emits a single cash event per (card, invoice month) even with many purchases', () => {
+    // Each card has multiple purchases in the same invoice — we should still
+    // see exactly ONE cash event per card (the consolidated invoice total).
+    const purchaseA1 = makeExpense({ id: 'a1', description: 'A1', value: 350, date: '2026-03-20', credit_card_id: CARD_A.id, invoice_month: '2026-04' });
+    const purchaseA2 = makeExpense({ id: 'a2', description: 'A2', value: 150, date: '2026-03-22', credit_card_id: CARD_A.id, invoice_month: '2026-04' });
+    const purchaseB1 = makeExpense({ id: 'b1', description: 'B1', value: 450, date: '2026-03-22', credit_card_id: CARD_B.id, invoice_month: '2026-04' });
+    const paymentA = makeExpense({ id: 'pa', description: 'Pagamento fatura Nubank', value: 500, date: '2026-04-05', wallet_id: 'w', invoice_month: '2026-04', credit_card_id: CARD_A.id });
+    const paymentB = makeExpense({ id: 'pb', description: 'Pagamento fatura Itaú', value: 450, date: '2026-04-28', wallet_id: 'w', invoice_month: '2026-04', credit_card_id: CARD_B.id });
+
+    const events = buildInvoiceCashEvents(
+      [CARD_A, CARD_B],
+      [purchaseA1, purchaseA2, purchaseB1, paymentA, paymentB],
+    );
+
+    expect(events).toHaveLength(2);
+    const byCard = Object.fromEntries(events.map((e) => [e.cardId, e]));
+    expect(byCard[CARD_A.id].amount).toBe(500); // 350 + 150
+    expect(byCard[CARD_B.id].amount).toBe(450);
+    expect(sumInvoiceCashEventsBeforeDate(events, '2026-05-01')).toBe(950);
+  });
+});
