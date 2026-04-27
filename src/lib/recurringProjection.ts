@@ -14,6 +14,29 @@ export function buildMonthRecurringSignature(monthKey: string, type: string, val
   return `${monthKey}|${buildRecurringSignature(type, value, description)}`;
 }
 
+export function buildRecurringExceptionSignature(templateId: string, occurrenceDate: string) {
+  return `${templateId}|${occurrenceDate}`;
+}
+
+export function shouldProjectRecurringInMonth(
+  templateDate: string,
+  selectedYear: number,
+  selectedMonth: number,
+  frequency?: string | null,
+) {
+  const template = new Date(`${templateDate}T12:00:00`);
+  const templateMonthIndex = template.getFullYear() * 12 + template.getMonth();
+  const selectedMonthIndex = selectedYear * 12 + selectedMonth;
+
+  if (selectedMonthIndex < templateMonthIndex) return false;
+
+  if (frequency === 'yearly') {
+    return template.getMonth() === selectedMonth;
+  }
+
+  return true;
+}
+
 type MaterializedRecurringLike = {
   type: string;
   description?: string | null;
