@@ -1,4 +1,5 @@
 import type { Expense } from '@/components/ExpenseTable';
+import { getCreditCardPaymentLabelCardName, isCreditCardPaymentLabel } from '@/lib/creditCardPayments';
 
 export interface CreditCard {
   id: string;
@@ -161,7 +162,7 @@ export function matchExpensesToInvoice(
     if (e.credit_card_id !== period.cardId) return false;
     if (e.type === 'income' || e.type === 'transfer') return false;
     // Exclude payment records — they are not actual invoice purchases
-    if (e.description?.startsWith('Pagamento fatura')) return false;
+    if (isCreditCardPaymentLabel(e.description)) return false;
 
     // Parcelas/projeções persistidas: fonte primária
     if (e.invoice_month) {
@@ -180,17 +181,13 @@ export function matchExpensesToInvoice(
   const normalizedCardName = period.cardName.trim().toLowerCase();
   const isPaid = expenses.some(e => {
     if (e.type !== 'expense' || !e.invoice_month || e.invoice_month !== dueLabel || !e.wallet_id) return false;
-    if (!e.description?.startsWith('Pagamento fatura')) return false;
+    if (!isCreditCardPaymentLabel(e.description)) return false;
 
     // Preferred: explicit card linkage on payment record
     if (e.credit_card_id) return e.credit_card_id === period.cardId;
 
     // Legacy fallback: infer card from description prefix
-    const legacyCardName = e.description
-      .replace(/^Pagamento fatura\s*/i, '')
-      .split(' - ')[0]
-      .trim()
-      .toLowerCase();
+    const legacyCardName = getCreditCardPaymentLabelCardName(e.description);
 
     return legacyCardName === normalizedCardName;
   });
