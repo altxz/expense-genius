@@ -18,6 +18,7 @@ import { InvoiceDetailsModal } from '@/components/modals/InvoiceDetailsModal';
 import { getInvoicePeriod, matchExpensesToInvoice } from '@/lib/invoiceHelpers';
 import type { CreditCard as CreditCardType, InvoicePeriod } from '@/lib/invoiceHelpers';
 import type { Expense } from '@/components/ExpenseTable';
+import { deleteSingleRecurringOccurrence } from '@/lib/recurringExceptions';
 
 const CATEGORY_ICONS: Record<string, { icon: typeof Utensils; bg: string; text: string }> = {
   alimentacao: { icon: Utensils, bg: 'bg-accent/30', text: 'text-accent-foreground' },
