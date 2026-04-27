@@ -247,12 +247,18 @@ export default function CategoriesPage() {
                     return (
                       <div key={parent.id} className="space-y-3">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: parent.color + '20' }}>
-                            <LucideIcon name={parent.icon} className="h-4 w-4" />
-                          </div>
-                          <h2 className="text-lg font-bold">{parent.name}</h2>
-                          <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: parent.color }} />
-                          <span className="text-xs text-muted-foreground">{parent.expense_count || 0} despesas</span>
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/categorias/${parent.id}`)}
+                            className="flex items-center gap-3 min-w-0 flex-1 text-left rounded-xl -mx-1 px-1 py-1 hover:bg-secondary/50 transition-colors"
+                          >
+                            <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: parent.color + '20' }}>
+                              <LucideIcon name={parent.icon} className="h-4 w-4" />
+                            </div>
+                            <h2 className="text-lg font-bold truncate">{parent.name}</h2>
+                            <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: parent.color }} />
+                            <span className="text-xs text-muted-foreground shrink-0">{parent.expense_count || 0} despesas</span>
+                          </button>
                           <div className="flex gap-1 ml-auto">
                             <Tooltip>
                               <TooltipTrigger asChild>
