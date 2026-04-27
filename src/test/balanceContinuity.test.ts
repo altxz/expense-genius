@@ -4,6 +4,7 @@ import {
   groupInvoiceCashEventsByDay,
   sumInvoiceCashEventsBeforeDate,
 } from '@/lib/invoiceCashFlow';
+import { computeProjectedMonthResult } from '@/lib/projectedBalanceMath';
 import { computeInvoiceTotalsForCashWindow } from '@/lib/projectedInvoiceTotals';
 import {
   buildMonthRecurringSignature,
@@ -157,14 +158,13 @@ function computeMonthClose({
   monthExpenses: Expense[];
   invoiceTotalForMonth: number;
 }) {
-  const nonTransfers = monthExpenses.filter((e) => e.type !== 'transfer');
-  const totalIncome = nonTransfers
-    .filter((e) => e.type === 'income')
-    .reduce((s, e) => s + e.value, 0);
-  const totalDebit = nonTransfers
-    .filter((e) => e.type !== 'income' && !e.credit_card_id && !isCCPayment(e))
-    .reduce((s, e) => s + e.value, 0);
-  return startingBalance + totalIncome - totalDebit - invoiceTotalForMonth;
+  return computeProjectedMonthResult({
+    effectiveMonthExpenses: monthExpenses,
+    invoiceTotal: invoiceTotalForMonth,
+    invoiceByCategory: {},
+    startingBalance,
+    isCreditCardPayment: isCCPayment,
+  }).projectedBalance;
 }
 
 describe('Invoice cash events — single source of truth', () => {
