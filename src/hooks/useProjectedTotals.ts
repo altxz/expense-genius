@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSelectedDate } from '@/contexts/DateContext';
 import { getInvoicePeriod, matchExpensesToInvoice } from '@/lib/invoiceHelpers';
-import { buildMaterializedRecurringSignature, buildMonthRecurringSignature, buildRecurringLooseSignature, buildRecurringSignature, hideMaterializedRecurringTemplates } from '@/lib/recurringProjection';
+import { buildMaterializedRecurringSignature, buildMonthRecurringSignature, buildRecurringExceptionSignature, buildRecurringLooseSignature, buildRecurringSignature, hideMaterializedRecurringTemplates } from '@/lib/recurringProjection';
 import type { CreditCard as CreditCardType } from '@/lib/invoiceHelpers';
 import type { Expense } from '@/components/ExpenseTable';
 
