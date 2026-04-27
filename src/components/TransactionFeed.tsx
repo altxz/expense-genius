@@ -633,10 +633,16 @@ export function TransactionFeed({
                     const isPending = !exp.is_paid;
                     const walletName = exp.wallet_id ? walletMap[exp.wallet_id] : null;
 
+                    const pendingAccent = isPending && !isTransfer
+                      ? isIncome
+                        ? 'border-l-2 border-emerald-500/60 bg-emerald-500/[0.04]'
+                        : 'border-l-2 border-destructive/60 bg-destructive/[0.04]'
+                      : '';
+
                     return (
                       <div
                         key={exp.id}
-                        className="w-full flex items-center gap-3 px-3 sm:px-4 py-3 hover:bg-muted/50 transition-colors group"
+                        className={`w-full flex items-center gap-3 px-3 sm:px-4 py-3 hover:bg-muted/50 transition-colors group ${pendingAccent}`}
                       >
                         {/* Category icon */}
                         <div className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${isInvoiceItem ? 'bg-accent/30' : catData.bg}`}>
@@ -667,6 +673,18 @@ export function TransactionFeed({
                             {exp.invoice_month && exp.credit_card_id && (
                               <Pin className="h-3 w-3 text-muted-foreground shrink-0" />
                             )}
+                            {isPending && !isTransfer && (
+                              <Badge
+                                variant="outline"
+                                className={`text-[9px] px-1 py-0 shrink-0 ${
+                                  isIncome
+                                    ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
+                                    : 'bg-destructive/10 text-destructive border-destructive/30'
+                                }`}
+                              >
+                                {isIncome ? 'A receber' : 'A pagar'}
+                              </Badge>
+                            )}
                           </div>
                           <div className="flex items-center gap-1 mt-0.5 flex-wrap">
                             {isInvoiceItem && originalDate && (
@@ -694,13 +712,11 @@ export function TransactionFeed({
                         <div className="shrink-0 flex items-center justify-end gap-1.5 min-w-[90px] sm:min-w-[160px] text-right">
                           {isPending && <Clock className="h-3.5 w-3.5 text-muted-foreground" />}
                           <span className={`text-sm font-bold ${
-                            isPending
-                              ? 'text-muted-foreground'
+                            isTransfer
+                              ? 'text-foreground'
                               : isIncome
-                                ? 'text-emerald-600'
-                                : isTransfer
-                                  ? 'text-foreground'
-                                  : 'text-destructive'
+                                ? isPending ? 'text-emerald-600/70' : 'text-emerald-600'
+                                : isPending ? 'text-destructive/70' : 'text-destructive'
                           }`}>
                             {isIncome ? '+' : isTransfer ? '' : '-'}{formatCurrency(exp.value)}
                           </span>
