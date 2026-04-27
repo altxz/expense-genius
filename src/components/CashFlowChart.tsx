@@ -65,10 +65,10 @@ export function CashFlowChart({ creditCards: propCards, wallets: propWallets }: 
 
     const fetchAll = async () => {
       const [expensesRes, recurringRes, unpaidRes] = await Promise.all([
-        // Fetch only needed columns instead of select('*')
-        supabase.from('expenses').select('description, value, type, credit_card_id, date, is_paid, is_recurring, invoice_month')
+        // Spec: ALL expenses ordered by date, with invoice_month included
+        supabase.from('expenses').select('value, type, credit_card_id, date, invoice_month, is_paid, is_recurring, description')
           .eq('user_id', user.id).order('date'),
-        supabase.from('expenses').select('description, value, type, date, credit_card_id')
+        supabase.from('expenses').select('description, value, type, date, credit_card_id, invoice_month')
           .eq('user_id', user.id).eq('is_recurring', true),
         supabase.from('expenses').select('value, credit_card_id, invoice_month')
           .eq('user_id', user.id).eq('is_paid', false).not('credit_card_id', 'is', null),
