@@ -37,6 +37,15 @@ const CARD: CreditCard = {
   closing_days_before_due: 7,
 };
 
+const isCCPayment = (e: Partial<Expense>) =>
+  e.type !== 'income' &&
+  !e.credit_card_id &&
+  (
+    e.description?.toLowerCase().includes('fatura') ||
+    e.final_category?.toLowerCase().includes('cartão') ||
+    e.final_category?.toLowerCase().includes('cartao')
+  );
+
 function makeExpense(overrides: Partial<Expense>): Expense {
   return {
     id: overrides.id ?? `exp-${Math.random().toString(36).slice(2)}`,
@@ -95,11 +104,7 @@ function computeStartingBalance({
     .filter((e) => e.type === 'income')
     .reduce((s, e) => s + e.value, 0);
   const historicalDebit = nonTransfers
-    .filter(
-      (e) =>
-        e.type !== 'income' &&
-        !e.description?.startsWith('Pagamento fatura'),
-    )
+    .filter((e) => e.type !== 'income' && !isCCPayment(e))
     .reduce((s, e) => s + e.value, 0);
 
   const realByMonthSig = new Set<string>();
@@ -157,12 +162,7 @@ function computeMonthClose({
     .filter((e) => e.type === 'income')
     .reduce((s, e) => s + e.value, 0);
   const totalDebit = nonTransfers
-    .filter(
-      (e) =>
-        e.type !== 'income' &&
-        !e.credit_card_id &&
-        !e.description?.startsWith('Pagamento fatura'),
-    )
+    .filter((e) => e.type !== 'income' && !e.credit_card_id && !isCCPayment(e))
     .reduce((s, e) => s + e.value, 0);
   return startingBalance + totalIncome - totalDebit - invoiceTotalForMonth;
 }
