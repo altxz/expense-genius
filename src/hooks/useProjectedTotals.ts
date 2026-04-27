@@ -35,6 +35,7 @@ async function fetchProjectedData(userId: string, startDate: string, endDate: st
     { data: historicalData },
     { data: cardsData },
     { data: walletsData },
+    { data: exceptionsData },
   ] = await Promise.all([
     supabase.from('expenses').select(EXPENSE_COLS).eq('user_id', userId)
       .gte('date', startDate).lt('date', endDate).order('date', { ascending: false }),
@@ -49,6 +50,7 @@ async function fetchProjectedData(userId: string, startDate: string, endDate: st
       .eq('user_id', userId).lt('date', startDate).is('credit_card_id', null),
     supabase.from('credit_cards').select('*').eq('user_id', userId),
     supabase.from('wallets').select('id, name, initial_balance').eq('user_id', userId).order('name'),
+    (supabase.from as any)('recurring_exceptions').select('template_id, occurrence_date').eq('user_id', userId),
   ]);
 
   // Merge CC expenses + invoice payment records (deduped)
@@ -64,6 +66,7 @@ async function fetchProjectedData(userId: string, startDate: string, endDate: st
     historicalExpenses: (historicalData || []) as any[],
     creditCards: (cardsData || []) as CreditCardType[],
     wallets: (walletsData || []).map((w: any) => ({ id: w.id, name: w.name, initial_balance: w.initial_balance ?? 0 })),
+    recurringExceptions: ((exceptionsData as any[]) || []) as { template_id: string; occurrence_date: string }[],
   };
 }
 
