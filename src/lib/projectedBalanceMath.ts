@@ -1,4 +1,6 @@
 import type { Expense } from '@/components/ExpenseTable';
+import { buildInvoiceCashEvents, groupInvoiceCashEventsByDay } from '@/lib/invoiceCashFlow';
+import type { CreditCard } from '@/lib/invoiceHelpers';
 
 interface ComputeProjectedMonthResultParams {
   effectiveMonthExpenses: Expense[];
@@ -6,6 +8,63 @@ interface ComputeProjectedMonthResultParams {
   invoiceByCategory: Record<string, number>;
   startingBalance: number;
   isCreditCardPayment: (expense: Expense) => boolean;
+}
+
+interface BuildDailyBalanceMapParams {
+  monthExpenses: Expense[];
+  invoiceExpenses: Expense[];
+  creditCards: CreditCard[];
+  startDate: string;
+  endDate: string;
+  startingBalance: number;
+  isCreditCardPayment: (expense: Expense) => boolean;
+}
+
+export function buildDailyBalanceMap({
+  monthExpenses,
+  invoiceExpenses,
+  creditCards,
+  startDate,
+  endDate,
+  startingBalance,
+  isCreditCardPayment,
+}: BuildDailyBalanceMapParams) {
+  const nonCcFlowByDay: Record<string, number> = {};
+
+  monthExpenses.forEach((expense) => {
+    if (expense.type === 'transfer') return;
+    if (expense.credit_card_id) return;
+    if (isCreditCardPayment(expense)) return;
+    if (expense.date < startDate || expense.date > endDate) return;
+
+    nonCcFlowByDay[expense.date] = nonCcFlowByDay[expense.date] || 0;
+    nonCcFlowByDay[expense.date] += expense.type === 'income' ? expense.value : -expense.value;
+  });
+
+  const invoiceTotalByDay = groupInvoiceCashEventsByDay(
+    buildInvoiceCashEvents(creditCards, invoiceExpenses.length > 0 ? invoiceExpenses : monthExpenses),
+    startDate,
+    endDate,
+  );
+
+  const allDayKeys = Array.from(
+    new Set([...Object.keys(nonCcFlowByDay), ...Object.keys(invoiceTotalByDay)]),
+  ).sort();
+
+  let runningBalance = startingBalance;
+  const balanceMap: Record<string, number> = {};
+
+  allDayKeys.forEach((day) => {
+    runningBalance += nonCcFlowByDay[day] || 0;
+    runningBalance -= invoiceTotalByDay[day] || 0;
+    balanceMap[day] = runningBalance;
+  });
+
+  return {
+    balanceMap,
+    nonCcFlowByDay,
+    invoiceTotalByDay,
+  };
 }
 
 export function computeProjectedMonthResult({

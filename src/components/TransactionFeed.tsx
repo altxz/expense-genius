@@ -20,7 +20,7 @@ import type { CreditCard as CreditCardType, InvoicePeriod } from '@/lib/invoiceH
 import type { Expense } from '@/components/ExpenseTable';
 import { deleteSingleRecurringOccurrence } from '@/lib/recurringExceptions';
 import { getCreditCardPaymentCardId, isTrackedCreditCardPayment } from '@/lib/creditCardPayments';
-import { buildInvoiceCashEvents, groupInvoiceCashEventsByDay } from '@/lib/invoiceCashFlow';
+import { buildDailyBalanceMap } from '@/lib/projectedBalanceMath';
 
 const CATEGORY_ICONS: Record<string, { icon: typeof Utensils; bg: string; text: string }> = {
   alimentacao: { icon: Utensils, bg: 'bg-accent/30', text: 'text-accent-foreground' },
@@ -324,15 +324,13 @@ export function TransactionFeed({
 
       // For paid invoices, find the actual payment date from the payment record
       const allTxnPool = allExpenses || expenses;
-      const paymentDateMap = new Map<string, string>(); // cardId -> payment date
+      const paymentDateMap = new Map<string, string>(); // cardId|invoice_month -> payment date
       if (groupCards) {
         allTxnPool.forEach(exp => {
           if (!isTrackedCreditCardPayment(exp, creditCards)) return;
           if (!exp.wallet_id) return;
-          const dueLabel = `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}`;
-          if (exp.invoice_month !== dueLabel) return;
           const cardId = getCreditCardPaymentCardId(exp, creditCards);
-          if (cardId) paymentDateMap.set(cardId, exp.date);
+          if (cardId && exp.invoice_month) paymentDateMap.set(`${cardId}|${exp.invoice_month}`, exp.date);
         });
       }
 
@@ -365,7 +363,7 @@ export function TransactionFeed({
       // For PAID invoices, use the actual payment date; otherwise use the due date
       invoicePeriods.forEach(inv => {
         const dueKey = toDateKey(inv.dueDate);
-        const paymentDate = paymentDateMap.get(inv.cardId);
+        const paymentDate = paymentDateMap.get(`${inv.cardId}|${inv.monthLabel}`);
         const displayKey = (inv.status === 'paid' && paymentDate) ? paymentDate : dueKey;
         if (!isInSelectedMonth(displayKey)) return;
 
@@ -393,45 +391,20 @@ export function TransactionFeed({
     // Se não caiu em nenhuma fatura com vencimento no mês selecionado, fica oculta neste mês.
 
     // Calculate running balance for the selected month
-    const allTxns = allExpenses || expenses;
-
-    const nonCcFlowByDay: Record<string, number> = {};
-      allTxns.forEach(exp => {
-      if (exp.type === 'transfer') return;
-      if (exp.credit_card_id) return;
-        if (isTrackedCreditCardPayment(exp, creditCards)) return;
-      const key = exp.date;
-      if (key < monthStart || key > monthEnd) return;
-      if (!nonCcFlowByDay[key]) nonCcFlowByDay[key] = 0;
-      if (exp.type === 'income') nonCcFlowByDay[key] += exp.value;
-      else nonCcFlowByDay[key] -= exp.value;
+    const { balanceMap } = buildDailyBalanceMap({
+      monthExpenses: allExpenses && allExpenses.length > 0 ? allExpenses : expenses,
+      invoiceExpenses: invoiceExpenses && invoiceExpenses.length > 0 ? invoiceExpenses : allExpenses || expenses,
+      creditCards,
+      startDate: monthStart,
+      endDate: monthEnd,
+      startingBalance: startingMonthBalance,
+      isCreditCardPayment: (expense) => isTrackedCreditCardPayment(expense, creditCards),
     });
 
-    // Use the full cross-month invoice pool so historical CC purchases (which live
-    // in months prior to the selected one) are still summed into each invoice total.
-    // Falling back to allTxns/expenses would cause invoices to be valued at 0 here,
-    // making the daily running balance ignore paid invoices.
-    const invoiceCashPool = invoiceExpenses && invoiceExpenses.length > 0 ? invoiceExpenses : allTxns;
-    const invoiceTotalByDay = groupInvoiceCashEventsByDay(
-      buildInvoiceCashEvents(creditCards, invoiceCashPool),
-      monthStart,
-      monthEnd,
-    );
-
     const allDayKeys = new Set<string>([
-      ...Object.keys(nonCcFlowByDay),
-      ...Object.keys(invoiceTotalByDay),
+      ...Object.keys(balanceMap),
       ...Object.keys(dayMap),
     ]);
-    const allDaysSorted = Array.from(allDayKeys).sort();
-
-    let runningBalance = startingMonthBalance;
-    const balanceMap: Record<string, number> = {};
-    for (const day of allDaysSorted) {
-      runningBalance += (nonCcFlowByDay[day] || 0);
-      runningBalance -= (invoiceTotalByDay[day] || 0);
-      balanceMap[day] = runningBalance;
-    }
 
     const allDisplayDays = new Set<string>([...Object.keys(dayMap), ...Object.keys(invoicesByDay)]);
     const sortedDays = Array.from(allDisplayDays).sort((a, b) => b.localeCompare(a));
