@@ -23,7 +23,6 @@ import { icons } from 'lucide-react';
 import { formatCurrency } from '@/lib/constants';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { EditExpenseModal } from '@/components/EditExpenseModal';
 
 interface Category {
   id: string;
@@ -61,7 +60,6 @@ export default function CategoryDetailsPage() {
   const [subCategories, setSubCategories] = useState<Category[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     if (!user || !id) return;
@@ -276,8 +274,8 @@ export default function CategoryDetailsPage() {
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8 rounded-xl shrink-0"
-                            onClick={() => setEditingExpenseId(e.id)}
-                            aria-label="Editar lançamento"
+                            onClick={() => navigate(`/historico?expense=${e.id}`)}
+                            aria-label="Abrir lançamento"
                           >
                             <Pencil className="h-3.5 w-3.5" />
                           </Button>
@@ -292,14 +290,6 @@ export default function CategoryDetailsPage() {
         </div>
       </div>
 
-      {editingExpenseId && (
-        <EditExpenseModal
-          expenseId={editingExpenseId}
-          open={!!editingExpenseId}
-          onOpenChange={(o) => !o && setEditingExpenseId(null)}
-          onSaved={() => { setEditingExpenseId(null); fetchData(); }}
-        />
-      )}
     </SidebarProvider>
   );
 }
