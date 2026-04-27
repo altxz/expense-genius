@@ -9,6 +9,8 @@ import { Trash2, ChevronLeft, ChevronRight, Sparkles, CheckCircle } from 'lucide
 import { CATEGORIES, getCategoryInfo, formatCurrency, formatDate } from '@/lib/constants';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
+import { deleteSingleRecurringOccurrence } from '@/lib/recurringExceptions';
 
 export interface Expense {
   id: string;
