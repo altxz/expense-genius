@@ -37,6 +37,15 @@ const CARD: CreditCard = {
   closing_days_before_due: 7,
 };
 
+const isCCPayment = (e: Partial<Expense>) =>
+  e.type !== 'income' &&
+  !e.credit_card_id &&
+  (
+    e.description?.toLowerCase().includes('fatura') ||
+    e.final_category?.toLowerCase().includes('cartão') ||
+    e.final_category?.toLowerCase().includes('cartao')
+  );
+
 function makeExpense(overrides: Partial<Expense>): Expense {
   return {
     id: overrides.id ?? `exp-${Math.random().toString(36).slice(2)}`,
@@ -95,11 +104,7 @@ function computeStartingBalance({
     .filter((e) => e.type === 'income')
     .reduce((s, e) => s + e.value, 0);
   const historicalDebit = nonTransfers
-    .filter(
-      (e) =>
-        e.type !== 'income' &&
-        !e.description?.startsWith('Pagamento fatura'),
-    )
+    .filter((e) => e.type !== 'income' && !isCCPayment(e))
     .reduce((s, e) => s + e.value, 0);
 
   const realByMonthSig = new Set<string>();
@@ -157,12 +162,7 @@ function computeMonthClose({
     .filter((e) => e.type === 'income')
     .reduce((s, e) => s + e.value, 0);
   const totalDebit = nonTransfers
-    .filter(
-      (e) =>
-        e.type !== 'income' &&
-        !e.credit_card_id &&
-        !e.description?.startsWith('Pagamento fatura'),
-    )
+    .filter((e) => e.type !== 'income' && !e.credit_card_id && !isCCPayment(e))
     .reduce((s, e) => s + e.value, 0);
   return startingBalance + totalIncome - totalDebit - invoiceTotalForMonth;
 }
@@ -283,7 +283,7 @@ describe('Balance continuity — April closes exactly where May opens', () => {
       date: '2026-04-29',
       wallet_id: 'wallet-1',
       invoice_month: '2026-04',
-      credit_card_id: CARD.id,
+      final_category: 'Cartão de crédito',
     });
     const aprilSalary = makeExpense({
       id: 'sal-apr',
@@ -444,7 +444,7 @@ describe('Balance continuity — April closes exactly where May opens', () => {
       date: '2026-04-05',
       wallet_id: 'w',
       invoice_month: '2026-04',
-      credit_card_id: CARD.id,
+      final_category: 'Cartão de crédito',
     });
 
     const events = buildInvoiceCashEvents([CARD], [purchase, partialPayment]);
@@ -529,8 +529,8 @@ describe('Balance continuity — multiple credit cards', () => {
       makeExpense({ id: 'a1', description: 'Mercado', value: 1200, date: '2026-03-15', credit_card_id: CARD_A.id, invoice_month: '2026-04' }),
       makeExpense({ id: 'b1', description: 'Viagem', value: 2500, date: '2026-03-08', credit_card_id: CARD_B.id, invoice_month: '2026-04' }),
     ];
-    const paymentA = makeExpense({ id: 'pa', description: 'Pagamento fatura Nubank', value: 1200, date: '2026-04-05', wallet_id: 'w', invoice_month: '2026-04', credit_card_id: CARD_A.id });
-    const paymentB = makeExpense({ id: 'pb', description: 'Pagamento fatura Itaú', value: 2500, date: '2026-04-28', wallet_id: 'w', invoice_month: '2026-04', credit_card_id: CARD_B.id });
+    const paymentA = makeExpense({ id: 'pa', description: 'Pagamento fatura Nubank', value: 1200, date: '2026-04-05', wallet_id: 'w', invoice_month: '2026-04', final_category: 'Cartão de crédito' });
+    const paymentB = makeExpense({ id: 'pb', description: 'Pagamento fatura Itaú', value: 2500, date: '2026-04-28', wallet_id: 'w', invoice_month: '2026-04', final_category: 'Cartão de crédito' });
     const salary = makeExpense({ id: 'sal', description: 'Salário', value: 8000, date: '2026-04-05', type: 'income' });
 
     const cards = [CARD_A, CARD_B];
