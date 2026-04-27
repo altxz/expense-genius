@@ -4,6 +4,7 @@ import {
   groupInvoiceCashEventsByDay,
   sumInvoiceCashEventsBeforeDate,
 } from '@/lib/invoiceCashFlow';
+import { computeInvoiceTotalsForCashWindow } from '@/lib/projectedInvoiceTotals';
 import {
   buildMonthRecurringSignature,
   buildRecurringExceptionSignature,
@@ -613,5 +614,54 @@ describe('Balance continuity — multiple credit cards', () => {
     expect(byCard[CARD_A.id].amount).toBe(500); // 350 + 150
     expect(byCard[CARD_B.id].amount).toBe(450);
     expect(sumInvoiceCashEventsBeforeDate(events, '2026-05-01')).toBe(950);
+  });
+
+  it('counts in April the invoice actually paid in April even if its invoice_month is May', () => {
+    const earlyPaymentCard: CreditCard = {
+      id: 'card-early',
+      name: 'Visa',
+      limit_amount: 7000,
+      closing_day: 25,
+      due_day: 8,
+      closing_strategy: 'fixed',
+      closing_days_before_due: 7,
+    };
+
+    const purchase = makeExpense({
+      id: 'early-purchase',
+      description: 'Notebook',
+      value: 1800,
+      date: '2026-04-02',
+      credit_card_id: earlyPaymentCard.id,
+      invoice_month: '2026-05',
+      final_category: 'trabalho',
+    });
+    const payment = makeExpense({
+      id: 'early-payment',
+      description: 'Pagamento fatura Visa',
+      value: 1800,
+      date: '2026-04-30',
+      wallet_id: 'wallet-1',
+      invoice_month: '2026-05',
+      credit_card_id: earlyPaymentCard.id,
+    });
+
+    const aprilTotals = computeInvoiceTotalsForCashWindow({
+      creditCards: [earlyPaymentCard],
+      expenses: [purchase, payment],
+      startDate: '2026-04-01',
+      endDate: '2026-05-01',
+    });
+
+    const mayTotals = computeInvoiceTotalsForCashWindow({
+      creditCards: [earlyPaymentCard],
+      expenses: [purchase, payment],
+      startDate: '2026-05-01',
+      endDate: '2026-06-01',
+    });
+
+    expect(aprilTotals.total).toBe(1800);
+    expect(aprilTotals.byCategory).toEqual({ trabalho: 1800 });
+    expect(mayTotals.total).toBe(0);
   });
 });
