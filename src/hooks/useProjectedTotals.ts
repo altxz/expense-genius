@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useSelectedDate } from '@/contexts/DateContext';
 import { buildInvoiceCashEvents, sumInvoiceCashEventsBeforeDate } from '@/lib/invoiceCashFlow';
 import { isTrackedCreditCardPayment } from '@/lib/creditCardPayments';
+import { computeProjectedMonthResult } from '@/lib/projectedBalanceMath';
 import { computeInvoiceTotalsForCashWindow } from '@/lib/projectedInvoiceTotals';
 import { buildMaterializedRecurringSignature, buildMonthRecurringSignature, buildRecurringExceptionSignature, buildRecurringLooseSignature, buildRecurringSignature, hideMaterializedRecurringTemplates, shouldProjectRecurringInMonth } from '@/lib/recurringProjection';
 import type { CreditCard as CreditCardType } from '@/lib/invoiceHelpers';
@@ -226,47 +227,14 @@ export function useProjectedTotals(): ProjectedTotals {
 
   // Compute totals
   const result = useMemo(() => {
-    const nonTransfers = effectiveMonthExpenses.filter(e => e.type !== 'transfer');
-    const materializedMonthSignatures = new Set(
-      nonTransfers.map((e) => buildRecurringSignature(e.type, e.value, e.description))
-    );
-    let totalIncome = nonTransfers.filter(e => e.type === 'income').reduce((s, e) => s + e.value, 0);
-    let debitExpense = nonTransfers.filter(e => e.type !== 'income' && !e.credit_card_id && !isCCPayment(e)).reduce((s, e) => s + e.value, 0);
-
-    recurringTemplates.forEach((template) => {
-      if (template.type === 'transfer' || template.credit_card_id) return;
-      if (!shouldProjectRecurringInMonth(template.date, selectedYear, selectedMonth, template.frequency)) return;
-      if (new Date(`${template.date}T12:00:00`) >= new Date(`${startDate}T12:00:00`)) return;
-      const monthDay = Math.min(
-        new Date(`${template.date}T12:00:00`).getDate(),
-        new Date(selectedYear, selectedMonth + 1, 0).getDate(),
-      );
-      const occurrenceDate = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-${String(monthDay).padStart(2, '0')}`;
-      if (exceptionSet.has(buildRecurringExceptionSignature(template.id, occurrenceDate))) return;
-      if (materializedMonthSignatures.has(buildRecurringSignature(template.type, template.value, template.description))) return;
-
-      if (template.type === 'income') totalIncome += template.value;
-      else debitExpense += template.value;
+    return computeProjectedMonthResult({
+      effectiveMonthExpenses,
+      invoiceTotal: invoiceTotals.total,
+      invoiceByCategory: invoiceTotals.byCategory,
+      startingBalance,
+      isCreditCardPayment: isCCPayment,
     });
-
-    const totalExpense = debitExpense + invoiceTotals.total;
-
-    const byCategory: Record<string, number> = { ...invoiceTotals.byCategory };
-    nonTransfers
-      .filter(e => e.type !== 'income' && !e.credit_card_id && !isCCPayment(e))
-      .forEach(e => {
-        byCategory[e.final_category] = (byCategory[e.final_category] || 0) + e.value;
-      });
-    const largest = Object.entries(byCategory).sort((a, b) => b[1] - a[1])[0];
-
-    return {
-      totalIncome,
-      totalExpense,
-      balance: totalIncome - totalExpense,
-      projectedBalance: startingBalance + totalIncome - totalExpense,
-      largestCategory: largest ? { name: largest[0], total: largest[1], categoryKey: largest[0] } : null,
-    };
-  }, [effectiveMonthExpenses, invoiceTotals, startingBalance, recurringTemplates, selectedYear, selectedMonth, startDate, exceptionSet, isCCPayment]);
+  }, [effectiveMonthExpenses, invoiceTotals, startingBalance, isCCPayment]);
 
   const refetch = () => {
     queryClient.invalidateQueries({ queryKey });
