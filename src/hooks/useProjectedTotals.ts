@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSelectedDate } from '@/contexts/DateContext';
 import { buildInvoiceCashEvents, sumInvoiceCashEventsBeforeDate } from '@/lib/invoiceCashFlow';
+import { isTrackedCreditCardPayment } from '@/lib/creditCardPayments';
 import { computeInvoiceTotalsForCashWindow } from '@/lib/projectedInvoiceTotals';
 import { buildMaterializedRecurringSignature, buildMonthRecurringSignature, buildRecurringExceptionSignature, buildRecurringLooseSignature, buildRecurringSignature, hideMaterializedRecurringTemplates, shouldProjectRecurringInMonth } from '@/lib/recurringProjection';
 import type { CreditCard as CreditCardType } from '@/lib/invoiceHelpers';
@@ -106,15 +107,7 @@ export function useProjectedTotals(): ProjectedTotals {
     () => new Set(recurringExceptions.map(e => buildRecurringExceptionSignature(e.template_id, e.occurrence_date))),
     [recurringExceptions]
   );
-  const isCCPayment = useCallback((e: any) => (
-    e.type !== 'income' &&
-    !e.credit_card_id &&
-    (
-      e.description?.toLowerCase().includes('fatura') ||
-      e.final_category?.toLowerCase().includes('cartão') ||
-      e.final_category?.toLowerCase().includes('cartao')
-    )
-  ), []);
+  const isCCPayment = useCallback((e: any) => isTrackedCreditCardPayment(e, creditCards), [creditCards]);
 
   // Virtual recurring
   const effectiveMonthExpenses = useMemo(() => {
