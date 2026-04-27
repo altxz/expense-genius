@@ -90,6 +90,10 @@ export function ExpenseTable({ expenses, loading, onDeleted, filters, onFilterCh
         if (error) throw error;
         toast({ title: 'Despesa excluída' });
       }
+      await queryClient.invalidateQueries({ predicate: (q) => {
+        const k = q.queryKey?.[0];
+        return typeof k === 'string' && (k.startsWith('projected-') || k.startsWith('analytics') || k.startsWith('budget') || k === 'expenses' || k === 'history');
+      }, refetchType: 'active' });
       onDeleted();
     } catch (err: any) {
       toast({ title: 'Erro', description: err.message, variant: 'destructive' });
