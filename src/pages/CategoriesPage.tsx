@@ -294,7 +294,11 @@ export default function CategoriesPage() {
                             {subs.map(cat => (
                               <Card key={cat.id} className="rounded-2xl border shadow-sm hover:shadow-md transition-shadow">
                                 <CardContent className="p-4 space-y-2">
-                                  <div className="flex items-center gap-3">
+                                  <button
+                                    type="button"
+                                    onClick={() => navigate(`/categorias/${cat.id}`)}
+                                    className="flex items-center gap-3 w-full text-left rounded-xl -m-1 p-1 hover:bg-secondary/50 transition-colors"
+                                  >
                                     <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: cat.color + '20' }}>
                                       <LucideIcon name={cat.icon} className="h-4 w-4" />
                                     </div>
@@ -303,7 +307,7 @@ export default function CategoriesPage() {
                                       <p className="text-xs text-muted-foreground">{cat.expense_count || 0} despesas</p>
                                     </div>
                                     <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />
-                                  </div>
+                                  </button>
                                   {cat.keywords && cat.keywords.length > 0 && (
                                     <div className="flex flex-wrap gap-1">
                                       {cat.keywords.slice(0, 3).map(k => (
