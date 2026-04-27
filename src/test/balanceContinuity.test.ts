@@ -594,23 +594,24 @@ describe('Balance continuity — multiple credit cards', () => {
     expect(grouped).toEqual({ '2026-04-05': 1300, '2026-04-28': 200 });
   });
 
-  it('does not count card B twice when its purchases also appear in the global expense list', () => {
-    // Simulates the situation where invoiceExpenses and monthExpenses overlap.
-    const purchaseA = makeExpense({ id: 'a1', description: 'A1', value: 350, date: '2026-03-20', credit_card_id: CARD_A.id, invoice_month: '2026-04' });
-    const purchaseB = makeExpense({ id: 'b1', description: 'B1', value: 450, date: '2026-03-22', credit_card_id: CARD_B.id, invoice_month: '2026-04' });
-    const paymentA = makeExpense({ id: 'pa', description: 'Pagamento fatura Nubank', value: 350, date: '2026-04-05', wallet_id: 'w', invoice_month: '2026-04', credit_card_id: CARD_A.id });
+  it('emits a single cash event per (card, invoice month) even with many purchases', () => {
+    // Each card has multiple purchases in the same invoice — we should still
+    // see exactly ONE cash event per card (the consolidated invoice total).
+    const purchaseA1 = makeExpense({ id: 'a1', description: 'A1', value: 350, date: '2026-03-20', credit_card_id: CARD_A.id, invoice_month: '2026-04' });
+    const purchaseA2 = makeExpense({ id: 'a2', description: 'A2', value: 150, date: '2026-03-22', credit_card_id: CARD_A.id, invoice_month: '2026-04' });
+    const purchaseB1 = makeExpense({ id: 'b1', description: 'B1', value: 450, date: '2026-03-22', credit_card_id: CARD_B.id, invoice_month: '2026-04' });
+    const paymentA = makeExpense({ id: 'pa', description: 'Pagamento fatura Nubank', value: 500, date: '2026-04-05', wallet_id: 'w', invoice_month: '2026-04', credit_card_id: CARD_A.id });
     const paymentB = makeExpense({ id: 'pb', description: 'Pagamento fatura Itaú', value: 450, date: '2026-04-28', wallet_id: 'w', invoice_month: '2026-04', credit_card_id: CARD_B.id });
 
-    const events = buildInvoiceCashEvents([CARD_A, CARD_B], [purchaseA, purchaseB, paymentA, paymentB]);
-    // Even if we accidentally pass duplicates, dedupe by (card, monthLabel) must hold.
-    const eventsDup = buildInvoiceCashEvents(
+    const events = buildInvoiceCashEvents(
       [CARD_A, CARD_B],
-      [purchaseA, purchaseA, purchaseB, paymentA, paymentB],
+      [purchaseA1, purchaseA2, purchaseB1, paymentA, paymentB],
     );
 
     expect(events).toHaveLength(2);
-    expect(eventsDup).toHaveLength(2);
-    expect(sumInvoiceCashEventsBeforeDate(events, '2026-05-01')).toBe(800);
-    expect(sumInvoiceCashEventsBeforeDate(eventsDup, '2026-05-01')).toBe(800);
+    const byCard = Object.fromEntries(events.map((e) => [e.cardId, e]));
+    expect(byCard[CARD_A.id].amount).toBe(500); // 350 + 150
+    expect(byCard[CARD_B.id].amount).toBe(450);
+    expect(sumInvoiceCashEventsBeforeDate(events, '2026-05-01')).toBe(950);
   });
 });
