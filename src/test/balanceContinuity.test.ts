@@ -9,6 +9,7 @@ import {
   buildMonthRecurringSignature,
   buildRecurringExceptionSignature,
   buildRecurringLooseSignature,
+  hideMaterializedRecurringTemplates,
   shouldProjectRecurringInMonth,
 } from '@/lib/recurringProjection';
 import type { CreditCard } from '@/lib/invoiceHelpers';
@@ -88,7 +89,8 @@ function computeStartingBalance({
   exceptionSet: Set<string>;
   cards: CreditCard[];
 }) {
-  const nonTransfers = historicalNonCc.filter((e) => e.type !== 'transfer');
+  const visibleHistorical = hideMaterializedRecurringTemplates(historicalNonCc);
+  const nonTransfers = visibleHistorical.filter((e) => e.type !== 'transfer');
   const historicalIncome = nonTransfers
     .filter((e) => e.type === 'income')
     .reduce((s, e) => s + e.value, 0);
@@ -663,5 +665,43 @@ describe('Balance continuity — multiple credit cards', () => {
     expect(aprilTotals.total).toBe(1800);
     expect(aprilTotals.byCategory).toEqual({ trabalho: 1800 });
     expect(mayTotals.total).toBe(0);
+  });
+
+  it('does not double-count a recurring template plus its materialized April payment into May opening', () => {
+    const recurringHousing = makeExpense({
+      id: 'rec-housing',
+      description: 'Habitação Caixa',
+      value: 2566.52,
+      date: '2026-04-15',
+      type: 'expense',
+      is_recurring: true,
+      is_paid: false,
+      frequency: 'monthly',
+      wallet_id: 'wallet-1',
+    });
+
+    const aprilMaterialized = makeExpense({
+      id: 'mat-housing-apr',
+      description: 'Habitação Caixa',
+      value: 2566.52,
+      date: '2026-04-15',
+      type: 'expense',
+      is_recurring: false,
+      is_paid: true,
+      wallet_id: 'wallet-1',
+    });
+
+    const startMay = computeStartingBalance({
+      walletInitial: 0,
+      historicalNonCc: [recurringHousing, aprilMaterialized],
+      recurringTemplates: [recurringHousing],
+      invoiceExpenses: [],
+      selectedYear: 2026,
+      selectedMonth: 4,
+      exceptionSet: new Set(),
+      cards: [],
+    });
+
+    expect(startMay).toBeCloseTo(-2566.52, 2);
   });
 });

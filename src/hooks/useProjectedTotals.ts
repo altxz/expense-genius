@@ -91,6 +91,10 @@ export function useProjectedTotals(): ProjectedTotals {
   const recurringExpenses = data?.recurringExpenses ?? [];
   const invoiceExpenses = data?.invoiceExpenses ?? [];
   const historicalExpenses = data?.historicalExpenses ?? [];
+  const visibleHistoricalExpenses = useMemo(
+    () => hideMaterializedRecurringTemplates(historicalExpenses),
+    [historicalExpenses],
+  );
   const creditCards = data?.creditCards ?? [];
   const wallets = data?.wallets ?? [];
   const recurringExceptions = data?.recurringExceptions ?? [];
@@ -150,7 +154,7 @@ export function useProjectedTotals(): ProjectedTotals {
   const { startingBalance, pendingInStartingBalance } = useMemo(() => {
     const walletSum = wallets.reduce((s, w) => s + w.initial_balance, 0);
 
-    const nonTransfers = historicalExpenses.filter((e: any) => e.type !== 'transfer');
+    const nonTransfers = visibleHistoricalExpenses.filter((e: any) => e.type !== 'transfer');
     const historicalIncome = nonTransfers.filter((e: any) => e.type === 'income').reduce((s: number, e: any) => s + e.value, 0);
     // Exclude "Pagamento fatura" — invoice impact is already captured by ccInvoiceTotal
     const historicalDebit = nonTransfers.filter((e: any) => e.type !== 'income' && !e.description?.startsWith('Pagamento fatura')).reduce((s: number, e: any) => s + e.value, 0);
@@ -171,7 +175,7 @@ export function useProjectedTotals(): ProjectedTotals {
         realByMonthLoose.add(`${ym}|${buildRecurringLooseSignature(e.type, e.description)}`);
       }
     };
-    historicalExpenses.forEach(addSigs);
+    visibleHistoricalExpenses.forEach(addSigs);
     visibleMonthExpenses.forEach(addSigs);
 
     const selectedMonthStart = selectedYear * 12 + selectedMonth;
@@ -203,7 +207,7 @@ export function useProjectedTotals(): ProjectedTotals {
 
     const balance = walletSum + historicalIncome - historicalDebit + virtualRecurringBalance - ccInvoiceTotal;
     return { startingBalance: balance, pendingInStartingBalance: pendingAmount };
-  }, [wallets, historicalExpenses, visibleMonthExpenses, recurringExpenses, creditCards, invoiceExpenses, startDate, exceptionSet]);
+  }, [wallets, visibleHistoricalExpenses, visibleMonthExpenses, recurringExpenses, creditCards, invoiceExpenses, startDate, exceptionSet]);
 
   // Invoice totals
   const invoiceTotals = useMemo(() => {
