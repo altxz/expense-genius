@@ -408,8 +408,13 @@ export function TransactionFeed({
       else nonCcFlowByDay[key] -= exp.value;
     });
 
+    // Use the full cross-month invoice pool so historical CC purchases (which live
+    // in months prior to the selected one) are still summed into each invoice total.
+    // Falling back to allTxns/expenses would cause invoices to be valued at 0 here,
+    // making the daily running balance ignore paid invoices.
+    const invoiceCashPool = invoiceExpenses && invoiceExpenses.length > 0 ? invoiceExpenses : allTxns;
     const invoiceTotalByDay = groupInvoiceCashEventsByDay(
-      buildInvoiceCashEvents(creditCards, allTxns),
+      buildInvoiceCashEvents(creditCards, invoiceCashPool),
       monthStart,
       monthEnd,
     );
