@@ -68,7 +68,8 @@ function LucideIcon({ name, className }: { name: string; className?: string }) {
 export default function CategoryDetailsPage() {
   const { id } = useParams<{ id: string }>();
   const { user, loading: authLoading } = useAuth();
-  const { startDate, endDate, label, selectedDate } = useSelectedDate();
+  const { startDate, endDate, label, selectedMonth, selectedYear } = useSelectedDate();
+  const selectedDate = useMemo(() => new Date(selectedYear, selectedMonth, 1), [selectedYear, selectedMonth]);
   const navigate = useNavigate();
 
   const [category, setCategory] = useState<Category | null>(null);
