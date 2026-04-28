@@ -1,10 +1,11 @@
-import { useState, useMemo, lazy, Suspense } from 'react';
+import { useState, useMemo, Suspense } from 'react';
 import { Button } from '@/components/ui/button';
 import { ChevronDown, ChevronUp, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import dynamicIconImports from 'lucide-react/dynamicIconImports';
 import type { LucideProps } from 'lucide-react';
+import { lazyWithRetry } from '@/lib/lazyWithRetry';
 
 interface Category {
   id: string;
@@ -26,7 +27,7 @@ function DynamicIcon({ name, ...props }: { name: string } & Omit<LucideProps, 'r
   if (!dynamicIconImports[key]) {
     return <div className="w-4 h-4 rounded-full" style={{ background: 'currentColor', opacity: 0.3 }} />;
   }
-  const IconComp = lazy(dynamicIconImports[key]);
+  const IconComp = lazyWithRetry(dynamicIconImports[key]);
   return (
     <Suspense fallback={<div className="w-4 h-4" />}>
       <IconComp {...props} />
