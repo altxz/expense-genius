@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef, lazy, Suspense } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef, Suspense } from 'react';
 
 import { useUserSettings } from '@/contexts/UserSettingsContext';
 
@@ -20,6 +20,7 @@ import { Navigate } from 'react-router-dom';
 import { useProjectedTotals } from '@/hooks/useProjectedTotals';
 import { GuidedTour } from '@/components/GuidedTour';
 import { getInvoicePeriod, matchExpensesToInvoice } from '@/lib/invoiceHelpers';
+import { lazyNamedWithRetry } from '@/lib/lazyWithRetry';
 
 // Lazy load all chart/widget components
 const CashFlowChart = lazy(() => import('@/components/CashFlowChart').then(m => ({ default: m.CashFlowChart })));
