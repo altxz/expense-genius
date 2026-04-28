@@ -1,9 +1,10 @@
-import { lazy, Suspense } from 'react';
+import { Suspense } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRealtimeSync } from '@/hooks/useRealtimeSync';
+import { lazyNamedWithRetry } from '@/lib/lazyWithRetry';
 
-const FloatingActionButton = lazy(() => import('./FloatingActionButton').then(m => ({ default: m.FloatingActionButton })));
-const GeniusChatbot = lazy(() => import('./GeniusChatbot').then(m => ({ default: m.GeniusChatbot })));
+const FloatingActionButton = lazyNamedWithRetry(() => import('./FloatingActionButton'), m => m.FloatingActionButton);
+const GeniusChatbot = lazyNamedWithRetry(() => import('./GeniusChatbot'), m => m.GeniusChatbot);
 
 export function AuthenticatedExtras() {
   const { user } = useAuth();
