@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, ComponentType } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
@@ -11,21 +11,53 @@ import { UserSettingsProvider } from "@/contexts/UserSettingsContext";
 import { AuthenticatedExtras } from "@/components/AuthenticatedExtras";
 import { AnimatedRoutes } from "@/components/AnimatedRoute";
 
-// Lazy load all route pages
-const Dashboard = lazy(() => import("./pages/Dashboard"));
-const AuthPage = lazy(() => import("./pages/AuthPage"));
-const CategoriesPage = lazy(() => import("./pages/CategoriesPage"));
-const CategoryDetailsPage = lazy(() => import("./pages/CategoryDetailsPage"));
-const HistoryPage = lazy(() => import("./pages/HistoryPage"));
-const SettingsPage = lazy(() => import("./pages/SettingsPage"));
-const AnalyticsPage = lazy(() => import("./pages/AnalyticsPage"));
-const WalletPage = lazy(() => import("./pages/WalletPage"));
-const BudgetPage = lazy(() => import("./pages/BudgetPage"));
-const ProjectsPage = lazy(() => import("./pages/ProjectsPage"));
-const DebtSimulatorPage = lazy(() => import("./pages/DebtSimulatorPage"));
+/**
+ * Lazy import wrapper that recovers from stale dynamic chunk errors after a deploy.
+ * When the browser still references an old chunk hash that no longer exists, the
+ * dynamic `import()` rejects with "Failed to fetch dynamically imported module".
+ * In that case we force a single full reload so Vite serves the fresh chunk graph.
+ */
+function lazyWithRetry<T extends ComponentType<unknown>>(factory: () => Promise<{ default: T }>) {
+  return lazy(async () => {
+    try {
+      return await factory();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      const isChunkError =
+        /Failed to fetch dynamically imported module/i.test(msg) ||
+        /Importing a module script failed/i.test(msg) ||
+        /error loading dynamically imported module/i.test(msg);
+      if (isChunkError && typeof window !== 'undefined') {
+        const KEY = 'lovable:chunk-reload';
+        const last = Number(sessionStorage.getItem(KEY) || 0);
+        // Avoid infinite reload loops — only retry once every 10 seconds.
+        if (Date.now() - last > 10_000) {
+          sessionStorage.setItem(KEY, String(Date.now()));
+          window.location.reload();
+          // Return a never-resolving promise while the reload happens.
+          return new Promise(() => {}) as never;
+        }
+      }
+      throw err;
+    }
+  });
+}
 
-const ChangelogPage = lazy(() => import("./pages/ChangelogPage"));
-const NotFound = lazy(() => import("./pages/NotFound"));
+// Lazy load all route pages
+const Dashboard = lazyWithRetry(() => import("./pages/Dashboard"));
+const AuthPage = lazyWithRetry(() => import("./pages/AuthPage"));
+const CategoriesPage = lazyWithRetry(() => import("./pages/CategoriesPage"));
+const CategoryDetailsPage = lazyWithRetry(() => import("./pages/CategoryDetailsPage"));
+const HistoryPage = lazyWithRetry(() => import("./pages/HistoryPage"));
+const SettingsPage = lazyWithRetry(() => import("./pages/SettingsPage"));
+const AnalyticsPage = lazyWithRetry(() => import("./pages/AnalyticsPage"));
+const WalletPage = lazyWithRetry(() => import("./pages/WalletPage"));
+const BudgetPage = lazyWithRetry(() => import("./pages/BudgetPage"));
+const ProjectsPage = lazyWithRetry(() => import("./pages/ProjectsPage"));
+const DebtSimulatorPage = lazyWithRetry(() => import("./pages/DebtSimulatorPage"));
+
+const ChangelogPage = lazyWithRetry(() => import("./pages/ChangelogPage"));
+const NotFound = lazyWithRetry(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
