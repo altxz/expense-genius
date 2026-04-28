@@ -240,10 +240,10 @@ export default function CategoriesPage() {
         <div className="flex-1 flex flex-col min-w-0">
           <DashboardHeader />
           <main className="flex-1 p-3 sm:p-4 lg:p-8 pb-32 space-y-4 sm:space-y-6 overflow-auto">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-3">
               <div>
-                <h1 className="text-3xl font-bold tracking-tight">Gerenciar Categorias</h1>
-                <p className="text-sm text-muted-foreground mt-1">Configure categorias e melhore a precisão da IA</p>
+                <h1 className="text-3xl font-bold tracking-tight">Categorias</h1>
+                <p className="text-sm text-muted-foreground mt-1 capitalize">Visão geral · {label}</p>
               </div>
               <Button onClick={openCreateModal} className="gap-2 rounded-xl h-11 px-6 bg-accent text-accent-foreground hover:bg-accent/90 font-semibold">
                 <PlusCircle className="h-5 w-5" />
@@ -252,26 +252,89 @@ export default function CategoriesPage() {
             </div>
 
             {/* Stats Cards */}
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
               <Card className="rounded-2xl border-0 shadow-md bg-primary text-primary-foreground">
-                <CardContent className="p-6 flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-primary-foreground/20 flex items-center justify-center"><Tag className="h-6 w-6" /></div>
-                  <div><p className="text-sm font-medium opacity-80">Total de Categorias</p><p className="text-2xl font-bold">{totalCats}</p></div>
+                <CardContent className="p-5 flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-2xl bg-primary-foreground/20 flex items-center justify-center shrink-0"><Tag className="h-5 w-5" /></div>
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-medium opacity-80">Categorias</p>
+                    <p className="text-xl font-bold">{totalCats}</p>
+                    <p className="text-[10px] opacity-70 truncate">{parentCount} principais · {subCount} subs</p>
+                  </div>
                 </CardContent>
               </Card>
-              <Card className="rounded-2xl border-0 shadow-md bg-ai text-ai-foreground">
-                <CardContent className="p-6 flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-ai-foreground/20 flex items-center justify-center"><BarChart3 className="h-6 w-6" /></div>
-                  <div><p className="text-sm font-medium opacity-80">Precisão da IA</p><p className="text-2xl font-bold">{avgAccuracy}%</p></div>
+              <Card className="rounded-2xl border-0 shadow-md">
+                <CardContent className="p-5 flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-2xl bg-rose-100 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0"><TrendingUp className="h-5 w-5" /></div>
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-medium text-muted-foreground">Gasto no mês</p>
+                    <p className="text-xl font-bold truncate">{formatCurrency(monthSpend)}</p>
+                    <p className="text-[10px] text-muted-foreground truncate">{monthCount} lançamentos</p>
+                  </div>
                 </CardContent>
               </Card>
-              <Card className="rounded-2xl border-0 shadow-md bg-pink text-pink-foreground">
-                <CardContent className="p-6 flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-pink-foreground/10 flex items-center justify-center"><Pencil className="h-6 w-6" /></div>
-                  <div><p className="text-sm font-medium opacity-80">Correções Manuais</p><p className="text-2xl font-bold">{correctedCount}</p></div>
+              <Card className="rounded-2xl border-0 shadow-md">
+                <CardContent className="p-5 flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0"><BarChart3 className="h-5 w-5" /></div>
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-medium text-muted-foreground">Média / categoria</p>
+                    <p className="text-xl font-bold truncate">{formatCurrency(avgPerCategory)}</p>
+                    <p className="text-[10px] text-muted-foreground truncate">por categoria ativa</p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="rounded-2xl border-0 shadow-md">
+                <CardContent className="p-5 flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-2xl bg-amber-100 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0"><ArrowUpRight className="h-5 w-5" /></div>
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-medium text-muted-foreground">Top categoria</p>
+                    <p className="text-base font-bold truncate">{topCategory?.name || '—'}</p>
+                    <p className="text-[10px] text-muted-foreground truncate">{topCategory ? formatCurrency(topCategory.month_value || 0) : 'Sem gastos'}</p>
+                  </div>
                 </CardContent>
               </Card>
             </div>
+
+            {/* Top Ranking */}
+            {topRanking.length > 0 && (
+              <Card className="rounded-2xl border-0 shadow-md">
+                <CardContent className="p-5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-sm font-semibold">Ranking de gastos · {label}</h2>
+                    <Badge variant="outline" className="rounded-lg text-[10px]">Top {topRanking.length}</Badge>
+                  </div>
+                  <div className="space-y-2">
+                    {topRanking.map((c, idx) => {
+                      const pct = monthSpend > 0 ? ((c.month_value || 0) / monthSpend) * 100 : 0;
+                      return (
+                        <button
+                          type="button"
+                          key={c.id}
+                          onClick={() => navigate(`/categorias/${c.id}`)}
+                          className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-secondary/50 transition-colors text-left"
+                        >
+                          <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-bold" style={{ backgroundColor: c.color + '25', color: c.color }}>
+                            {idx + 1}
+                          </div>
+                          <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: c.color + '20' }}>
+                            <LucideIcon name={c.icon} className="h-4 w-4" />
+                          </div>
+                          <div className="flex-1 min-w-0 space-y-1">
+                            <div className="flex items-center justify-between gap-2 text-xs">
+                              <span className="font-medium truncate">{c.name}</span>
+                              <span className="text-muted-foreground shrink-0">{formatCurrency(c.month_value || 0)} · {pct.toFixed(0)}%</span>
+                            </div>
+                            <div className="h-1.5 rounded-full bg-secondary overflow-hidden">
+                              <div className="h-full rounded-full" style={{ width: `${Math.min(100, pct)}%`, backgroundColor: c.color }} />
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Categories Grid */}
             {loading ? (
