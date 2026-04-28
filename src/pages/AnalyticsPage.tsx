@@ -1,4 +1,4 @@
-import { useState, lazy, Suspense } from 'react';
+import { useState, Suspense } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { AppSidebar } from '@/components/AppSidebar';
@@ -9,15 +9,16 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { useAnalyticsData, AnalyticsFilters } from '@/hooks/useAnalyticsData';
 import { Skeleton } from '@/components/ui/skeleton';
+import { lazyNamedWithRetry } from '@/lib/lazyWithRetry';
 
-const OverviewCards = lazy(() => import('@/components/analytics/OverviewCards').then(m => ({ default: m.OverviewCards })));
-const CategoryCharts = lazy(() => import('@/components/analytics/CategoryCharts').then(m => ({ default: m.CategoryCharts })));
-const InsightsSection = lazy(() => import('@/components/analytics/InsightsSection').then(m => ({ default: m.InsightsSection })));
-const TrendsCharts = lazy(() => import('@/components/analytics/TrendsCharts').then(m => ({ default: m.TrendsCharts })));
-const ExpenseTreemap = lazy(() => import('@/components/analytics/ExpenseTreemap').then(m => ({ default: m.ExpenseTreemap })));
-const EmergencyFundCard = lazy(() => import('@/components/analytics/EmergencyFundCard').then(m => ({ default: m.EmergencyFundCard })));
-const NetWorthChart = lazy(() => import('@/components/analytics/NetWorthChart').then(m => ({ default: m.NetWorthChart })));
-const GoalsSection = lazy(() => import('@/components/analytics/GoalsSection').then(m => ({ default: m.GoalsSection })));
+const OverviewCards = lazyNamedWithRetry(() => import('@/components/analytics/OverviewCards'), m => m.OverviewCards);
+const CategoryCharts = lazyNamedWithRetry(() => import('@/components/analytics/CategoryCharts'), m => m.CategoryCharts);
+const InsightsSection = lazyNamedWithRetry(() => import('@/components/analytics/InsightsSection'), m => m.InsightsSection);
+const TrendsCharts = lazyNamedWithRetry(() => import('@/components/analytics/TrendsCharts'), m => m.TrendsCharts);
+const ExpenseTreemap = lazyNamedWithRetry(() => import('@/components/analytics/ExpenseTreemap'), m => m.ExpenseTreemap);
+const EmergencyFundCard = lazyNamedWithRetry(() => import('@/components/analytics/EmergencyFundCard'), m => m.EmergencyFundCard);
+const NetWorthChart = lazyNamedWithRetry(() => import('@/components/analytics/NetWorthChart'), m => m.NetWorthChart);
+const GoalsSection = lazyNamedWithRetry(() => import('@/components/analytics/GoalsSection'), m => m.GoalsSection);
 
 export default function AnalyticsPage() {
   const { user, loading: authLoading } = useAuth();

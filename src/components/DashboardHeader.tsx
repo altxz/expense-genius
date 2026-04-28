@@ -1,10 +1,11 @@
-import { useState, useEffect, lazy, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { LogOut, Menu, Sun, Moon, Monitor, Plus } from 'lucide-react';
 import { useSidebar } from '@/components/ui/sidebar';
+import { lazyNamedWithRetry } from '@/lib/lazyWithRetry';
 
-const AddExpenseModal = lazy(() => import('@/components/AddExpenseModal').then(m => ({ default: m.AddExpenseModal })));
+const AddExpenseModal = lazyNamedWithRetry(() => import('@/components/AddExpenseModal'), m => m.AddExpenseModal);
 import { NotificationBell } from '@/components/NotificationBell';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
+import { retryDynamicImport } from '@/lib/lazyWithRetry';
 
 interface AuthContextType {
   user: User | null;
@@ -24,7 +25,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (seededRef.current.has(userId)) return;
       seededRef.current.add(userId);
       // Dynamic import to avoid blocking initial load
-      const { seedDefaultCategories } = await import('@/lib/seedCategories');
+      const { seedDefaultCategories } = await retryDynamicImport(() => import('@/lib/seedCategories'));
       seedDefaultCategories(userId).catch(console.error);
     };
 
