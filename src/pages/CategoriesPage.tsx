@@ -418,7 +418,12 @@ export default function CategoriesPage() {
                                     </div>
                                     <div className="min-w-0 flex-1">
                                       <h3 className="font-semibold text-sm truncate">{cat.name}</h3>
-                                      <p className="text-xs text-muted-foreground">{cat.expense_count || 0} despesas</p>
+                                      <p className="text-xs text-muted-foreground">
+                                        {(cat.month_value || 0) > 0
+                                          ? <span className="font-medium">{formatCurrency(cat.month_value || 0)}</span>
+                                          : <span>0 no mês</span>}
+                                        <span className="opacity-60"> · {cat.month_count || 0} lanç.</span>
+                                      </p>
                                     </div>
                                     <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />
                                   </button>
