@@ -14,7 +14,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { PlusCircle, Pencil, BarChart3, Trash2, Tag, Loader2 } from 'lucide-react';
+import { PlusCircle, Pencil, BarChart3, Trash2, Tag, Loader2, TrendingUp, ArrowUpRight } from 'lucide-react';
+import { hideMaterializedRecurringTemplates } from '@/lib/recurringProjection';
+import { formatCurrency } from '@/lib/constants';
+import { useSelectedDate } from '@/contexts/DateContext';
 import { useToast } from '@/hooks/use-toast';
 import { icons } from 'lucide-react';
 
@@ -29,6 +32,9 @@ interface Category {
   parent_id?: string | null;
   expense_count?: number;
   ai_accuracy?: number;
+  total_value?: number;
+  month_count?: number;
+  month_value?: number;
 }
 
 const PRESET_COLORS = [
@@ -64,6 +70,7 @@ export default function CategoriesPage() {
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { startDate, endDate, label } = useSelectedDate();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
