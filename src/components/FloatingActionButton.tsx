@@ -1,7 +1,8 @@
-import { useState, lazy, Suspense } from 'react';
+import { useState, Suspense } from 'react';
 import { Plus } from 'lucide-react';
+import { lazyNamedWithRetry } from '@/lib/lazyWithRetry';
 
-const AddExpenseModal = lazy(() => import('./AddExpenseModal').then(m => ({ default: m.AddExpenseModal })));
+const AddExpenseModal = lazyNamedWithRetry(() => import('./AddExpenseModal'), m => m.AddExpenseModal);
 
 interface FloatingActionButtonProps {
   onCreated?: () => void;
