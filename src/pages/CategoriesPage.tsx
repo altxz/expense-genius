@@ -368,7 +368,10 @@ export default function CategoriesPage() {
                             </div>
                             <h2 className="text-lg font-bold truncate">{parent.name}</h2>
                             <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: parent.color }} />
-                            <span className="text-xs text-muted-foreground shrink-0">{parent.expense_count || 0} despesas</span>
+                            <span className="text-xs text-muted-foreground shrink-0 hidden sm:inline">{parent.month_count || 0} no mês</span>
+                            {(parent.month_value || 0) > 0 && (
+                              <Badge variant="secondary" className="rounded-lg text-[10px] shrink-0">{formatCurrency(parent.month_value || 0)}</Badge>
+                            )}
                           </button>
                           <div className="flex gap-1 ml-auto">
                             <Tooltip>
