@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback, useMemo, useRef, Suspense } from 'rea
 import { useUserSettings } from '@/contexts/UserSettingsContext';
 
 import { SummaryCards } from '@/components/SummaryCards';
-const AddExpenseModal = lazy(() => import('@/components/AddExpenseModal').then(m => ({ default: m.AddExpenseModal })));
+const AddExpenseModal = lazyNamedWithRetry(() => import('@/components/AddExpenseModal'), m => m.AddExpenseModal);
 import { DashboardHeader } from '@/components/DashboardHeader';
 import { InstallPwaPrompt } from '@/components/InstallPwaPrompt';
 import { SmartAlertsCarousel, SmartAlert } from '@/components/SmartAlertsCarousel';
@@ -23,24 +23,24 @@ import { getInvoicePeriod, matchExpensesToInvoice } from '@/lib/invoiceHelpers';
 import { lazyNamedWithRetry } from '@/lib/lazyWithRetry';
 
 // Lazy load all chart/widget components
-const CashFlowChart = lazy(() => import('@/components/CashFlowChart').then(m => ({ default: m.CashFlowChart })));
-const DashboardScoreCarousel = lazy(() => import('@/components/DashboardScoreCarousel').then(m => ({ default: m.DashboardScoreCarousel })));
-const CalendarView = lazy(() => import('@/components/CalendarView').then(m => ({ default: m.CalendarView })));
-const IncomeVsExpenseChart = lazy(() => import('@/components/analytics/IncomeVsExpenseChart').then(m => ({ default: m.IncomeVsExpenseChart })));
-const TopExpensesList = lazy(() => import('@/components/analytics/TopExpensesList').then(m => ({ default: m.TopExpensesList })));
-const CreditUsageChart = lazy(() => import('@/components/analytics/CreditUsageChart').then(m => ({ default: m.CreditUsageChart })));
-const CreditCardSummary = lazy(() => import('@/components/analytics/CreditCardSummary').then(m => ({ default: m.CreditCardSummary })));
-const EndOfMonthForecast = lazy(() => import('@/components/analytics/EndOfMonthForecast').then(m => ({ default: m.EndOfMonthForecast })));
-const DailySpendingChart = lazy(() => import('@/components/analytics/DailySpendingChart').then(m => ({ default: m.DailySpendingChart })));
-const FixedVsVariableChart = lazy(() => import('@/components/analytics/FixedVsVariableChart').then(m => ({ default: m.FixedVsVariableChart })));
-const SubcategoryTreemap = lazy(() => import('@/components/analytics/SubcategoryTreemap').then(m => ({ default: m.SubcategoryTreemap })));
-const SavingsRateGauge = lazy(() => import('@/components/analytics/SavingsRateGauge').then(m => ({ default: m.SavingsRateGauge })));
-const WeekComparisonChart = lazy(() => import('@/components/analytics/WeekComparisonChart').then(m => ({ default: m.WeekComparisonChart })));
-const IncomeSourcesPie = lazy(() => import('@/components/analytics/IncomeSourcesPie').then(m => ({ default: m.IncomeSourcesPie })));
-const WaterfallChart = lazy(() => import('@/components/analytics/WaterfallChart').then(m => ({ default: m.WaterfallChart })));
-const SpendingHeatmap = lazy(() => import('@/components/analytics/SpendingHeatmap').then(m => ({ default: m.SpendingHeatmap })));
-const BurndownChart = lazy(() => import('@/components/analytics/BurndownChart').then(m => ({ default: m.BurndownChart })));
-const NetWorthChart = lazy(() => import('@/components/analytics/NetWorthChart').then(m => ({ default: m.NetWorthChart })));
+const CashFlowChart = lazyNamedWithRetry(() => import('@/components/CashFlowChart'), m => m.CashFlowChart);
+const DashboardScoreCarousel = lazyNamedWithRetry(() => import('@/components/DashboardScoreCarousel'), m => m.DashboardScoreCarousel);
+const CalendarView = lazyNamedWithRetry(() => import('@/components/CalendarView'), m => m.CalendarView);
+const IncomeVsExpenseChart = lazyNamedWithRetry(() => import('@/components/analytics/IncomeVsExpenseChart'), m => m.IncomeVsExpenseChart);
+const TopExpensesList = lazyNamedWithRetry(() => import('@/components/analytics/TopExpensesList'), m => m.TopExpensesList);
+const CreditUsageChart = lazyNamedWithRetry(() => import('@/components/analytics/CreditUsageChart'), m => m.CreditUsageChart);
+const CreditCardSummary = lazyNamedWithRetry(() => import('@/components/analytics/CreditCardSummary'), m => m.CreditCardSummary);
+const EndOfMonthForecast = lazyNamedWithRetry(() => import('@/components/analytics/EndOfMonthForecast'), m => m.EndOfMonthForecast);
+const DailySpendingChart = lazyNamedWithRetry(() => import('@/components/analytics/DailySpendingChart'), m => m.DailySpendingChart);
+const FixedVsVariableChart = lazyNamedWithRetry(() => import('@/components/analytics/FixedVsVariableChart'), m => m.FixedVsVariableChart);
+const SubcategoryTreemap = lazyNamedWithRetry(() => import('@/components/analytics/SubcategoryTreemap'), m => m.SubcategoryTreemap);
+const SavingsRateGauge = lazyNamedWithRetry(() => import('@/components/analytics/SavingsRateGauge'), m => m.SavingsRateGauge);
+const WeekComparisonChart = lazyNamedWithRetry(() => import('@/components/analytics/WeekComparisonChart'), m => m.WeekComparisonChart);
+const IncomeSourcesPie = lazyNamedWithRetry(() => import('@/components/analytics/IncomeSourcesPie'), m => m.IncomeSourcesPie);
+const WaterfallChart = lazyNamedWithRetry(() => import('@/components/analytics/WaterfallChart'), m => m.WaterfallChart);
+const SpendingHeatmap = lazyNamedWithRetry(() => import('@/components/analytics/SpendingHeatmap'), m => m.SpendingHeatmap);
+const BurndownChart = lazyNamedWithRetry(() => import('@/components/analytics/BurndownChart'), m => m.BurndownChart);
+const NetWorthChart = lazyNamedWithRetry(() => import('@/components/analytics/NetWorthChart'), m => m.NetWorthChart);
 
 function ChartFallback() {
   return <Skeleton className="h-full w-full min-h-[280px] rounded-2xl" />;
