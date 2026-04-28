@@ -14,7 +14,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { PlusCircle, Pencil, BarChart3, Trash2, Tag, Loader2 } from 'lucide-react';
+import { PlusCircle, Pencil, BarChart3, Trash2, Tag, Loader2, TrendingUp, ArrowUpRight } from 'lucide-react';
+import { hideMaterializedRecurringTemplates } from '@/lib/recurringProjection';
+import { formatCurrency } from '@/lib/constants';
+import { useSelectedDate } from '@/contexts/DateContext';
 import { useToast } from '@/hooks/use-toast';
 import { icons } from 'lucide-react';
 
@@ -29,6 +32,9 @@ interface Category {
   parent_id?: string | null;
   expense_count?: number;
   ai_accuracy?: number;
+  total_value?: number;
+  month_count?: number;
+  month_value?: number;
 }
 
 const PRESET_COLORS = [
@@ -64,6 +70,7 @@ export default function CategoriesPage() {
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { startDate, endDate, label } = useSelectedDate();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -81,34 +88,65 @@ export default function CategoriesPage() {
       .eq('user_id', user.id)
       .order('sort_order');
 
-    const { data: expenses } = await supabase
+    // Fetch ALL expenses with the fields needed for proper deduplication of recurring templates
+    const select = 'id, type, value, final_category, category_ai, date, is_recurring, is_paid, description, wallet_id, credit_card_id, payment_method, project_id';
+    const { data: allExpenses } = await supabase
       .from('expenses')
-      .select('final_category, category_ai')
+      .select(select)
       .eq('user_id', user.id);
 
+    // Apply the same deduplication used elsewhere so recurring TEMPLATES that have a real
+    // materialized counterpart don't get counted twice (fixes "ghost" duplicates)
+    const deduped = hideMaterializedRecurringTemplates((allExpenses || []) as never[]) as Array<{
+      type: string; value: number; final_category: string; category_ai?: string | null; date: string;
+    }>;
+
     const countMap: Record<string, number> = {};
+    const valueMap: Record<string, number> = {};
+    const monthCountMap: Record<string, number> = {};
+    const monthValueMap: Record<string, number> = {};
     const correctMap: Record<string, number> = {};
     const totalMap: Record<string, number> = {};
 
-    (expenses || []).forEach(e => {
-      countMap[e.final_category] = (countMap[e.final_category] || 0) + 1;
+    const startStr = startDate;
+    const endStr = endDate;
+
+    deduped.forEach(e => {
+      const key = (e.final_category || '').toLowerCase();
+      countMap[key] = (countMap[key] || 0) + 1;
+      if (e.type === 'expense') {
+        valueMap[key] = (valueMap[key] || 0) + Number(e.value || 0);
+      }
+      if (e.date >= startStr && e.date < endStr) {
+        monthCountMap[key] = (monthCountMap[key] || 0) + 1;
+        if (e.type === 'expense') {
+          monthValueMap[key] = (monthValueMap[key] || 0) + Number(e.value || 0);
+        }
+      }
       if (e.category_ai) {
-        totalMap[e.final_category] = (totalMap[e.final_category] || 0) + 1;
+        const ck = (e.final_category || '');
+        totalMap[ck] = (totalMap[ck] || 0) + 1;
         if (e.category_ai === e.final_category) {
-          correctMap[e.final_category] = (correctMap[e.final_category] || 0) + 1;
+          correctMap[ck] = (correctMap[ck] || 0) + 1;
         }
       }
     });
 
-    const mapped: Category[] = (allCats || []).map(c => ({
-      ...c,
-      expense_count: countMap[c.name.toLowerCase()] || countMap[c.name] || 0,
-      ai_accuracy: totalMap[c.name] ? Math.round((correctMap[c.name] || 0) / totalMap[c.name] * 100) : undefined,
-    }));
+    const mapped: Category[] = (allCats || []).map(c => {
+      const k = c.name.toLowerCase();
+      return {
+        ...c,
+        expense_count: countMap[k] || 0,
+        total_value: valueMap[k] || 0,
+        month_count: monthCountMap[k] || 0,
+        month_value: monthValueMap[k] || 0,
+        ai_accuracy: totalMap[c.name] ? Math.round((correctMap[c.name] || 0) / totalMap[c.name] * 100) : undefined,
+      };
+    });
 
     setCategories(mapped);
     setLoading(false);
-  }, [user]);
+  }, [user, startDate, endDate]);
 
   useEffect(() => { fetchCategories(); }, [fetchCategories]);
 
@@ -174,13 +212,23 @@ export default function CategoriesPage() {
 
   // Stats
   const totalCats = categories.length;
-  const withAccuracy = categories.filter(c => c.ai_accuracy !== undefined);
-  const avgAccuracy = withAccuracy.length ? Math.round(withAccuracy.reduce((s, c) => s + (c.ai_accuracy || 0), 0) / withAccuracy.length) : 0;
-  const totalExpenses = categories.reduce((s, c) => s + (c.expense_count || 0), 0);
-  const correctedCount = categories.reduce((s, c) => {
-    if (c.ai_accuracy !== undefined && c.ai_accuracy < 100) return s + 1;
-    return s;
-  }, 0);
+  const parentCount = categories.filter(c => !c.parent_id).length;
+  const subCount = categories.filter(c => c.parent_id).length;
+  const totalMonthValue = categories
+    .filter(c => !c.parent_id) // only parents to avoid double counting (subs roll up via final_category)
+    .reduce((s, c) => s + (c.month_value || 0), 0);
+  // Actually each expense has exactly one final_category, so summing over ALL cats counts each expense once.
+  // Use the full sum instead:
+  const monthSpend = categories.reduce((s, c) => s + (c.month_value || 0), 0);
+  const monthCount = categories.reduce((s, c) => s + (c.month_count || 0), 0);
+  const avgPerCategory = monthCount > 0 ? monthSpend / Math.max(1, categories.filter(c => (c.month_count || 0) > 0).length) : 0;
+  const topCategory = [...categories]
+    .filter(c => (c.month_value || 0) > 0)
+    .sort((a, b) => (b.month_value || 0) - (a.month_value || 0))[0];
+  const topRanking = [...categories]
+    .filter(c => (c.month_value || 0) > 0)
+    .sort((a, b) => (b.month_value || 0) - (a.month_value || 0))
+    .slice(0, 5);
 
   if (authLoading) return <div className="min-h-screen flex items-center justify-center bg-background"><span className="text-muted-foreground font-medium">Carregando...</span></div>;
   if (!user) return <Navigate to="/auth" replace />;
@@ -192,10 +240,10 @@ export default function CategoriesPage() {
         <div className="flex-1 flex flex-col min-w-0">
           <DashboardHeader />
           <main className="flex-1 p-3 sm:p-4 lg:p-8 pb-32 space-y-4 sm:space-y-6 overflow-auto">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-3">
               <div>
-                <h1 className="text-3xl font-bold tracking-tight">Gerenciar Categorias</h1>
-                <p className="text-sm text-muted-foreground mt-1">Configure categorias e melhore a precisão da IA</p>
+                <h1 className="text-3xl font-bold tracking-tight">Categorias</h1>
+                <p className="text-sm text-muted-foreground mt-1 capitalize">Visão geral · {label}</p>
               </div>
               <Button onClick={openCreateModal} className="gap-2 rounded-xl h-11 px-6 bg-accent text-accent-foreground hover:bg-accent/90 font-semibold">
                 <PlusCircle className="h-5 w-5" />
@@ -204,26 +252,89 @@ export default function CategoriesPage() {
             </div>
 
             {/* Stats Cards */}
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
               <Card className="rounded-2xl border-0 shadow-md bg-primary text-primary-foreground">
-                <CardContent className="p-6 flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-primary-foreground/20 flex items-center justify-center"><Tag className="h-6 w-6" /></div>
-                  <div><p className="text-sm font-medium opacity-80">Total de Categorias</p><p className="text-2xl font-bold">{totalCats}</p></div>
+                <CardContent className="p-5 flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-2xl bg-primary-foreground/20 flex items-center justify-center shrink-0"><Tag className="h-5 w-5" /></div>
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-medium opacity-80">Categorias</p>
+                    <p className="text-xl font-bold">{totalCats}</p>
+                    <p className="text-[10px] opacity-70 truncate">{parentCount} principais · {subCount} subs</p>
+                  </div>
                 </CardContent>
               </Card>
-              <Card className="rounded-2xl border-0 shadow-md bg-ai text-ai-foreground">
-                <CardContent className="p-6 flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-ai-foreground/20 flex items-center justify-center"><BarChart3 className="h-6 w-6" /></div>
-                  <div><p className="text-sm font-medium opacity-80">Precisão da IA</p><p className="text-2xl font-bold">{avgAccuracy}%</p></div>
+              <Card className="rounded-2xl border-0 shadow-md">
+                <CardContent className="p-5 flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-2xl bg-rose-100 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0"><TrendingUp className="h-5 w-5" /></div>
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-medium text-muted-foreground">Gasto no mês</p>
+                    <p className="text-xl font-bold truncate">{formatCurrency(monthSpend)}</p>
+                    <p className="text-[10px] text-muted-foreground truncate">{monthCount} lançamentos</p>
+                  </div>
                 </CardContent>
               </Card>
-              <Card className="rounded-2xl border-0 shadow-md bg-pink text-pink-foreground">
-                <CardContent className="p-6 flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-pink-foreground/10 flex items-center justify-center"><Pencil className="h-6 w-6" /></div>
-                  <div><p className="text-sm font-medium opacity-80">Correções Manuais</p><p className="text-2xl font-bold">{correctedCount}</p></div>
+              <Card className="rounded-2xl border-0 shadow-md">
+                <CardContent className="p-5 flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0"><BarChart3 className="h-5 w-5" /></div>
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-medium text-muted-foreground">Média / categoria</p>
+                    <p className="text-xl font-bold truncate">{formatCurrency(avgPerCategory)}</p>
+                    <p className="text-[10px] text-muted-foreground truncate">por categoria ativa</p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="rounded-2xl border-0 shadow-md">
+                <CardContent className="p-5 flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-2xl bg-amber-100 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0"><ArrowUpRight className="h-5 w-5" /></div>
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-medium text-muted-foreground">Top categoria</p>
+                    <p className="text-base font-bold truncate">{topCategory?.name || '—'}</p>
+                    <p className="text-[10px] text-muted-foreground truncate">{topCategory ? formatCurrency(topCategory.month_value || 0) : 'Sem gastos'}</p>
+                  </div>
                 </CardContent>
               </Card>
             </div>
+
+            {/* Top Ranking */}
+            {topRanking.length > 0 && (
+              <Card className="rounded-2xl border-0 shadow-md">
+                <CardContent className="p-5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-sm font-semibold">Ranking de gastos · {label}</h2>
+                    <Badge variant="outline" className="rounded-lg text-[10px]">Top {topRanking.length}</Badge>
+                  </div>
+                  <div className="space-y-2">
+                    {topRanking.map((c, idx) => {
+                      const pct = monthSpend > 0 ? ((c.month_value || 0) / monthSpend) * 100 : 0;
+                      return (
+                        <button
+                          type="button"
+                          key={c.id}
+                          onClick={() => navigate(`/categorias/${c.id}`)}
+                          className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-secondary/50 transition-colors text-left"
+                        >
+                          <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-bold" style={{ backgroundColor: c.color + '25', color: c.color }}>
+                            {idx + 1}
+                          </div>
+                          <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: c.color + '20' }}>
+                            <LucideIcon name={c.icon} className="h-4 w-4" />
+                          </div>
+                          <div className="flex-1 min-w-0 space-y-1">
+                            <div className="flex items-center justify-between gap-2 text-xs">
+                              <span className="font-medium truncate">{c.name}</span>
+                              <span className="text-muted-foreground shrink-0">{formatCurrency(c.month_value || 0)} · {pct.toFixed(0)}%</span>
+                            </div>
+                            <div className="h-1.5 rounded-full bg-secondary overflow-hidden">
+                              <div className="h-full rounded-full" style={{ width: `${Math.min(100, pct)}%`, backgroundColor: c.color }} />
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Categories Grid */}
             {loading ? (
@@ -257,7 +368,10 @@ export default function CategoriesPage() {
                             </div>
                             <h2 className="text-lg font-bold truncate">{parent.name}</h2>
                             <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: parent.color }} />
-                            <span className="text-xs text-muted-foreground shrink-0">{parent.expense_count || 0} despesas</span>
+                            <span className="text-xs text-muted-foreground shrink-0 hidden sm:inline">{parent.month_count || 0} no mês</span>
+                            {(parent.month_value || 0) > 0 && (
+                              <Badge variant="secondary" className="rounded-lg text-[10px] shrink-0">{formatCurrency(parent.month_value || 0)}</Badge>
+                            )}
                           </button>
                           <div className="flex gap-1 ml-auto">
                             <Tooltip>
@@ -304,7 +418,12 @@ export default function CategoriesPage() {
                                     </div>
                                     <div className="min-w-0 flex-1">
                                       <h3 className="font-semibold text-sm truncate">{cat.name}</h3>
-                                      <p className="text-xs text-muted-foreground">{cat.expense_count || 0} despesas</p>
+                                      <p className="text-xs text-muted-foreground">
+                                        {(cat.month_value || 0) > 0
+                                          ? <span className="font-medium">{formatCurrency(cat.month_value || 0)}</span>
+                                          : <span>0 no mês</span>}
+                                        <span className="opacity-60"> · {cat.month_count || 0} lanç.</span>
+                                      </p>
                                     </div>
                                     <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />
                                   </button>
