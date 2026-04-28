@@ -88,34 +88,65 @@ export default function CategoriesPage() {
       .eq('user_id', user.id)
       .order('sort_order');
 
-    const { data: expenses } = await supabase
+    // Fetch ALL expenses with the fields needed for proper deduplication of recurring templates
+    const select = 'id, type, value, final_category, category_ai, date, is_recurring, is_paid, description, wallet_id, credit_card_id, payment_method, project_id';
+    const { data: allExpenses } = await supabase
       .from('expenses')
-      .select('final_category, category_ai')
+      .select(select)
       .eq('user_id', user.id);
 
+    // Apply the same deduplication used elsewhere so recurring TEMPLATES that have a real
+    // materialized counterpart don't get counted twice (fixes "ghost" duplicates)
+    const deduped = hideMaterializedRecurringTemplates((allExpenses || []) as never[]) as Array<{
+      type: string; value: number; final_category: string; category_ai?: string | null; date: string;
+    }>;
+
     const countMap: Record<string, number> = {};
+    const valueMap: Record<string, number> = {};
+    const monthCountMap: Record<string, number> = {};
+    const monthValueMap: Record<string, number> = {};
     const correctMap: Record<string, number> = {};
     const totalMap: Record<string, number> = {};
 
-    (expenses || []).forEach(e => {
-      countMap[e.final_category] = (countMap[e.final_category] || 0) + 1;
+    const startStr = startDate;
+    const endStr = endDate;
+
+    deduped.forEach(e => {
+      const key = (e.final_category || '').toLowerCase();
+      countMap[key] = (countMap[key] || 0) + 1;
+      if (e.type === 'expense') {
+        valueMap[key] = (valueMap[key] || 0) + Number(e.value || 0);
+      }
+      if (e.date >= startStr && e.date < endStr) {
+        monthCountMap[key] = (monthCountMap[key] || 0) + 1;
+        if (e.type === 'expense') {
+          monthValueMap[key] = (monthValueMap[key] || 0) + Number(e.value || 0);
+        }
+      }
       if (e.category_ai) {
-        totalMap[e.final_category] = (totalMap[e.final_category] || 0) + 1;
+        const ck = (e.final_category || '');
+        totalMap[ck] = (totalMap[ck] || 0) + 1;
         if (e.category_ai === e.final_category) {
-          correctMap[e.final_category] = (correctMap[e.final_category] || 0) + 1;
+          correctMap[ck] = (correctMap[ck] || 0) + 1;
         }
       }
     });
 
-    const mapped: Category[] = (allCats || []).map(c => ({
-      ...c,
-      expense_count: countMap[c.name.toLowerCase()] || countMap[c.name] || 0,
-      ai_accuracy: totalMap[c.name] ? Math.round((correctMap[c.name] || 0) / totalMap[c.name] * 100) : undefined,
-    }));
+    const mapped: Category[] = (allCats || []).map(c => {
+      const k = c.name.toLowerCase();
+      return {
+        ...c,
+        expense_count: countMap[k] || 0,
+        total_value: valueMap[k] || 0,
+        month_count: monthCountMap[k] || 0,
+        month_value: monthValueMap[k] || 0,
+        ai_accuracy: totalMap[c.name] ? Math.round((correctMap[c.name] || 0) / totalMap[c.name] * 100) : undefined,
+      };
+    });
 
     setCategories(mapped);
     setLoading(false);
-  }, [user]);
+  }, [user, startDate, endDate]);
 
   useEffect(() => { fetchCategories(); }, [fetchCategories]);
 
