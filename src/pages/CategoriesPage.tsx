@@ -212,13 +212,23 @@ export default function CategoriesPage() {
 
   // Stats
   const totalCats = categories.length;
-  const withAccuracy = categories.filter(c => c.ai_accuracy !== undefined);
-  const avgAccuracy = withAccuracy.length ? Math.round(withAccuracy.reduce((s, c) => s + (c.ai_accuracy || 0), 0) / withAccuracy.length) : 0;
-  const totalExpenses = categories.reduce((s, c) => s + (c.expense_count || 0), 0);
-  const correctedCount = categories.reduce((s, c) => {
-    if (c.ai_accuracy !== undefined && c.ai_accuracy < 100) return s + 1;
-    return s;
-  }, 0);
+  const parentCount = categories.filter(c => !c.parent_id).length;
+  const subCount = categories.filter(c => c.parent_id).length;
+  const totalMonthValue = categories
+    .filter(c => !c.parent_id) // only parents to avoid double counting (subs roll up via final_category)
+    .reduce((s, c) => s + (c.month_value || 0), 0);
+  // Actually each expense has exactly one final_category, so summing over ALL cats counts each expense once.
+  // Use the full sum instead:
+  const monthSpend = categories.reduce((s, c) => s + (c.month_value || 0), 0);
+  const monthCount = categories.reduce((s, c) => s + (c.month_count || 0), 0);
+  const avgPerCategory = monthCount > 0 ? monthSpend / Math.max(1, categories.filter(c => (c.month_count || 0) > 0).length) : 0;
+  const topCategory = [...categories]
+    .filter(c => (c.month_value || 0) > 0)
+    .sort((a, b) => (b.month_value || 0) - (a.month_value || 0))[0];
+  const topRanking = [...categories]
+    .filter(c => (c.month_value || 0) > 0)
+    .sort((a, b) => (b.month_value || 0) - (a.month_value || 0))
+    .slice(0, 5);
 
   if (authLoading) return <div className="min-h-screen flex items-center justify-center bg-background"><span className="text-muted-foreground font-medium">Carregando...</span></div>;
   if (!user) return <Navigate to="/auth" replace />;
