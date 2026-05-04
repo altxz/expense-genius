@@ -138,6 +138,14 @@
     @apply border-border;
   }
 
+  html {
+    overscroll-behavior: none;
+    /* Improves font rendering on iOS/Android */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
   body {
     @apply bg-background text-foreground font-sans antialiased;
     overflow-wrap: anywhere;
@@ -147,9 +155,34 @@
     padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
   }
 
-  /* Prevent iOS bounce/overscroll */
-  html {
-    overscroll-behavior: none;
+  /* Prevent iOS auto-zoom on focus by guaranteeing 16px font on inputs in mobile */
+  @media (max-width: 640px) {
+    input,
+    textarea,
+    select {
+      font-size: 16px !important;
+    }
+  }
+
+  /* Larger touch targets on touch devices (Apple HIG ~44px / Material ~48dp) */
+  @media (hover: none) and (pointer: coarse) {
+    button,
+    [role="button"],
+    a {
+      touch-action: manipulation;
+    }
+  }
+
+  /* Respect users who prefer reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }
 
@@ -157,5 +190,32 @@
   .animate-pulse-slow {
     animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
+
+  /* Safe area helpers for fixed elements (FAB, bottom bars) */
+  .pb-safe {
+    padding-bottom: max(env(safe-area-inset-bottom), 0.5rem);
+  }
+  .pt-safe {
+    padding-top: max(env(safe-area-inset-top), 0.5rem);
+  }
+  .mb-safe {
+    margin-bottom: max(env(safe-area-inset-bottom), 0.5rem);
+  }
+
+  /* Hide scrollbars while keeping scroll behavior (used in carousels) */
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Promote element to its own layer for smoother scrolls/transitions on mobile */
+  .gpu {
+    transform: translateZ(0);
+    will-change: transform;
+  }
 }
+
 
