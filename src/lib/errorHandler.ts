@@ -35,6 +35,15 @@ export function translateError(err: unknown): { title: string; description: stri
     };
   }
 
+  // Reconciliação: inserção retroativa bloqueada pelo trigger do banco
+  if (lower.includes('reconciliação') || lower.includes('reconciliacao') || lower.includes('inserção retroativa')) {
+    return {
+      title: 'Transação já existe neste mês',
+      description: 'Já existe uma transação com essa descrição em um mês anterior. Para evitar duplicidade, revise a transação original (edite a data ou o valor) em vez de criar uma nova.',
+      isAuthIssue: false,
+    };
+  }
+
   // Conflito / duplicado
   if (code === '23505' || lower.includes('duplicate key')) {
     return {
