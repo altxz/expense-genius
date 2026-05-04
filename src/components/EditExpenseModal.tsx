@@ -325,10 +325,16 @@ export function EditExpenseModal({ open, expense, onOpenChange, onExpenseUpdated
           if (templateError) throw templateError;
           if (!templateRow) throw new Error('Template recorrente não encontrado.');
 
+          // The cutoff date is the EARLIEST of:
+          //  - the occurrence the user clicked on (expense.date)
+          //  - the new template start date (form `date`)
+          // This guarantees the old template is suppressed everywhere the new
+          // one will project, even if the user moved the start date forward.
           const oldOccurrenceDate = expense.date;
+          const cutoffDate = oldOccurrenceDate < date ? oldOccurrenceDate : date;
           const futureExceptionDates = buildFutureRecurringExceptionDates(
             templateRow.date,
-            oldOccurrenceDate,
+            cutoffDate,
             templateRow.frequency || frequency,
           );
 
@@ -351,6 +357,20 @@ export function EditExpenseModal({ open, expense, onOpenChange, onExpenseUpdated
             .update({ is_recurring: false, frequency: null })
             .eq('id', templateRow.id);
           if (deactivateError) throw deactivateError;
+
+          // Clean up any UNPAID materialized copies (from the background job or
+          // earlier "mark as paid" flows) that fall on/after the cutoff. Paid
+          // copies are preserved — they represent real historical activity.
+          const { error: cleanupError } = await supabase
+            .from('expenses')
+            .delete()
+            .eq('user_id', user!.id)
+            .eq('description', templateRow.description)
+            .eq('type', templateRow.type)
+            .eq('is_recurring', false)
+            .eq('is_paid', false)
+            .gte('date', cutoffDate);
+          if (cleanupError) throw cleanupError;
 
           if (wantInstallment) {
             const newTemplate = {
