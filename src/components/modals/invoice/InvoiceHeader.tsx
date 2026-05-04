@@ -19,30 +19,31 @@ export function InvoiceHeader({ invoice }: InvoiceHeaderProps) {
   const StatusIcon = statusInfo.icon;
 
   return (
-    <div className="bg-primary rounded-2xl p-5 sm:p-6 text-primary-foreground">
-      <div className="flex items-center justify-between mb-4 gap-3">
-        <div className="flex items-center gap-2.5 min-w-0 flex-1">
-          <CreditCard className="h-5 w-5 shrink-0" />
-          <span className="font-bold text-sm sm:text-base truncate">{invoice.cardName}</span>
+    <div className="bg-primary rounded-2xl p-4 text-primary-foreground">
+      <div className="flex items-center justify-between gap-3 mb-2">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <CreditCard className="h-4 w-4 shrink-0" />
+          <span className="font-semibold text-sm truncate">{invoice.cardName}</span>
         </div>
-        <div className={`flex items-center gap-1.5 text-[11px] sm:text-xs font-semibold px-2.5 py-1.5 rounded-full shrink-0 ${statusInfo.bg} ${statusInfo.text}`}>
-          <StatusIcon className="h-3.5 w-3.5" />
+        <div className={`flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-full shrink-0 ${statusInfo.bg} ${statusInfo.text}`}>
+          <StatusIcon className="h-3 w-3" />
           <span className="whitespace-nowrap">{statusInfo.label}</span>
         </div>
       </div>
 
-      <div className="text-3xl sm:text-4xl font-extrabold mb-2 break-words tracking-tight">
-        {formatCurrency(invoice.total)}
-      </div>
-
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs opacity-80">
-        <div className="flex items-center gap-1.5">
-          <Calendar className="h-3.5 w-3.5 shrink-0" />
-          <span>Fecha em {formatInvoiceDate(invoice.periodEnd)}</span>
+      <div className="flex items-end justify-between gap-3 flex-wrap">
+        <div className="text-2xl sm:text-3xl font-extrabold tracking-tight break-words">
+          {formatCurrency(invoice.total)}
         </div>
-        <div className="flex items-center gap-1.5">
-          <Receipt className="h-3.5 w-3.5 shrink-0" />
-          <span>Vence em {formatInvoiceDate(invoice.dueDate)}</span>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] opacity-80">
+          <div className="flex items-center gap-1">
+            <Calendar className="h-3 w-3 shrink-0" />
+            <span>Fecha {formatInvoiceDate(invoice.periodEnd)}</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <Receipt className="h-3 w-3 shrink-0" />
+            <span>Vence {formatInvoiceDate(invoice.dueDate)}</span>
+          </div>
         </div>
       </div>
     </div>
