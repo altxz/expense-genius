@@ -24,22 +24,24 @@ export function InvoicePaymentFooter({
   const [selectedWalletId, setSelectedWalletId] = useState<string>(wallets[0]?.id || '');
   const [payDateMode, setPayDateMode] = useState<'due' | 'today' | 'custom'>('due');
   const [payCustomDate, setPayCustomDate] = useState<Date | undefined>(undefined);
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
   if (isPaid) {
     return (
-      <div className="border-t border-border shrink-0 bg-background px-5 py-5 pb-7 sm:pb-5">
-        <div className="space-y-3">
-          <div className="flex items-center justify-center gap-2 py-2 text-primary">
-            <CheckCircle2 className="h-5 w-5" />
+      <div className="border-t border-border shrink-0 bg-background px-4 py-3 pb-safe sm:pb-3">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 text-primary flex-1">
+            <CheckCircle2 className="h-4 w-4" />
             <span className="font-semibold text-sm">Fatura paga</span>
           </div>
           <Button
             variant="outline"
-            className="w-full min-h-12 rounded-xl gap-2 text-sm"
+            size="sm"
+            className="rounded-xl gap-1.5 text-xs"
             onClick={onUnpay}
           >
-            <Undo2 className="h-4 w-4 shrink-0" />
-            Desfazer pagamento
+            <Undo2 className="h-3.5 w-3.5 shrink-0" />
+            Desfazer
           </Button>
         </div>
       </div>
@@ -48,81 +50,83 @@ export function InvoicePaymentFooter({
 
   if (total <= 0.01 || !hasTransactions) {
     return (
-      <div className="border-t border-border shrink-0 bg-background px-5 py-5 pb-7 sm:pb-5">
-        <div className="text-center py-2 text-muted-foreground text-sm font-medium">
+      <div className="border-t border-border shrink-0 bg-background px-4 py-3 pb-safe sm:pb-3">
+        <div className="text-center text-muted-foreground text-sm font-medium">
           Nenhum valor a pagar
         </div>
       </div>
     );
   }
 
+  const dueLabel = `Vencimento (${dueDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })})`;
+  const todayLabel = `Hoje (${new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })})`;
+  const customLabel = payCustomDate
+    ? payCustomDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    : 'Escolher data...';
+
   return (
-    <div className="border-t border-border shrink-0 bg-background px-5 py-5 pb-7 sm:pb-5">
-      <div className="space-y-4">
-        {wallets.length > 0 && (
-          <Select value={selectedWalletId} onValueChange={setSelectedWalletId}>
-            <SelectTrigger className="rounded-xl min-h-11">
-              <SelectValue placeholder="Selecione a conta" />
+    <div className="border-t border-border shrink-0 bg-background px-4 py-3 pb-safe sm:pb-3">
+      <div className="space-y-2">
+        <div className="grid grid-cols-2 gap-2">
+          {wallets.length > 0 && (
+            <Select value={selectedWalletId} onValueChange={setSelectedWalletId}>
+              <SelectTrigger className="rounded-xl h-10 text-xs">
+                <SelectValue placeholder="Conta" />
+              </SelectTrigger>
+              <SelectContent>
+                {wallets.map(w => (
+                  <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
+          <Select
+            value={payDateMode}
+            onValueChange={(v: 'due' | 'today' | 'custom') => {
+              setPayDateMode(v);
+              if (v === 'custom') setCalendarOpen(true);
+            }}
+          >
+            <SelectTrigger className="rounded-xl h-10 text-xs">
+              <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {wallets.map(w => (
-                <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
-              ))}
+              <SelectItem value="due">{dueLabel}</SelectItem>
+              <SelectItem value="today">{todayLabel}</SelectItem>
+              <SelectItem value="custom">
+                {payDateMode === 'custom' && payCustomDate ? customLabel : 'Personalizada...'}
+              </SelectItem>
             </SelectContent>
           </Select>
-        )}
-
-        <div className="space-y-2">
-          <p className="text-xs font-medium text-muted-foreground">Data do pagamento:</p>
-          <div className="flex flex-col gap-2">
-            <Button
-              type="button"
-              size="sm"
-              variant={payDateMode === 'due' ? 'default' : 'outline'}
-              className="rounded-xl text-xs justify-start min-h-10 px-3"
-              onClick={() => setPayDateMode('due')}
-            >
-              Data de vencimento ({dueDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })})
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant={payDateMode === 'today' ? 'default' : 'outline'}
-              className="rounded-xl text-xs justify-start min-h-10 px-3"
-              onClick={() => setPayDateMode('today')}
-            >
-              Data de hoje ({new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })})
-            </Button>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={payDateMode === 'custom' ? 'default' : 'outline'}
-                  className="rounded-xl text-xs justify-start min-h-10 px-3"
-                  onClick={() => setPayDateMode('custom')}
-                >
-                  <CalendarIcon className="h-3.5 w-3.5 mr-1.5" />
-                  {payDateMode === 'custom' && payCustomDate
-                    ? payCustomDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
-                    : 'Escolher data'}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0 z-[60]" align="start">
-                <Calendar
-                  mode="single"
-                  selected={payCustomDate}
-                  onSelect={(d) => { setPayCustomDate(d); setPayDateMode('custom'); }}
-                  className={cn("p-3 pointer-events-auto")}
-                />
-              </PopoverContent>
-            </Popover>
-
-          </div>
         </div>
 
+        {payDateMode === 'custom' && (
+          <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-full rounded-xl text-xs h-10 justify-start"
+              >
+                <CalendarIcon className="h-3.5 w-3.5 mr-1.5" />
+                {customLabel}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0 z-[60]" align="start">
+              <Calendar
+                mode="single"
+                selected={payCustomDate}
+                onSelect={(d) => { setPayCustomDate(d); setCalendarOpen(false); }}
+                className={cn("p-3 pointer-events-auto")}
+              />
+            </PopoverContent>
+          </Popover>
+        )}
+
         <Button
-          className="w-full min-h-12 rounded-xl gap-2 text-sm font-semibold"
+          className="w-full h-11 rounded-xl gap-2 text-sm font-semibold"
           disabled={paying || !selectedWalletId || (payDateMode === 'custom' && !payCustomDate)}
           onClick={() => onPay(selectedWalletId, payDateMode, payCustomDate)}
         >
