@@ -339,9 +339,18 @@ export function EditExpenseModal({ open, expense, onOpenChange, onExpenseUpdated
               occurrence_date,
             }));
 
-            const { error: exceptionError } = await (supabase.from as any)('recurring_exceptions').insert(exceptionRows);
+            const { error: exceptionError } = await (supabase.from as any)('recurring_exceptions')
+              .upsert(exceptionRows, { onConflict: 'template_id,occurrence_date', ignoreDuplicates: true });
             if (exceptionError && !`${exceptionError.message}`.toLowerCase().includes('duplicate')) throw exceptionError;
           }
+
+          // Deactivate the old recurring template so the background job and
+          // projection engine stop spawning copies based on the OLD value/date.
+          const { error: deactivateError } = await supabase
+            .from('expenses')
+            .update({ is_recurring: false, frequency: null })
+            .eq('id', templateRow.id);
+          if (deactivateError) throw deactivateError;
 
           if (wantInstallment) {
             const newTemplate = {

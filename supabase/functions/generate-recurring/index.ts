@@ -7,6 +7,10 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+function normalizeDescription(s: string | null | undefined) {
+  return (s ?? "").trim().toLowerCase();
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -33,13 +37,23 @@ serve(async (req) => {
       throw fetchError;
     }
 
+    // Fetch all recurring exceptions in one shot — used to skip occurrences the
+    // user explicitly removed/edited/quick-paid.
+    const { data: exceptions } = await supabase
+      .from("recurring_exceptions")
+      .select("template_id, occurrence_date");
+
+    const exceptionSet = new Set(
+      (exceptions ?? []).map((e: any) => `${e.template_id}|${e.occurrence_date}`),
+    );
+
     let created = 0;
     let skipped = 0;
 
     for (const expense of recurring || []) {
       const freq = expense.frequency || "monthly";
       const originalDate = new Date(expense.date);
-      
+
       // Determine the target day for this month
       const targetDay = originalDate.getDate();
       const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
@@ -57,20 +71,27 @@ serve(async (req) => {
       if (freq === "monthly") {
         // OK, generate every month
       } else if (freq === "weekly") {
-        // For weekly, check if today matches the day of week
         if (today.getDay() !== originalDate.getDay()) {
           skipped++;
           continue;
         }
       } else if (freq === "yearly") {
-        // Only generate if month matches
         if (today.getMonth() !== originalDate.getMonth()) {
           skipped++;
           continue;
         }
       }
 
-      // Check if already generated for this period
+      // Honor explicit user exceptions (mark as paid w/ new date, delete one
+      // occurrence, edit "this one only", edit "all from now on", etc.)
+      const occurrenceDate = freq === "weekly" ? todayStr : targetDate;
+      if (exceptionSet.has(`${expense.id}|${occurrenceDate}`)) {
+        skipped++;
+        continue;
+      }
+
+      // Check if already generated for this period — match by description+type
+      // only (value or exact day might have changed when user paid/edited).
       const checkStart = freq === "weekly"
         ? todayStr
         : `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-01`;
@@ -80,17 +101,19 @@ serve(async (req) => {
 
       const { data: existing } = await supabase
         .from("expenses")
-        .select("id")
+        .select("id, description, type")
         .eq("user_id", expense.user_id)
-        .eq("description", expense.description)
-        .eq("value", expense.value)
         .eq("type", expense.type)
-        .eq("is_recurring", false) // Generated copies are not marked recurring
+        .eq("is_recurring", false)
         .gte("date", checkStart)
-        .lte("date", checkEnd)
-        .limit(1);
+        .lte("date", checkEnd);
 
-      if (existing && existing.length > 0) {
+      const normalizedTarget = normalizeDescription(expense.description);
+      const alreadyMaterialized = (existing ?? []).some(
+        (row: any) => normalizeDescription(row.description) === normalizedTarget,
+      );
+
+      if (alreadyMaterialized) {
         skipped++;
         continue;
       }
@@ -102,9 +125,9 @@ serve(async (req) => {
         value: expense.value,
         final_category: expense.final_category,
         type: expense.type,
-        date: freq === "weekly" ? todayStr : targetDate,
-        is_recurring: false, // Copy, not the template
-        is_paid: false, // Pending until user confirms
+        date: occurrenceDate,
+        is_recurring: false,
+        is_paid: false,
         wallet_id: expense.wallet_id,
         credit_card_id: expense.credit_card_id,
         notes: `Gerado automaticamente (recorrente ${freq})`,
