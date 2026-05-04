@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.prevent_retroactive_recurring_duplicates() FROM PUBLIC, anon, authenticated;
