@@ -93,28 +93,31 @@ export function InvoicePaymentFooter({
             >
               Data de hoje ({new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })})
             </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant={payDateMode === 'custom' ? 'default' : 'outline'}
-              className="rounded-xl text-xs justify-start min-h-10 px-3"
-              onClick={() => setPayDateMode('custom')}
-            >
-              <CalendarIcon className="h-3.5 w-3.5 mr-1.5" />
-              {payDateMode === 'custom' && payCustomDate
-                ? payCustomDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
-                : 'Escolher data'}
-            </Button>
-            {payDateMode === 'custom' && (
-              <div className="flex justify-center pt-1">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={payDateMode === 'custom' ? 'default' : 'outline'}
+                  className="rounded-xl text-xs justify-start min-h-10 px-3"
+                  onClick={() => setPayDateMode('custom')}
+                >
+                  <CalendarIcon className="h-3.5 w-3.5 mr-1.5" />
+                  {payDateMode === 'custom' && payCustomDate
+                    ? payCustomDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                    : 'Escolher data'}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0 z-[60]" align="start">
                 <Calendar
                   mode="single"
                   selected={payCustomDate}
-                  onSelect={setPayCustomDate}
-                  className={cn("p-3 pointer-events-auto rounded-xl border")}
+                  onSelect={(d) => { setPayCustomDate(d); setPayDateMode('custom'); }}
+                  className={cn("p-3 pointer-events-auto")}
                 />
-              </div>
-            )}
+              </PopoverContent>
+            </Popover>
+
           </div>
         </div>
 
