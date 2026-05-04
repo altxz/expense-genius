@@ -20,6 +20,7 @@ import { useToast } from '@/hooks/use-toast';
 import { showFriendlyError } from '@/lib/errorHandler';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Expense } from '@/components/ExpenseTable';
+import { buildFutureRecurringExceptionDates } from '@/lib/recurringProjection';
 
 interface EditExpenseModalProps {
   open: boolean;
@@ -315,27 +316,65 @@ export function EditExpenseModal({ open, expense, onOpenChange, onExpenseUpdated
           if (error) throw error;
           toast({ title: 'Todas as parcelas atualizadas!' });
         } else if (expense.is_recurring) {
-          // Update all recurring siblings with same signature (type + description + value)
-          const sharedFields = {
-            description: description.trim(),
-            value: parsedValue,
-            final_category: finalCategory,
-            wallet_id: walletId || null,
-            notes: notes.trim() || null,
-            tags: tags.length > 0 ? tags : null,
-            is_recurring: wantInstallment ? true : false,
-            frequency: wantInstallment ? frequency : null,
-          };
-          const { error } = await supabase.from('expenses')
-            .update(sharedFields)
-            .eq('user_id', user!.id)
-            .eq('type', expense.type)
-            .eq('description', expense.description)
-            .eq('value', expense.value)
-            .eq('is_recurring', true);
+          const { data: templateRow, error: templateError } = await supabase
+            .from('expenses')
+            .select('*')
+            .eq('id', expense.id)
+            .maybeSingle();
 
-          if (error) throw error;
-          toast({ title: 'Todas as recorrências atualizadas!' });
+          if (templateError) throw templateError;
+          if (!templateRow) throw new Error('Template recorrente não encontrado.');
+
+          const oldOccurrenceDate = expense.date;
+          const futureExceptionDates = buildFutureRecurringExceptionDates(
+            templateRow.date,
+            oldOccurrenceDate,
+            templateRow.frequency || frequency,
+          );
+
+          if (futureExceptionDates.length > 0) {
+            const exceptionRows = futureExceptionDates.map((occurrence_date) => ({
+              user_id: user!.id,
+              template_id: templateRow.id,
+              occurrence_date,
+            }));
+
+            const { error: exceptionError } = await (supabase.from as any)('recurring_exceptions').insert(exceptionRows);
+            if (exceptionError && !`${exceptionError.message}`.toLowerCase().includes('duplicate')) throw exceptionError;
+          }
+
+          if (wantInstallment) {
+            const newTemplate = {
+              user_id: user!.id,
+              description: description.trim(),
+              value: parsedValue,
+              type: expense.type,
+              final_category: finalCategory,
+              category_ai: expense.category_ai,
+              credit_card_id: creditCardId || null,
+              wallet_id: walletId || null,
+              destination_wallet_id: expense.destination_wallet_id,
+              debt_id: expense.debt_id,
+              project_id: expense.project_id,
+              is_paid: false,
+              is_recurring: true,
+              frequency,
+              installments: 1,
+              installment_group_id: null,
+              installment_info: null,
+              payment_method: expense.payment_method,
+              notes: notes.trim() || null,
+              tags: tags.length > 0 ? tags : null,
+              date,
+              invoice_month: isCredit ? (invoiceMonth || null) : null,
+            };
+
+            const { error: insertTemplateError } = await supabase.from('expenses').insert(newTemplate);
+            if (insertTemplateError) throw insertTemplateError;
+            toast({ title: 'Próximas recorrências atualizadas!' });
+          } else {
+            toast({ title: 'Próximas recorrências encerradas!' });
+          }
         }
       } else {
         // Normal single update — also clear recurring if it was turned off
