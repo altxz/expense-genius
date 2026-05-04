@@ -164,6 +164,8 @@ export function TransactionFeed({
       if (exp.is_recurring) {
         // The virtual projected occurrence keeps the template id intact
         const templateId = exp.id;
+        // The date the user is "replacing" — i.e. the projected occurrence date.
+        const projectedOccurrenceDate = exp.date;
 
         const { error } = await supabase.from('expenses').insert({
           user_id: (exp as any).user_id || user?.id,
@@ -183,6 +185,19 @@ export function TransactionFeed({
           invoice_month: exp.invoice_month || null,
         });
         if (error) throw error;
+
+        // Always register an exception for the projected occurrence so that
+        // neither the projection engine nor the generate-recurring background
+        // job re-creates this occurrence (which would cause a duplicate when
+        // payDate ≠ projectedOccurrenceDate).
+        const { error: excErr } = await (supabase.from as any)('recurring_exceptions').insert({
+          user_id: (exp as any).user_id || user?.id,
+          template_id: templateId,
+          occurrence_date: projectedOccurrenceDate,
+        });
+        if (excErr && !`${excErr.message}`.toLowerCase().includes('duplicate')) {
+          throw excErr;
+        }
 
         // If user opted to apply changes to all future occurrences, update the template
         if ((valueChanged || dateChanged) && payApplyScope === 'all') {
