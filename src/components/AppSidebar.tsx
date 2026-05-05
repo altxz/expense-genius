@@ -54,12 +54,12 @@ export function AppSidebar() {
     { title: 'Configurações', url: '/configuracoes', icon: Settings, visible: true, badge: false },
   ];
 
-  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, url: string) => {
+  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    // Remove focus immediately to avoid lingering active/focus highlight
+    (e.currentTarget as HTMLAnchorElement).blur();
     if (isMobile) {
-      e.preventDefault();
+      // Close the sidebar without blocking navigation; React Router handles routing via the Link
       setOpenMobile(false);
-      // Navigate after sidebar closes to avoid blocking the animation
-      setTimeout(() => navigate(url), 150);
     }
   };
 
