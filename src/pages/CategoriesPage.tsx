@@ -110,6 +110,10 @@ export default function CategoriesPage() {
     const valueMap: Record<string, number> = {};
     const monthCountMap: Record<string, number> = {};
     const monthValueMap: Record<string, number> = {};
+    const monthExpenseValueMap: Record<string, number> = {};
+    const monthIncomeValueMap: Record<string, number> = {};
+    const monthExpenseCountMap: Record<string, number> = {};
+    const monthIncomeCountMap: Record<string, number> = {};
     const correctMap: Record<string, number> = {};
     const totalMap: Record<string, number> = {};
 
@@ -126,6 +130,11 @@ export default function CategoriesPage() {
         monthCountMap[key] = (monthCountMap[key] || 0) + 1;
         if (e.type === 'expense') {
           monthValueMap[key] = (monthValueMap[key] || 0) + Number(e.value || 0);
+          monthExpenseValueMap[key] = (monthExpenseValueMap[key] || 0) + Number(e.value || 0);
+          monthExpenseCountMap[key] = (monthExpenseCountMap[key] || 0) + 1;
+        } else if (e.type === 'income') {
+          monthIncomeValueMap[key] = (monthIncomeValueMap[key] || 0) + Number(e.value || 0);
+          monthIncomeCountMap[key] = (monthIncomeCountMap[key] || 0) + 1;
         }
       }
       if (e.category_ai) {
@@ -145,6 +154,10 @@ export default function CategoriesPage() {
         total_value: valueMap[k] || 0,
         month_count: monthCountMap[k] || 0,
         month_value: monthValueMap[k] || 0,
+        month_expense_value: monthExpenseValueMap[k] || 0,
+        month_income_value: monthIncomeValueMap[k] || 0,
+        month_expense_count: monthExpenseCountMap[k] || 0,
+        month_income_count: monthIncomeCountMap[k] || 0,
         ai_accuracy: totalMap[c.name] ? Math.round((correctMap[c.name] || 0) / totalMap[c.name] * 100) : undefined,
       };
     });
