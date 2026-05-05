@@ -253,13 +253,6 @@ export default function CategoriesPage() {
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
         <AppSidebar />
-  if (authLoading) return <div className="min-h-screen flex items-center justify-center bg-background"><span className="text-muted-foreground font-medium">Carregando...</span></div>;
-  if (!user) return <Navigate to="/auth" replace />;
-
-  return (
-    <SidebarProvider>
-      <div className="min-h-screen flex w-full">
-        <AppSidebar />
         <div className="flex-1 flex flex-col min-w-0">
           <DashboardHeader />
           <main className="flex-1 p-3 sm:p-4 lg:p-8 pb-32 space-y-4 sm:space-y-6 overflow-auto">
