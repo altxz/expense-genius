@@ -36,6 +36,10 @@ interface Category {
   total_value?: number;
   month_count?: number;
   month_value?: number;
+  month_expense_value?: number;
+  month_income_value?: number;
+  month_expense_count?: number;
+  month_income_count?: number;
 }
 
 const PRESET_COLORS = [
