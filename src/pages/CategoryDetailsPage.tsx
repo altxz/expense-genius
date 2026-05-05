@@ -315,13 +315,13 @@ export default function CategoryDetailsPage() {
                 {/* Hero KPI banner */}
                 <Card className="rounded-2xl border-0 shadow-md overflow-hidden">
                   <CardContent
-                    className="p-6 sm:p-8 relative"
+                    className="p-4 sm:p-6 lg:p-8 relative"
                     style={{ background: `linear-gradient(135deg, ${accent}15, ${accent}05)` }}
                   >
-                    <div className="grid gap-6 md:grid-cols-3 items-center">
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Total gasto no período</p>
-                        <p className="text-3xl sm:text-4xl font-bold mt-1" style={{ color: accent }}>
+                    <div className="grid gap-4 sm:gap-6 md:grid-cols-3 items-center">
+                      <div className="min-w-0">
+                        <p className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wider">Total gasto no período</p>
+                        <p className="text-2xl sm:text-3xl lg:text-4xl font-bold mt-1 break-words" style={{ color: accent }}>
                           {formatCurrency(totals.expense)}
                         </p>
                         <div className="flex items-center gap-2 mt-2">
