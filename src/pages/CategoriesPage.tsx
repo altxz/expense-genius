@@ -232,21 +232,44 @@ export default function CategoriesPage() {
   const totalCats = categories.length;
   const parentCount = categories.filter(c => !c.parent_id).length;
   const subCount = categories.filter(c => c.parent_id).length;
-  const totalMonthValue = categories
-    .filter(c => !c.parent_id) // only parents to avoid double counting (subs roll up via final_category)
-    .reduce((s, c) => s + (c.month_value || 0), 0);
-  // Actually each expense has exactly one final_category, so summing over ALL cats counts each expense once.
-  // Use the full sum instead:
-  const monthSpend = categories.reduce((s, c) => s + (c.month_value || 0), 0);
-  const monthCount = categories.reduce((s, c) => s + (c.month_count || 0), 0);
-  const avgPerCategory = monthCount > 0 ? monthSpend / Math.max(1, categories.filter(c => (c.month_count || 0) > 0).length) : 0;
-  const topCategory = [...categories]
-    .filter(c => (c.month_value || 0) > 0)
-    .sort((a, b) => (b.month_value || 0) - (a.month_value || 0))[0];
-  const topRanking = [...categories]
-    .filter(c => (c.month_value || 0) > 0)
-    .sort((a, b) => (b.month_value || 0) - (a.month_value || 0))
+  const monthSpend = categories.reduce((s, c) => s + (c.month_expense_value || 0), 0);
+  const monthIncome = categories.reduce((s, c) => s + (c.month_income_value || 0), 0);
+  const monthSpendCount = categories.reduce((s, c) => s + (c.month_expense_count || 0), 0);
+  const monthIncomeCount = categories.reduce((s, c) => s + (c.month_income_count || 0), 0);
+  const expenseTopRanking = [...categories]
+    .filter(c => (c.month_expense_value || 0) > 0)
+    .sort((a, b) => (b.month_expense_value || 0) - (a.month_expense_value || 0))
     .slice(0, 5);
+  const incomeTopRanking = [...categories]
+    .filter(c => (c.month_income_value || 0) > 0)
+    .sort((a, b) => (b.month_income_value || 0) - (a.month_income_value || 0))
+    .slice(0, 5);
+  const topCategory = expenseTopRanking[0];
+
+  if (authLoading) return <div className="min-h-screen flex items-center justify-center bg-background"><span className="text-muted-foreground font-medium">Carregando...</span></div>;
+  if (!user) return <Navigate to="/auth" replace />;
+
+  return (
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full">
+        <AppSidebar />
+        <div className="flex-1 flex flex-col min-w-0">
+          <DashboardHeader />
+          <main className="flex-1 p-3 sm:p-4 lg:p-8 pb-32 space-y-4 sm:space-y-6 overflow-auto">
+            <div className="flex items-start justify-between flex-wrap gap-3">
+              <div className="min-w-0">
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Categorias</h1>
+                <p className="text-xs sm:text-sm text-muted-foreground mt-1 capitalize">Visão geral · {label}</p>
+              </div>
+              <div className="flex items-center gap-2 ml-auto flex-wrap">
+                <MonthSelector />
+                <Button onClick={openCreateModal} className="gap-2 rounded-xl h-10 sm:h-11 px-4 sm:px-6 bg-accent text-accent-foreground hover:bg-accent/90 font-semibold text-sm">
+                  <PlusCircle className="h-4 w-4 sm:h-5 sm:w-5" />
+                  <span className="hidden sm:inline">Nova Categoria</span>
+                  <span className="sm:hidden">Nova</span>
+                </Button>
+              </div>
+            </div>
 
   if (authLoading) return <div className="min-h-screen flex items-center justify-center bg-background"><span className="text-muted-foreground font-medium">Carregando...</span></div>;
   if (!user) return <Navigate to="/auth" replace />;
