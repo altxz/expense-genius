@@ -274,11 +274,11 @@ export default function CategoriesPage() {
             {/* Stats Cards */}
             <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
               <Card className="rounded-2xl border-0 shadow-md bg-primary text-primary-foreground">
-                <CardContent className="p-5 flex items-center gap-3">
-                  <div className="w-11 h-11 rounded-2xl bg-primary-foreground/20 flex items-center justify-center shrink-0"><Tag className="h-5 w-5" /></div>
-                  <div className="min-w-0">
+                <CardContent className="p-4 sm:p-5 flex items-center gap-3">
+                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-primary-foreground/20 flex items-center justify-center shrink-0"><Tag className="h-5 w-5" /></div>
+                  <div className="min-w-0 flex-1">
                     <p className="text-[11px] font-medium opacity-80">Categorias</p>
-                    <p className="text-xl font-bold">{totalCats}</p>
+                    <p className="text-base sm:text-xl font-bold">{totalCats}</p>
                     <p className="text-[10px] opacity-70 truncate">{parentCount} principais · {subCount} subs</p>
                   </div>
                 </CardContent>
