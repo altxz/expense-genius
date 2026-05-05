@@ -269,37 +269,41 @@ export default function CategoryDetailsPage() {
           <DashboardHeader />
           <main className="flex-1 p-3 sm:p-4 lg:p-8 pb-32 space-y-4 sm:space-y-6 overflow-auto">
             {/* Header */}
-            <div className="flex items-center gap-3 flex-wrap">
-              <Button variant="ghost" size="icon" onClick={() => navigate('/categorias')} className="rounded-xl h-10 w-10 shrink-0">
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              {category ? (
-                <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <div
-                    className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0"
-                    style={{ backgroundColor: accent + '20' }}
-                  >
-                    <LucideIcon name={category.icon || 'tag'} className="h-6 w-6" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h1 className="text-2xl sm:text-3xl font-bold tracking-tight truncate">{category.name}</h1>
-                      {parentCategory && (
-                        <Badge variant="secondary" className="rounded-lg">
-                          <span className="text-xs">↳ {parentCategory.name}</span>
-                        </Badge>
-                      )}
-                      {subCategories.length > 0 && (
-                        <Badge variant="outline" className="rounded-lg text-xs">{subCategories.length} subcategorias</Badge>
-                      )}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <Button variant="ghost" size="icon" onClick={() => navigate('/categorias')} className="rounded-xl h-10 w-10 shrink-0">
+                  <ArrowLeft className="h-5 w-5" />
+                </Button>
+                {category ? (
+                  <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                    <div
+                      className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center shrink-0"
+                      style={{ backgroundColor: accent + '20' }}
+                    >
+                      <LucideIcon name={category.icon || 'tag'} className="h-5 w-5 sm:h-6 sm:w-6" />
                     </div>
-                    <p className="text-xs text-muted-foreground capitalize">{label}</p>
+                    <div className="min-w-0 flex-1">
+                      <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight truncate">{category.name}</h1>
+                      <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                        {parentCategory && (
+                          <Badge variant="secondary" className="rounded-lg text-[10px] px-1.5 py-0 max-w-[140px] truncate">
+                            ↳ {parentCategory.name}
+                          </Badge>
+                        )}
+                        {subCategories.length > 0 && (
+                          <Badge variant="outline" className="rounded-lg text-[10px] px-1.5 py-0">{subCategories.length} subs</Badge>
+                        )}
+                        <p className="text-[10px] sm:text-xs text-muted-foreground capitalize truncate">{label}</p>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Categoria</h1>
-              )}
-              <MonthSelector />
+                ) : (
+                  <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight">Categoria</h1>
+                )}
+              </div>
+              <div className="flex justify-center sm:justify-end">
+                <MonthSelector />
+              </div>
             </div>
 
             {loading ? (
@@ -311,13 +315,13 @@ export default function CategoryDetailsPage() {
                 {/* Hero KPI banner */}
                 <Card className="rounded-2xl border-0 shadow-md overflow-hidden">
                   <CardContent
-                    className="p-6 sm:p-8 relative"
+                    className="p-4 sm:p-6 lg:p-8 relative"
                     style={{ background: `linear-gradient(135deg, ${accent}15, ${accent}05)` }}
                   >
-                    <div className="grid gap-6 md:grid-cols-3 items-center">
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Total gasto no período</p>
-                        <p className="text-3xl sm:text-4xl font-bold mt-1" style={{ color: accent }}>
+                    <div className="grid gap-4 sm:gap-6 md:grid-cols-3 items-center">
+                      <div className="min-w-0">
+                        <p className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wider">Total gasto no período</p>
+                        <p className="text-2xl sm:text-3xl lg:text-4xl font-bold mt-1 break-words" style={{ color: accent }}>
                           {formatCurrency(totals.expense)}
                         </p>
                         <div className="flex items-center gap-2 mt-2">
