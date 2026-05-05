@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { LayoutDashboard, Settings, Wallet, PiggyBank, ArrowLeftRight, FolderKanban, Calculator, Activity, Sparkles, Tag } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
-import { useNavigate } from 'react-router-dom';
+
 import { useUserSettings } from '@/contexts/UserSettingsContext';
 import { LATEST_CHANGELOG_ID } from '@/pages/ChangelogPage';
 import {
