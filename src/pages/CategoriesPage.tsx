@@ -284,77 +284,125 @@ export default function CategoriesPage() {
                 </CardContent>
               </Card>
               <Card className="rounded-2xl border-0 shadow-md">
-                <CardContent className="p-5 flex items-center gap-3">
-                  <div className="w-11 h-11 rounded-2xl bg-rose-100 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0"><TrendingUp className="h-5 w-5" /></div>
-                  <div className="min-w-0">
-                    <p className="text-[11px] font-medium text-muted-foreground">Gasto no mês</p>
-                    <p className="text-xl font-bold truncate">{formatCurrency(monthSpend)}</p>
-                    <p className="text-[10px] text-muted-foreground truncate">{monthCount} lançamentos</p>
+                <CardContent className="p-4 sm:p-5 flex items-center gap-3">
+                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-rose-100 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0"><TrendingDown className="h-5 w-5" /></div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11px] font-medium text-muted-foreground">Despesas no mês</p>
+                    <p className="text-base sm:text-xl font-bold truncate">{formatCurrency(monthSpend)}</p>
+                    <p className="text-[10px] text-muted-foreground truncate">{monthSpendCount} lançamentos</p>
                   </div>
                 </CardContent>
               </Card>
               <Card className="rounded-2xl border-0 shadow-md">
-                <CardContent className="p-5 flex items-center gap-3">
-                  <div className="w-11 h-11 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0"><BarChart3 className="h-5 w-5" /></div>
-                  <div className="min-w-0">
-                    <p className="text-[11px] font-medium text-muted-foreground">Média / categoria</p>
-                    <p className="text-xl font-bold truncate">{formatCurrency(avgPerCategory)}</p>
-                    <p className="text-[10px] text-muted-foreground truncate">por categoria ativa</p>
+                <CardContent className="p-4 sm:p-5 flex items-center gap-3">
+                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0"><TrendingUp className="h-5 w-5" /></div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11px] font-medium text-muted-foreground">Receitas no mês</p>
+                    <p className="text-base sm:text-xl font-bold truncate">{formatCurrency(monthIncome)}</p>
+                    <p className="text-[10px] text-muted-foreground truncate">{monthIncomeCount} lançamentos</p>
                   </div>
                 </CardContent>
               </Card>
               <Card className="rounded-2xl border-0 shadow-md">
-                <CardContent className="p-5 flex items-center gap-3">
-                  <div className="w-11 h-11 rounded-2xl bg-amber-100 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0"><ArrowUpRight className="h-5 w-5" /></div>
-                  <div className="min-w-0">
+                <CardContent className="p-4 sm:p-5 flex items-center gap-3">
+                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-amber-100 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0"><ArrowUpRight className="h-5 w-5" /></div>
+                  <div className="min-w-0 flex-1">
                     <p className="text-[11px] font-medium text-muted-foreground">Top categoria</p>
-                    <p className="text-base font-bold truncate">{topCategory?.name || '—'}</p>
-                    <p className="text-[10px] text-muted-foreground truncate">{topCategory ? formatCurrency(topCategory.month_value || 0) : 'Sem gastos'}</p>
+                    <p className="text-sm sm:text-base font-bold truncate">{topCategory?.name || '—'}</p>
+                    <p className="text-[10px] text-muted-foreground truncate">{topCategory ? formatCurrency(topCategory.month_expense_value || 0) : 'Sem gastos'}</p>
                   </div>
                 </CardContent>
               </Card>
             </div>
 
-            {/* Top Ranking */}
-            {topRanking.length > 0 && (
-              <Card className="rounded-2xl border-0 shadow-md">
-                <CardContent className="p-5 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-sm font-semibold">Ranking de gastos · {label}</h2>
-                    <Badge variant="outline" className="rounded-lg text-[10px]">Top {topRanking.length}</Badge>
-                  </div>
-                  <div className="space-y-2">
-                    {topRanking.map((c, idx) => {
-                      const pct = monthSpend > 0 ? ((c.month_value || 0) / monthSpend) * 100 : 0;
-                      return (
-                        <button
-                          type="button"
-                          key={c.id}
-                          onClick={() => navigate(`/categorias/${c.id}`)}
-                          className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-secondary/50 transition-colors text-left"
-                        >
-                          <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-bold" style={{ backgroundColor: c.color + '25', color: c.color }}>
-                            {idx + 1}
-                          </div>
-                          <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: c.color + '20' }}>
-                            <LucideIcon name={c.icon} className="h-4 w-4" />
-                          </div>
-                          <div className="flex-1 min-w-0 space-y-1">
-                            <div className="flex items-center justify-between gap-2 text-xs">
-                              <span className="font-medium truncate">{c.name}</span>
-                              <span className="text-muted-foreground shrink-0">{formatCurrency(c.month_value || 0)} · {pct.toFixed(0)}%</span>
+            {/* Top Rankings: Despesas e Receitas separados */}
+            <div className="grid gap-4 lg:grid-cols-2">
+              {expenseTopRanking.length > 0 && (
+                <Card className="rounded-2xl border-0 shadow-md">
+                  <CardContent className="p-4 sm:p-5 space-y-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <h2 className="text-sm font-semibold flex items-center gap-2 min-w-0">
+                        <TrendingDown className="h-4 w-4 text-rose-500 shrink-0" />
+                        <span className="truncate">Top despesas</span>
+                      </h2>
+                      <Badge variant="outline" className="rounded-lg text-[10px] shrink-0">Top {expenseTopRanking.length}</Badge>
+                    </div>
+                    <div className="space-y-2">
+                      {expenseTopRanking.map((c, idx) => {
+                        const pct = monthSpend > 0 ? ((c.month_expense_value || 0) / monthSpend) * 100 : 0;
+                        return (
+                          <button
+                            type="button"
+                            key={c.id}
+                            onClick={() => navigate(`/categorias/${c.id}`)}
+                            className="w-full flex items-center gap-2 sm:gap-3 p-2 rounded-xl hover:bg-secondary/50 transition-colors text-left"
+                          >
+                            <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center shrink-0 text-[10px] sm:text-xs font-bold" style={{ backgroundColor: c.color + '25', color: c.color }}>
+                              {idx + 1}
                             </div>
-                            <div className="h-1.5 rounded-full bg-secondary overflow-hidden">
-                              <div className="h-full rounded-full" style={{ width: `${Math.min(100, pct)}%`, backgroundColor: c.color }} />
+                            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: c.color + '20' }}>
+                              <LucideIcon name={c.icon} className="h-4 w-4" />
                             </div>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+                            <div className="flex-1 min-w-0 space-y-1">
+                              <div className="flex items-center justify-between gap-2 text-[11px] sm:text-xs">
+                                <span className="font-medium truncate">{c.name}</span>
+                                <span className="text-muted-foreground shrink-0 tabular-nums">{formatCurrency(c.month_expense_value || 0)} · {pct.toFixed(0)}%</span>
+                              </div>
+                              <div className="h-1.5 rounded-full bg-secondary overflow-hidden">
+                                <div className="h-full rounded-full" style={{ width: `${Math.min(100, pct)}%`, backgroundColor: c.color }} />
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {incomeTopRanking.length > 0 && (
+                <Card className="rounded-2xl border-0 shadow-md">
+                  <CardContent className="p-4 sm:p-5 space-y-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <h2 className="text-sm font-semibold flex items-center gap-2 min-w-0">
+                        <TrendingUp className="h-4 w-4 text-emerald-500 shrink-0" />
+                        <span className="truncate">Top receitas</span>
+                      </h2>
+                      <Badge variant="outline" className="rounded-lg text-[10px] shrink-0">Top {incomeTopRanking.length}</Badge>
+                    </div>
+                    <div className="space-y-2">
+                      {incomeTopRanking.map((c, idx) => {
+                        const pct = monthIncome > 0 ? ((c.month_income_value || 0) / monthIncome) * 100 : 0;
+                        return (
+                          <button
+                            type="button"
+                            key={c.id}
+                            onClick={() => navigate(`/categorias/${c.id}`)}
+                            className="w-full flex items-center gap-2 sm:gap-3 p-2 rounded-xl hover:bg-secondary/50 transition-colors text-left"
+                          >
+                            <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center shrink-0 text-[10px] sm:text-xs font-bold bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400">
+                              {idx + 1}
+                            </div>
+                            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: c.color + '20' }}>
+                              <LucideIcon name={c.icon} className="h-4 w-4" />
+                            </div>
+                            <div className="flex-1 min-w-0 space-y-1">
+                              <div className="flex items-center justify-between gap-2 text-[11px] sm:text-xs">
+                                <span className="font-medium truncate">{c.name}</span>
+                                <span className="text-muted-foreground shrink-0 tabular-nums">{formatCurrency(c.month_income_value || 0)} · {pct.toFixed(0)}%</span>
+                              </div>
+                              <div className="h-1.5 rounded-full bg-secondary overflow-hidden">
+                                <div className="h-full rounded-full bg-emerald-500" style={{ width: `${Math.min(100, pct)}%` }} />
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
 
             {/* Categories Grid */}
             {loading ? (
