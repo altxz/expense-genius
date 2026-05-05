@@ -39,7 +39,7 @@ export function AppSidebar() {
   const collapsed = state === 'collapsed';
   const { settings } = useUserSettings();
   const hasUnread = useChangelogUnread();
-  const navigate = useNavigate();
+  
 
   const items = [
     { title: 'Dashboard', url: '/', icon: LayoutDashboard, visible: true, badge: false },
